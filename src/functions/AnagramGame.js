@@ -24,8 +24,8 @@ const DEBOUNCE_SAVE_MS = 5000; // Salva 5s após a última alteração
 
 // --- Caminhos ---
 const ANAGRAMA_DATA_PATH = path.join(database.databasePath, 'anagrama.json');
-const ANAGRAMA_LETTERS_PATH = path.join(database.databasePath, 'letters');
-const ANAGRAMA_WORDS_PATH = path.join(database.databasePath, 'words');
+const ANAGRAMA_LETTERS_PATH = path.join(database.databasePath, 'anagrama', 'letters');
+const ANAGRAMA_WORDS_PATH = path.join(database.databasePath, 'anagrama', 'words');
 
 // --- Estado do Jogo ---
 /**
@@ -281,7 +281,7 @@ async function startNewRound(bot, message, group, isFirstRound = true) {
   if (isFirstRound) {
     const hintsLeft = HINTS_PER_ROUND - game.hintsUsed;
     const skipsLeft = SKIPS_PER_ROUND - game.skipsUsed;
-    let startMessage = `Use *!a <palpite>* para responder.\n`;
+    let startMessage = `Use *!ana <palpite>* para responder.\n`;
     startMessage += `Você tem ${GAME_DURATION_SECONDS} segundos!\n\n`;
     startMessage += `> 💡 Dicas: ${hintsLeft} | 🐇 Pulos: ${skipsLeft}`;
     bot.sendReturnMessages(new ReturnMessage({ chatId: groupId, content: startMessage }));
@@ -345,7 +345,7 @@ async function guessCommand(bot, message, args, group) {
   if (!guess) {
     return new ReturnMessage({
       chatId: groupId,
-      content: 'Você precisa fornecer um palpite. Ex: `!a palavra`',
+      content: 'Você precisa fornecer um palpite. Ex: `!ana palavra`',
       options: { quotedMessageId: message.origin.id._serialized }
     });
   }
@@ -510,16 +510,16 @@ const commands = [
     }
   }),
   new Command({
-    name: 'a',
+    name: 'ana',
     description: 'Envia um palpite para o jogo Anagrama.',
     category: 'jogos',
-    usage: '!a <palpite>',
+    usage: '!ana <palpite>',
     needsArgs: true,
     cooldown: 2,
     method: guessCommand
   }),
   new Command({
-    name: 'dica',
+    name: 'ana-dica',
     description: 'Pede uma dica para a palavra atual do Anagrama.',
     category: 'jogos',
     cooldown: 5,
@@ -530,7 +530,7 @@ const commands = [
     }
   }),
   new Command({
-    name: 'pular',
+    name: 'ana-pular',
     description: 'Pula a palavra atual no jogo Anagrama.',
     category: 'jogos',
     cooldown: 5,
