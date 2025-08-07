@@ -14,7 +14,7 @@ const Database = require('../utils/Database');
 const Canvas = require("canvas");
 const LLMService = require('../services/LLMService');
 
-const llmService = new LLMService({});
+const llmService = new LLMService({apiTimeout: 5000});
 const logger = new Logger('anagrama-game');
 const database = Database.getInstance();
 
