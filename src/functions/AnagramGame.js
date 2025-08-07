@@ -391,9 +391,7 @@ async function guessCommand(bot, message, args, group) {
 
     let reaction = '🥶'; // Frio
     if (similarity > 0.80) reaction = '🔥'; // Quente
-    else if (similarity > 0.50) reaction = '🌡️'; // Morno
-
-    message.origin.react(reaction).catch(e => logger.error("Falha ao reagir:", e));
+    else if (similarity > 0.50) reaction = '🥵'; // Morno
   }
   return null;
 }

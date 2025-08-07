@@ -53,6 +53,7 @@ class NSFWPredict {
       };
 
       const response = await this.llmService.getCompletion(completionOptions);
+      this.logger.info(`Detecção NSFW RAW: ${response}`);
       const parsedResponse = JSON.parse(response);
 
       this.logger.info(`Detecção NSFW: ${parsedResponse.classification}`);
