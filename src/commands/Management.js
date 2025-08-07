@@ -1233,6 +1233,24 @@ async setWelcomeMessage(bot, message, args, group) {
         infoMessage += `- *Cooldown:* ${group.interact.cooldown} minutos\n\n`;
       }
       
+       // Números e strings ignorados
+      if (group.ignoredNumbers && group.ignoredNumbers.length > 0) {
+        infoMessage += `\n*Números Ignorados:* ${group.ignoredNumbers.join(", ")}\n`;
+      }
+      
+      if (group.mutedStrings && group.mutedStrings.length > 0) {
+        infoMessage += `*Comandos Ignorados:* ${group.mutedStrings.join(", ")}\n`;
+      }
+
+      if (group.mutedCategories && group.mutedCategories.length > 0) {  
+        infoMessage += `\n*Categorias Silenciadas:* ${group.mutedCategories.join(', ')}\n`;  
+      }
+      
+      // Apelidos configurados
+      if (group.nicks && group.nicks.length > 0) {
+        infoMessage += `\n*Apelidos Configurados:* ${group.nicks.map(n => `${n.apelido} (${n.numero})`).join(", ")}\n`;
+      }
+
       // SEÇÃO DETALHADA: Adiciona informações de streams configurados
       infoMessage += `*Canais Monitorados:*\n`;
       
@@ -1391,23 +1409,6 @@ async setWelcomeMessage(bot, message, args, group) {
         infoMessage += `_... e mais ${activeCommands.length - maxCommands} comandos_\n`;
       }
       
-      // Números e strings ignorados
-      if (group.ignoredNumbers && group.ignoredNumbers.length > 0) {
-        infoMessage += `\n*Números Ignorados:* ${group.ignoredNumbers.length}\n`;
-      }
-      
-      if (group.mutedStrings && group.mutedStrings.length > 0) {
-        infoMessage += `*Comandos Ignorados:* ${group.mutedStrings.length}\n`;
-      }
-
-      if (group.mutedCategories && group.mutedCategories.length > 0) {  
-        infoMessage += `\n*Categorias Silenciadas:* ${group.mutedCategories.join(', ')}\n`;  
-      }
-      
-      // Apelidos configurados
-      if (group.nicks && group.nicks.length > 0) {
-        infoMessage += `\n*Apelidos Configurados:* ${group.nicks.length}\n`;
-      }
       
       return new ReturnMessage({
         chatId: group.id,
