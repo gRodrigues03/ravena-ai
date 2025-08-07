@@ -380,9 +380,13 @@ async function guessCommand(bot, message, args, group) {
       content: `${successMessage}\n\n🔄 Iniciando próxima rodada... 🌟 *Level ${game.round}*`
     }));
 
-    setTimeout(() => {
-      startNewRound(bot, message, group, false);
-    }, 2000); // 2 segundos de delay
+    if(!game.roundEnded){
+      setTimeout(() => {
+        startNewRound(bot, message, group, false);
+      }, 2000); // 2 segundos de delay
+    }
+
+    game.roundEnded = true;
 
   } else {
     // Reage com base na similaridade
