@@ -12,7 +12,9 @@ const { MessageMedia } = require('whatsapp-web.js');
 const Command = require('../models/Command');
 const Database = require('../utils/Database');
 const Canvas = require("canvas");
+const LLMService = require('../services/LLMService');
 
+const llmService = new LLMService({});
 const logger = new Logger('anagrama-game');
 const database = Database.getInstance();
 
@@ -412,9 +414,17 @@ async function hintCommand(bot, message) {
   const hintDisplay = game.word.split('').map((char, i) => game.revealedLetters[i] ? ` ${char.toUpperCase()} ` : ' __ ').join('');
   const hintsLeft = HINTS_PER_ROUND - game.hintsUsed;
 
+  let dicaIA = "";
+
+  const respostaIA = await llmService.getCompletion({prompt: `O usuário requisitou uma dica, responda ((apenas)) com: sinônimo ou frase que ajude.\n\nPalavra: ${game.word}`, systemContext: "Você é um robo que está controlando um jogo de Anagrama"});
+
+  if(!respostaIA.toLowerCase().includes("erro")){
+    dicaIA = `\nℹ️ *Dica:* _${respostaIA}_\n`
+  }
+
   return new ReturnMessage({
     chatId: groupId,
-    content: `📝 *Dica:* ${hintDisplay}\n\n> 💡 Você tem mais ${hintsLeft} dica(s).`
+    content: `📝 ${hintDisplay}\n${dicaIA}\n> 💡 Você tem mais ${hintsLeft} dica(s).`
   });
 }
 

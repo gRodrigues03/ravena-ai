@@ -516,7 +516,7 @@ class LLMService {
 				response = await this.ollamaCompletion(options);
 				if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
 					this.logger.error('Resposta inválida da API ollama:', response);
-					return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
+					return "Erro: Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
 				}
 				return response.choices[0].message.content;
 
@@ -524,7 +524,7 @@ class LLMService {
 				response = await this.lmstudioCompletion(options);
 				if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
 					this.logger.error('Resposta inválida da API LM Studio:', response);
-					return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
+					return "Erro: Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
 				}
 				return response.choices[0].message.content;
 
@@ -534,7 +534,7 @@ class LLMService {
 						!response.candidates[0].content || !response.candidates[0].content.parts || 
 						!response.candidates[0].content.parts[0]) {
 					this.logger.error('Resposta inválida da API Gemini:', response);
-					return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
+					return "Erro: Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
 				}
 				return response.candidates[0].content.parts[0].text;
 				
@@ -542,7 +542,7 @@ class LLMService {
 				response = await this.deepseekCompletion({...options, version: 'v1'});
 				if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
 					this.logger.error('Resposta inválida da API Deepseek R1:', response);
-					return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
+					return "Erro: Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
 				}
 				return response.choices[0].message.content;
 				
@@ -550,7 +550,7 @@ class LLMService {
 				response = await this.deepseekCompletion({...options, version: 'v3'});
 				if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
 					this.logger.error('Resposta inválida da API Deepseek:', response);
-					return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
+					return "Erro: Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
 				}
 				return response.choices[0].message.content;
 				
@@ -558,7 +558,7 @@ class LLMService {
 				response = await this.openAICompletion({ ...options, useLocal: true, model: this.localModel});
 				if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
 					this.logger.error('Resposta inválida da API Local:', response);
-					return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
+					return "Erro: Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
 				}
 				return response.choices[0].message.content;
 
@@ -567,7 +567,7 @@ class LLMService {
 				response = await this.openRouterCompletion(options);
 				if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
 					this.logger.error('Resposta inválida da API OpenRouter:', response);
-					return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
+					return "Erro: Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
 				}
 				return response.choices[0].message.content;
 				
@@ -576,7 +576,7 @@ class LLMService {
 				response = await this.openAICompletion(options);
 				if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
 					this.logger.error('Resposta inválida da API OpenAI:', response);
-					return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
+					return "Erro: Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
 				}
 				return response.choices[0].message.content;
 		}
@@ -619,7 +619,7 @@ class LLMService {
 
 		// Se todos os provedores falharem, retorna mensagem de erro
 		this.logger.error('Todos os provedores falharam');
-		return "Não foi possível gerar uma resposta de nenhum provedor disponível. Por favor, tente novamente mais tarde.";
+		return "Erro: Não foi possível gerar uma resposta de nenhum provedor disponível. Por favor, tente novamente mais tarde.";
 	}
 }
 
