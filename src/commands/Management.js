@@ -668,8 +668,7 @@ class Management {
       });
     }
     
-    // MELHORIA: Usa o comando completo como gatilho em vez de apenas a primeira palavra
-    const commandTrigger = args.join(' ').toLowerCase();
+    const commandTrigger = args.join(' ');
     
     // Obtém comandos personalizados para este grupo
     const commands = await this.database.getCustomCommands(group.id);
