@@ -14,7 +14,7 @@ const Database = require('../utils/Database');
 const Canvas = require("canvas");
 const LLMService = require('../services/LLMService');
 
-const llmService = new LLMService({});
+const llmService = new LLMService({apiTimeout: 5000});
 const logger = new Logger('anagrama-game');
 const database = Database.getInstance();
 
@@ -380,9 +380,13 @@ async function guessCommand(bot, message, args, group) {
       content: `${successMessage}\n\n🔄 Iniciando próxima rodada... 🌟 *Level ${game.round}*`
     }));
 
-    setTimeout(() => {
-      startNewRound(bot, message, group, false);
-    }, 2000); // 2 segundos de delay
+    if(!game.roundEnded){
+      setTimeout(() => {
+        startNewRound(bot, message, group, false);
+      }, 2000); // 2 segundos de delay
+    }
+
+    game.roundEnded = true;
 
   } else {
     // Reage com base na similaridade
