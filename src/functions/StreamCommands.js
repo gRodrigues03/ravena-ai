@@ -636,12 +636,19 @@ async function getStreamInformation(bot, chatId, platform, channelName) {
       }
       
       // Prepara a mensagem textual
+      let linkSite = `https://twitch.tv/${channelName}`;
+      if(platform === 'youtube'){
+        linkSite = `https://youtube.com/watch?v=${status.lastVideo?.id}`;
+      } else if(platform === 'kick'){
+        linkSite = `https://kick.com/${channelName}`;
+      }
+
       const content = `🔴 *LIVE: ${status.displayName || channelName}* (${platform})\n\n` +
                      `📝 *Título:* ${status.title || 'Sem título'}\n` +
                      `🎮 *Jogo:* ${status.game || status.category || 'Não informado'}\n` +
                      `👁️ *Viewers:* ${status.viewerCount || 'Não informado'}\n` +
                      `⏱️ *Duração:* ${streamDuration || 'Não informado'}\n\n` +
-                     `🔗 *Link:* https://${platform}.${platform === 'youtube' ? 'com/watch?v=' + status.lastVideo?.id : 'tv/' + channelName}`;
+                     `🔗 *Link:* ${linkSite}`;
       
       // Se o canal tem thumbnail, tenta baixá-la e enviar como imagem
       if (status.thumbnail) {
