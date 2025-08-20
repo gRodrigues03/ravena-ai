@@ -22,8 +22,9 @@ class InviteSystem {
     this.logger = new Logger(`invite-system-${bot.id}`);
     this.database = Database.getInstance();
     this.pendingRequests = new Map(); // Mapa de autor -> { inviteLink, timeout }
-    this.userCooldowns = new Map(); // Mapa de autor -> timestamp do último convite
     this.inviteCooldown = 60; // Padrão 60 minutos (para o cooldown de convite por usuário)
+    this.userCooldowns = new Map(); // Mapa de autor -> timestamp do último convite de usuário
+    this.groupInviteCooldowns = new Map(); // Mapa de inviteCode -> timestamp do último convite do grupo
   }
 
   rndString(){
@@ -54,17 +55,26 @@ class InviteSystem {
       }
 
       // Verifica o cooldown do usuário
-      const lastInviteTime = this.userCooldowns.get(message.author);
+      const lastUserInviteTime = this.userCooldowns.get(message.author);
       const currentTime = Date.now();
-      const cooldownDurationMs = this.inviteCooldown * 60 * 1000; // Cooldown em milissegundos
+      const userCooldownDurationMs = this.inviteCooldown * 60 * 1000; // Cooldown do usuário em milissegundos
 
-      if (lastInviteTime && (currentTime - lastInviteTime < cooldownDurationMs)) {
+      if (lastUserInviteTime && (currentTime - lastUserInviteTime < userCooldownDurationMs)) {
         this.logger.info(`Usuário ${message.author} está em cooldown para convites. Ignorando.`);
         return false;
       }
       
       const inviteLink = inviteMatch[0];
       const inviteCode = inviteMatch[1];
+
+      // Verifica o cooldown do grupo (inviteCode)
+      const lastGroupInviteTime = this.groupInviteCooldowns.get(inviteCode);
+      const groupCooldownDurationMs = this.inviteCooldown * 60 * 1000; // Cooldown do grupo em milissegundos
+
+      if (lastGroupInviteTime && (currentTime - lastGroupInviteTime < groupCooldownDurationMs)) {
+        this.logger.info(`Convite para o grupo ${inviteCode} está em cooldown. Ignorando.`);
+        return false;
+      }
       
       this.logger.info(`Recebido convite de grupo de ${message.author}: ${inviteLink}`);
       
@@ -93,8 +103,10 @@ class InviteSystem {
         timeout: timeoutId
       });
 
-      // Define o timestamp do último convite para o usuário (inicia o cooldown)
+      // Define o timestamp do último convite para o usuário (inicia o cooldown de usuário)
       this.userCooldowns.set(message.author, currentTime);
+      // Define o timestamp do último convite para o grupo (inicia o cooldown de grupo)
+      this.groupInviteCooldowns.set(inviteCode, currentTime);
       
       return true;
     } catch (error) {
@@ -266,7 +278,8 @@ class InviteSystem {
       clearTimeout(timeout);
     }
     this.pendingRequests.clear();
-    this.userCooldowns.clear(); // Limpa também o mapa de cooldowns
+    this.userCooldowns.clear(); // Limpa também o mapa de cooldowns de usuário
+    this.groupInviteCooldowns.clear(); // Limpa também o mapa de cooldowns de grupo
   }
 }
 
