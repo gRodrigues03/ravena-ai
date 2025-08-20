@@ -5,8 +5,7 @@ const fs = require('fs').promises;
 
 /**
  * Gerencia o sistema de convites para o bot
- * 
- * Fluxo de trabalho:
+ * * Fluxo de trabalho:
  * 1. Usuário envia um link de convite para o bot em um chat privado
  * 2. Bot pergunta o motivo para adicionar o bot ao grupo
  * 3. Usuário responde com um motivo ou ocorre timeout
@@ -23,6 +22,8 @@ class InviteSystem {
     this.logger = new Logger(`invite-system-${bot.id}`);
     this.database = Database.getInstance();
     this.pendingRequests = new Map(); // Mapa de autor -> { inviteLink, timeout }
+    this.userCooldowns = new Map(); // Mapa de autor -> timestamp do último convite
+    this.inviteCooldown = 60; // Padrão 60 minutos (para o cooldown de convite por usuário)
   }
 
   rndString(){
@@ -49,6 +50,16 @@ class InviteSystem {
       const isBlocked = await this.database.isUserInviteBlocked(message.author.split('@')[0]);
       if (isBlocked) {
         this.logger.info(`Ignorando convite de usuário bloqueado: ${message.author}`);
+        return false;
+      }
+
+      // Verifica o cooldown do usuário
+      const lastInviteTime = this.userCooldowns.get(message.author);
+      const currentTime = Date.now();
+      const cooldownDurationMs = this.inviteCooldown * 60 * 1000; // Cooldown em milissegundos
+
+      if (lastInviteTime && (currentTime - lastInviteTime < cooldownDurationMs)) {
+        this.logger.info(`Usuário ${message.author} está em cooldown para convites. Ignorando.`);
         return false;
       }
       
@@ -81,6 +92,9 @@ class InviteSystem {
         inviteCode,
         timeout: timeoutId
       });
+
+      // Define o timestamp do último convite para o usuário (inicia o cooldown)
+      this.userCooldowns.set(message.author, currentTime);
       
       return true;
     } catch (error) {
@@ -252,6 +266,7 @@ class InviteSystem {
       clearTimeout(timeout);
     }
     this.pendingRequests.clear();
+    this.userCooldowns.clear(); // Limpa também o mapa de cooldowns
   }
 }
 
