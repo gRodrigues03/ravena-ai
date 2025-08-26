@@ -428,11 +428,13 @@ class LLMService {
 				},
 			};
 
+			const toTime = options.timeout || this.apiTimeout || 60000;
 			this.logger.debug('[LLMService][ollamaCompletion] Sending request to Ollama API', {
 					endpoint: endpoint,
 					model: payload.model,
 					promptLength: options.prompt.length,
-					hasImage: !!options.image
+					hasImage: !!options.image,
+					timeout: toTime
 			});
 
 			// 5. Make the POST request using axios.
@@ -440,7 +442,7 @@ class LLMService {
 				headers: {
 					'Content-Type': 'application/json',
 				},
-				timeout: options.timeout || this.apiTimeout,
+				timeout: toTime,
 			});
 
 			// The structure of the successful response from Ollama is different from OpenAI's.
