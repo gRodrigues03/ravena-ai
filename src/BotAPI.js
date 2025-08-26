@@ -635,6 +635,12 @@ class BotAPI {
       res.sendFile(filePath); 
     });
 
+    // Ciclo da vida da ravena
+    this.app.get('/ciclo-ravena', async (req, res) => {
+      res.redirect('https://gemini.google.com/share/a03e1fe297de');
+    });
+
+
     // Groups !enviar public data
     this.app.get('/getData/:groupId/:variable', (req, res) => {  
         const { groupId, variable } = req.params;  
