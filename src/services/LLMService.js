@@ -434,7 +434,7 @@ class LLMService {
 					model: payload.model,
 					promptLength: options.prompt.length,
 					hasImage: !!options.image,
-					timeout: toTime
+					timeout: toTime	
 			});
 
 			// 5. Make the POST request using axios.
@@ -591,13 +591,13 @@ class LLMService {
 	async getCompletionFromProviders(options) {
 		// Lista de provedores para tentar em ordem
 		const providers = [
-			{ name: 'ollama', method: async () => {
-				const response = await this.ollamaCompletion(options);
-				return response.message.content;
-			}},
 			{ name: 'lmstudio', method: async () => {
 				const response = await this.lmstudioCompletion(options);
 				return response.choices[0].message.content;
+			}},
+			{ name: 'ollama', method: async () => {
+				const response = await this.ollamaCompletion(options);
+				return response.message.content;
 			}},
 			{ name: 'gemini', method: async () => {
 				const response = await this.geminiCompletion(options);
