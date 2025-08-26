@@ -85,7 +85,7 @@ class LLMService {
 
 			return response.data;
 		} catch (error) {
-			this.logger.error('Erro ao chamar API OpenRouter:', error.response ? error.response.data : error.message);
+			this.logger.error('Erro ao chamar API OpenRouter:', error.message);
 			throw error;
 		}
 	}
@@ -107,7 +107,7 @@ class LLMService {
 			}
 
 			const model = options.model || 'gemini-2.5-flash';
-			this.logger.debug('Enviando solicitação para API Gemini:', { 
+			this.logger.debug('[LLMService] Enviando solicitação para API Gemini:', { 
 				model: model,
 				promptLength: options.prompt.length,
 				maxTokens: options.maxTokens || 5000
@@ -117,7 +117,7 @@ class LLMService {
 			//	this.logger.info(`[geminiCompletion] Usando ctx personalizado: ${options.systemContext.trim(0, 30)}...`);
 			//}
 
-			this.logger.info(`[geminiCompletion] Prompt: ${options.prompt.trim(0, 30)}...`);
+			this.logger.info(`[LLMService][geminiCompletion] Prompt: ${options.prompt.trim(0, 30)}...`);
 
 			// Endpoint da API Gemini
 			const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.googleKey}`;
@@ -157,7 +157,7 @@ class LLMService {
 
 			return response.data;
 		} catch (error) {
-			this.logger.error('Erro ao chamar API Gemini:', error.response ? error.response.data : error.message);
+			this.logger.error('[LLMService] Erro ao chamar API Gemini:',  error.message);
 			throw error;
 		}
 	}
@@ -215,7 +215,7 @@ class LLMService {
 
 			return response.data;
 		} catch (error) {
-			this.logger.error('Erro ao chamar API Deepseek:', error.response ? error.response.data : error.message);
+			this.logger.error('Erro ao chamar API Deepseek:', error.message);
 			throw error;
 		}
 	}
@@ -280,7 +280,7 @@ class LLMService {
 
 			return response.data;
 		} catch (error) {
-			this.logger.error(`Erro ao chamar API ${options.useLocal ? 'LM Studio Local' : 'OpenAI'}:`, error.response ? error.response.data : error.message);
+			this.logger.error(`Erro ao chamar API ${options.useLocal ? 'LM Studio Local' : 'OpenAI'}:`, error.message);
 			throw error;
 		}
 	}
@@ -301,7 +301,6 @@ class LLMService {
 		try {
 			const endpoint = this.localEndpoint + '/api/v0/chat/completions';
 			
-
 			const messages = [];
 			const systemContext = options.systemContext ?? "Você é ravena, um bot de whatsapp criado por moothz";
 			messages.push({ role: 'system', content: systemContext });
@@ -361,7 +360,7 @@ class LLMService {
 
 			return response.data;
 		} catch (error) {
-			this.logger.error('Erro ao chamar API LM Studio:', error.message);
+			this.logger.error('[LLMService] Erro ao chamar API LM Studio:', error.message);
 			throw error;
 		}
 	}
@@ -429,7 +428,7 @@ class LLMService {
 				},
 			};
 
-			this.logger.debug('[ollamaCompletion] Sending request to Ollama API', {
+			this.logger.debug('[LLMService][ollamaCompletion] Sending request to Ollama API', {
 					endpoint: endpoint,
 					model: payload.model,
 					promptLength: options.prompt.length,
@@ -451,12 +450,12 @@ class LLMService {
 
 		} catch (error) {
 			// Enhanced error logging
-			this.logger.error('Error calling Ollama API:', error.message);
+			this.logger.error('[LLMService] Error calling Ollama API:', error.message);
 			if (error.response) {
-				this.logger.error('Ollama API Response Error Data:', error.response.data);
-				this.logger.error('Ollama API Response Error Status:', error.response.status);
+				//this.logger.error('Ollama API Response Error Data:', error.response.data);
+				this.logger.error('[LLMService] Ollama API Response Error:', error.response.status);
 			} else if (error.request) {
-				this.logger.error('Ollama API No Response Received. Request details:', error.request);
+				this.logger.error('[LLMService] Ollama API No Response Received. Request details:', error.request);
 			}
 			throw error;
 		}
@@ -476,7 +475,7 @@ class LLMService {
 		try {
 			// Se um provedor específico for solicitado, use-o diretamente
 			if (options.provider) {
-				this.logger.debug('Obtendo completação com opções:', { 
+				this.logger.debug('[LLMService] Obtendo completação com opções:', { 
 					provider: options.provider,
 					promptLength: options.prompt.length,
 					temperature: options.temperature || 0.7
@@ -489,7 +488,7 @@ class LLMService {
 			} 
 			// Caso contrário, tente múltiplos provedores em sequência
 			else {
-				this.logger.debug('Nenhum provedor específico solicitado, tentando múltiplos provedores em sequência');
+				this.logger.debug('[LLMService] Nenhum provedor específico solicitado, tentando múltiplos provedores em sequência');
 
 				let response =	await this.getCompletionFromProviders(options);
 				response = response.replace(/<think>.*?<\/think>/gs, "").trim().replace(/^"|"$/g, ""); // Remove tags de think e frase entre aspas
@@ -607,12 +606,12 @@ class LLMService {
 		// Tenta cada provedor em sequência
 		for (const provider of providers) {
 			try {
-				this.logger.debug(`Tentando provedor: ${provider.name}`);
+				this.logger.debug(`[LLMService] Tentando provedor: ${provider.name}`);
 				const result = await provider.method();
-				this.logger.debug(`Provedor ${provider.name} retornou resposta com sucesso`);
+				this.logger.debug(`[LLMService] Provedor ${provider.name} retornou resposta com sucesso`);
 				return result;
 			} catch (error) {
-				this.logger.error(`Erro ao usar provedor ${provider.name}:`, error.response ? error.response.data : error.message);
+				this.logger.error(`Erro ao usar provedor ${provider.name}:`, error.message);
 				// Continua para o próximo provedor
 			}
 		}
