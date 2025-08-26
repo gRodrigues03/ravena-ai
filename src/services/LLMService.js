@@ -340,7 +340,7 @@ class LLMService {
 				stream: false
 			};
 
-			//this.logger.debug('[lmstudioCompletion] Enviando solicitação para API LM Studio:', queryOptions);
+			this.logger.debug('[LLMService][lmstudioCompletion] Enviando solicitação para API LM Studio:', queryOptions);
 
 			if(options.response_format){
 				queryOptions.response_format = options.response_format;
