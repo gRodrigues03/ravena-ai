@@ -40,7 +40,7 @@ class LLMService {
 	 * Envia uma solicitação de completação para OpenRouter
 	 * @param {Object} options - Opções de solicitação
 	 * @param {string} options.prompt - O texto do prompt
-	 * @param {string} [options.model='google/gemini-2.0-flash-exp:free'] - O modelo a usar
+	 * @param {string} [options.model='google/gemini-2.5-flash:free'] - O modelo a usar
 	 * @param {number} [options.maxTokens=1000] - Número máximo de tokens a gerar
 	 * @param {number} [options.temperature=0.7] - Temperatura de amostragem
 	 * @returns {Promise<Object>} - A resposta da API
@@ -53,7 +53,7 @@ class LLMService {
 			}
 
 			this.logger.debug('Enviando solicitação para API OpenRouter:', { 
-				model: options.model || 'google/gemini-2.0-flash-exp:free',
+				model: options.model || 'google/gemini-2.5-flash:free',
 				promptLength: options.prompt.length,
 				maxTokens: options.maxTokens || 5000
 			});
@@ -61,7 +61,7 @@ class LLMService {
 			const response = await axios.post(
 				'https://openrouter.ai/api/v1/chat/completions',
 				{
-					model: options.model || 'google/gemini-2.0-flash-exp:free',
+					model: options.model || 'google/gemini-2.5-flash:free',
 					messages: [
 						{ role: 'user', content: options.prompt }
 					],
@@ -106,7 +106,7 @@ class LLMService {
 				throw new Error('Chave da API Google não configurada');
 			}
 
-			const model = options.model || 'gemini-2.0-flash-exp';
+			const model = options.model || 'gemini-2.5-flash';
 			this.logger.debug('Enviando solicitação para API Gemini:', { 
 				model: model,
 				promptLength: options.prompt.length,
