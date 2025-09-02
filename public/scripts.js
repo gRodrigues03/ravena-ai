@@ -258,7 +258,7 @@ function renderBots(data) {
         const minutesSinceLastMessage = getTimeSinceLastMessage(bot.lastMessageReceived);
         const statusEmoji = getStatusEmoji(minutesSinceLastMessage, bot.connected);
         const statusDesc = getStatusDescription(minutesSinceLastMessage, bot.connected);
-        const phoneNumber = formatPhoneNumber(extractPhoneFromBotId(bot.id, data.bots));
+        const phoneNumber = formatPhoneNumber(extractPhoneFromBotId(bot.id, data.bots)).replace("+55","").trim();
         const whatsappUrl = formatWhatsAppUrl(phoneNumber);
         const msgsHr = Math.round(bot.msgsHr || 0);
         const msgActivityClass = getMessageActivityClass(msgsHr);
@@ -288,6 +288,17 @@ function renderBots(data) {
             `;
         }
         
+        // 
+        let detalhes = "";
+
+        if(bot.semPV || bot.semConvites){
+            const txtDetalhes = [bot.semPV && "PV Desabilitado", bot.semConvites && "Não recebe convites"].filter(Boolean).join(", ");
+
+            detalhes = `<div class="detail-item">
+                    <span class="detail-label" style="width: 100%; text-align: center; color: #a2a20d">${txtDetalhes}</span>
+                </div>`;
+        }
+
         botCard.innerHTML = `
             <div class="bot-header">
                 <div class="bot-title">
@@ -300,15 +311,15 @@ function renderBots(data) {
             </div>
             <div class="bot-details">
                 <div class="detail-item">
+                    <span class="detail-label">Telefone:</span>
+                    <span class="detail-value">${phoneNumber || 'Não disponível'}</span>
+                </div>
+                <div class="detail-item">
                     <span class="detail-label">Última mensagem:</span>
                     <span class="detail-value tooltip-container">
                         ${formatTimeSince(minutesSinceLastMessage)}
                         <span class="tooltip-text">Recebida em: ${formatTime(bot.lastMessageReceived)}</span>
                     </span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Telefone:</span>
-                    <span class="detail-value">${phoneNumber || 'Não disponível'}</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">Msgs/hora:</span>
@@ -329,6 +340,7 @@ function renderBots(data) {
                         <span class="tooltip-text">Delay máximo: ${maxResponseTime}s</span>
                     </span>
                 </div>
+                ${detalhes}
                 ${buttonsHtml}
             </div>
         `;

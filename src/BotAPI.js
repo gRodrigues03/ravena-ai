@@ -122,6 +122,8 @@ class BotAPI {
                 avg: avgResponseTime,
                 max: maxResponseTime
               },
+              semPV: bot.ignorePV || false,
+              semConvites: bot.ignoreInvites || false,
               vip: bot.vip || false // Adiciona a propriedade VIP
             };
           })
@@ -142,6 +144,8 @@ class BotAPI {
               avg: 0,
               max: 0
             },
+            semPV: bot.ignorePV || false,
+            semConvites: bot.ignoreInvites || false,
             vip: bot.vip || false
           }))
         });
