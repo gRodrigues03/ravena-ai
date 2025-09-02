@@ -40,6 +40,33 @@ async function readDonationFooter() {
   }
 }
 
+/**
+ * Formata o tempo passado desde um timestamp.
+ * @param {number} timestamp - O timestamp em milissegundos.
+ * @returns {string} - String formatada, ex: "ontem", "há 2 dias".
+ */
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return 'Data desconhecida';
+    const now = new Date();
+    const past = new Date(timestamp);
+
+    // Intl.RelativeTimeFormat é uma API nativa do JS para formatação de tempo relativo.
+    const rtf = new Intl.RelativeTimeFormat('pt-BR', { numeric: 'auto' });
+
+    const diffInSeconds = Math.floor((now - past) / 1000);
+
+    const days = Math.round(diffInSeconds / 86400);
+    if (days > 0) return rtf.format(-days, 'day');
+
+    const hours = Math.round(diffInSeconds / 3600);
+    if (hours > 0) return rtf.format(-hours, 'hour');
+
+    const minutes = Math.round(diffInSeconds / 60);
+    if (minutes > 0) return rtf.format(-minutes, 'minute');
+
+    return `agora mesmo`;
+}
+
 
 /**
  * Mostra status da meta de doação (se configurada)
@@ -130,27 +157,54 @@ async function showTopDonors(bot, message, args, group) {
       });
     }
     
-    // Ordena doações por valor (maior primeiro)
+    // 1. Encontra a última doação
+    const lastDonation = donations.reduce((latest, current) => {
+        return (current.timestamp && current.timestamp > (latest.timestamp || 0)) ? current : latest;
+    }, {});
+    const timeSinceLastDonation = lastDonation.timestamp ? formatTimeAgo(lastDonation.timestamp) : 'Nunca';
+
+    // 2. Filtra doações dos últimos 3 meses
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    const recentDonations = donations.filter(d => d.timestamp && d.timestamp > threeMonthsAgo.getTime());
+    
+    const totalRecentAmount = recentDonations.reduce((total, donation) => total + donation.valor, 0);
+    
+    // 3. Obtém o top 5 doadores recentes
+    const topRecentDonors = [...recentDonations] // Cria uma cópia para não alterar a original
+        .sort((a, b) => b.valor - a.valor)
+        .slice(0, 5);
+
+    // Ordena doações por valor (maior primeiro) para a lista geral
     donations.sort((a, b) => b.valor - a.valor);
     
     // Limita aos 1000 principais doadores
     const topDonors = donations.slice(0, 1000);
     
-    // Calcula total de doações
-    const totalAmount = donations.reduce((total, donation) => total + donation.valor, 0);
-    
-    const donationLink = process.env.DONATION_LINK || 'https://tipa.ai/seunome';
-
     // Constrói mensagem
     let donorsMsg = await readDonationHeader();
     
+    // Adiciona as novas seções
+    donorsMsg += `A última doação foi recebida ${timeSinceLastDonation}.\n\n`;
+    donorsMsg += `💰 *Total nos últimos 3 meses:* R$${totalRecentAmount.toFixed(2)}\n\n`;
+
+    if (topRecentDonors.length > 0) {
+        donorsMsg += '🏆 *Top 5 doadores (Últimos 3 meses):*\n';
+        topRecentDonors.forEach((donor, index) => {
+            donorsMsg += `${index + 1}. *${donor.nome}*: R$${donor.valor.toFixed(2)}\n`;
+        });
+        donorsMsg += '\n';
+    }
+    
+    donorsMsg += '--- *Todos os Doadores* ---\n';
+    
+    // Adiciona a lista geral de doadores
     topDonors.forEach((donor, index) => {
       let emjNumero = (donor.numero?.length > 5) ? "" : " ❗️";
       donorsMsg += `${index + 1}. *${donor.nome}*: R$${donor.valor.toFixed(2)}${emjNumero}\n`;
     });
     
     donorsMsg += await readDonationFooter();
-
     
     logger.debug('Lista de principais doadores enviada com sucesso');
     

@@ -1018,11 +1018,13 @@ class Database {
       
       // Verifica se o doador já existe
       const existingIndex = donations.findIndex(d => d.nome.toLowerCase() === name.toLowerCase());
+      const now = Date.now();
       
       let donationTotal;
       if (existingIndex !== -1) {
         // Atualiza doação existente
         donations[existingIndex].valor += amount;
+        donations[existingIndex].timestamp = now; // Atualiza o timestamp
         donationTotal = donations[existingIndex].valor;
         if (numero) {
           donations[existingIndex].numero = numero;
@@ -1032,7 +1034,8 @@ class Database {
         donations.push({
           nome: name,
           valor: amount,
-          numero
+          numero,
+          timestamp: now // Adiciona o timestamp
         });
         donationTotal = 0;
       }
@@ -1103,16 +1106,21 @@ class Database {
         this.logger.warn(`Doador "${name}" não encontrado, criando...`);
         donor = {
           nome: name,
-          valor: amount
+          valor: amount,
+          timestamp: Date.now()
         };
         donations.push(donor);
       } else {
-        // Atualiza valor
+        // Atualiza valor e timestamp
         donor.valor += amount;
+        donor.timestamp = Date.now();
       }
 
-      if(donor.valor == 0){
-        donations = donations.filter(d => d.nome !== name);
+      if(donor.valor <= 0){
+        const donorIndex = donations.findIndex(d => d.nome.toLowerCase() === name.toLowerCase());
+        if (donorIndex > -1) {
+          donations.splice(donorIndex, 1);
+        }
         this.logger.warn(`Doador "${name}" foi removido da lista.`);
       }
       
@@ -1149,12 +1157,20 @@ class Database {
         return false;
       }
       
+      const targetDonor = donations[targetIndex];
+      const sourceDonor = donations[sourceIndex];
+
       // Une valores
-      donations[targetIndex].valor += donations[sourceIndex].valor;
+      targetDonor.valor += sourceDonor.valor;
       
       // Mantém número de origem se o alvo não tiver um
-      if (!donations[targetIndex].numero && donations[sourceIndex].numero) {
-        donations[targetIndex].numero = donations[sourceIndex].numero;
+      if (!targetDonor.numero && sourceDonor.numero) {
+        targetDonor.numero = sourceDonor.numero;
+      }
+
+      // Mantém o timestamp mais recente
+      if (sourceDonor.timestamp && (!targetDonor.timestamp || sourceDonor.timestamp > targetDonor.timestamp)) {
+        targetDonor.timestamp = sourceDonor.timestamp;
       }
       
       // Remove doador de origem
