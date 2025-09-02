@@ -74,7 +74,7 @@ async function searchYoutubeVideo(searchTerm) {
  */
 async function processYoutubeReaction(bot, message, emoji) {
   try {
-    if (emoji !== '⏬') return false;
+    if ((emoji !== '⏬') || (!message.group)) return false;
     
     // Obtém texto da mensagem original
     const messageText = message.type === 'text' ? message.content : message.caption;
@@ -302,6 +302,16 @@ async function baixarMusicaYoutube(idVideo, dadosSolicitante, callback) {
  * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
 async function ytCommand(bot, message, args, group) {
+
+  if (!message.group) {
+    try {
+      await message.origin.react('🤷‍♂️');
+    } catch (reactError) {
+      logger.error('Erro ao reagir à mensagem:', reactError);
+    }
+    return false;
+  }
+
   const chatId = message.group || message.author;
   const returnMessages = [];
   
@@ -419,6 +429,15 @@ async function ytCommand(bot, message, args, group) {
  * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
 async function srCommand(bot, message, args, group) {
+  if (!message.group) {
+    try {
+      await message.origin.react('🤷‍♂️');
+    } catch (reactError) {
+      logger.error('Erro ao reagir à mensagem:', reactError);
+    }
+    return false;
+  }
+
   const chatId = message.group || message.author;
   const returnMessages = [];
   

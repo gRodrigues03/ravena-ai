@@ -130,7 +130,7 @@ class EventHandler {
     try {
 
       // Verifica links de convite em chats privados
-      if (!message.group) {
+      if (!message.group && !bot.ignorePV) {
         // Verifica se é uma mensagem de link de convite
         if(!bot.ignoreInvites){
           const isInviteHandled = await bot.inviteSystem.processMessage(message);
@@ -278,9 +278,11 @@ class EventHandler {
         }
 
         // Processa comando normal
-        this.commandHandler.handleCommand(bot, message, commandText, group).catch(error => {
-          this.logger.error('Erro em handleCommand:', error);
-        });
+        if(!bot.ignorePV || message.group){
+          this.commandHandler.handleCommand(bot, message, commandText, group).catch(error => {
+            this.logger.error('Erro em handleCommand:', error);
+          });
+        }
       } else {
         // Processa mensagem não-comando
         // Aqui também vai cair quando o grupo tiver a opção customIgnoresPrefix, que os comandos personalizados não precisam de prefixo
