@@ -190,7 +190,6 @@ async function showTopDonors(bot, message, args, group) {
         }
     });
     
-    // 3. Obtém o top 5 doadores recentes
     const topRecentDonors = Object.values(recentDonorsSummary)
         .sort((a, b) => b.valor - a.valor);
         //.slice(0, 5);
