@@ -590,7 +590,7 @@ class CommandHandler {
     // Verifica se o bot deve ignorar mensagens no PV
     let ignorePV = bot.ignorePV && bot.notInWhitelist(message.author);
 
-    if(ignorePV && message.group === null){ // Recebeu mensagem no PV
+    if(ignorePV && message.group === null && !(command.startsWith('sa-'))){ // Recebeu mensagem no PV e não é de super admin
       return;
     }
     
