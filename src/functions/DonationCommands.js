@@ -163,17 +163,38 @@ async function showTopDonors(bot, message, args, group) {
     }, {});
     const timeSinceLastDonation = lastDonation.timestamp ? formatTimeAgo(lastDonation.timestamp) : 'Nunca';
 
-    // 2. Filtra doações dos últimos 3 meses
+    // 2. Calcula doações dos últimos 3 meses a partir do histórico
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-    const recentDonations = donations.filter(d => d.timestamp && d.timestamp > threeMonthsAgo.getTime());
+    const threeMonthsAgoTs = threeMonthsAgo.getTime();
     
-    const totalRecentAmount = recentDonations.reduce((total, donation) => total + donation.valor, 0);
+    let totalRecentAmount = 0;
+    const recentDonorsSummary = {};
+
+    donations.forEach(donor => {
+        const recentAmount = (donor.historico || [])
+            .filter(h => h.ts > threeMonthsAgoTs)
+            .reduce((sum, h) => sum + h.valor, 0);
+        
+        // Fallback: se não há histórico, mas o timestamp principal é recente, usa o valor total.
+        // É uma forma de lidar com dados antigos que ainda não têm histórico.
+        if (recentAmount === 0 && (!donor.historico || donor.historico.length === 0) && donor.timestamp && donor.timestamp > threeMonthsAgoTs) {
+             const fallbackAmount = donor.valor;
+             if (fallbackAmount > 0) {
+                totalRecentAmount += fallbackAmount;
+                recentDonorsSummary[donor.nome] = { nome: donor.nome, valor: fallbackAmount };
+             }
+        } else if (recentAmount > 0) {
+            totalRecentAmount += recentAmount;
+            recentDonorsSummary[donor.nome] = { nome: donor.nome, valor: recentAmount };
+        }
+    });
     
     // 3. Obtém o top 5 doadores recentes
-    const topRecentDonors = [...recentDonations] // Cria uma cópia para não alterar a original
+    const topRecentDonors = Object.values(recentDonorsSummary)
         .sort((a, b) => b.valor - a.valor);
         //.slice(0, 5);
+
 
     // Ordena doações por valor (maior primeiro) para a lista geral
     donations.sort((a, b) => b.valor - a.valor);
@@ -196,7 +217,7 @@ async function showTopDonors(bot, message, args, group) {
         donorsMsg += '\n';
     }
     
-    donorsMsg += '🏆 *Top Doadores (desde o início):*\n';
+    donorsMsg += '🏆 *Top Doadores (Desde o início):*\n';
     
     // Adiciona a lista geral de doadores
     topDonors.forEach((donor, index) => {
@@ -248,3 +269,4 @@ const commands = [
 
 
 module.exports = { commands };
+

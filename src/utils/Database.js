@@ -1013,43 +1013,44 @@ class Database {
    */
   async addDonation(name, amount, numero = undefined) {
     try {
-      // Obtém doações existentes
-      const donations = await this.getDonations();
-      
-      // Verifica se o doador já existe
-      const existingIndex = donations.findIndex(d => d.nome.toLowerCase() === name.toLowerCase());
-      const now = Date.now();
-      
-      let donationTotal;
-      if (existingIndex !== -1) {
-        // Atualiza doação existente
-        donations[existingIndex].valor += amount;
-        donations[existingIndex].timestamp = now; // Atualiza o timestamp
-        donationTotal = donations[existingIndex].valor;
-        if (numero) {
-          donations[existingIndex].numero = numero;
+        const donations = await this.getDonations();
+        const existingIndex = donations.findIndex(d => d.nome.toLowerCase() === name.toLowerCase());
+        const now = Date.now();
+        const historyEntry = { ts: now, valor: amount };
+
+        let donationTotal;
+        if (existingIndex !== -1) {
+            const donor = donations[existingIndex];
+            donor.valor += amount;
+            donor.timestamp = now;
+            
+            if (!donor.historico || !Array.isArray(donor.historico)) {
+                donor.historico = [];
+            }
+            donor.historico.push(historyEntry);
+
+            if (numero) {
+                donor.numero = numero;
+            }
+            donationTotal = donor.valor;
+        } else {
+            donations.push({
+                nome: name,
+                valor: amount,
+                numero,
+                timestamp: now,
+                historico: [historyEntry]
+            });
+            donationTotal = amount;
         }
-      } else {
-        // Adiciona nova doação
-        donations.push({
-          nome: name,
-          valor: amount,
-          numero,
-          timestamp: now // Adiciona o timestamp
-        });
-        donationTotal = 0;
-      }
-      
-      // Atualiza cache
-      this.cache.donations = donations;
-      
-      // Marca como modificado
-      this.dirtyFlags.donations = true;
-      
-      return donationTotal;
+
+        this.cache.donations = donations;
+        this.dirtyFlags.donations = true;
+
+        return donationTotal;
     } catch (error) {
-      this.logger.error('Erro ao adicionar doação:', error);
-      return false;
+        this.logger.error('Erro ao adicionar doação:', error);
+        return false;
     }
   }
 
@@ -1096,44 +1097,49 @@ class Database {
    */
   async updateDonationAmount(name, amount) {
     try {
-      // Obtém doações existentes
-      const donations = await this.getDonations();
-      
-      // Encontra doador
-      let donor = donations.find(d => d.nome.toLowerCase() === name.toLowerCase());
-      
-      if (!donor) {
-        this.logger.warn(`Doador "${name}" não encontrado, criando...`);
-        donor = {
-          nome: name,
-          valor: amount,
-          timestamp: Date.now()
-        };
-        donations.push(donor);
-      } else {
-        // Atualiza valor e timestamp
-        donor.valor += amount;
-        donor.timestamp = Date.now();
-      }
+        const donations = await this.getDonations();
+        let donor = donations.find(d => d.nome.toLowerCase() === name.toLowerCase());
+        const now = Date.now();
+        const historyEntry = { ts: now, valor: amount };
 
-      if(donor.valor <= 0){
-        const donorIndex = donations.findIndex(d => d.nome.toLowerCase() === name.toLowerCase());
-        if (donorIndex > -1) {
-          donations.splice(donorIndex, 1);
+        if (!donor) {
+            if (amount > 0) {
+                this.logger.warn(`Doador "${name}" não encontrado, criando...`);
+                donor = {
+                    nome: name,
+                    valor: amount,
+                    timestamp: now,
+                    historico: [historyEntry]
+                };
+                donations.push(donor);
+            } else {
+                this.logger.warn(`Doador "${name}" não encontrado, não é possível adicionar valor negativo.`);
+                return false;
+            }
+        } else {
+            donor.valor += amount;
+            donor.timestamp = now;
+            if (!donor.historico || !Array.isArray(donor.historico)) {
+                donor.historico = [];
+            }
+            donor.historico.push(historyEntry);
         }
-        this.logger.warn(`Doador "${name}" foi removido da lista.`);
-      }
-      
-      // Atualiza cache
-      this.cache.donations = donations;
-      
-      // Marca como modificado
-      this.dirtyFlags.donations = true;
-      
-      return true;
+
+        if (donor.valor <= 0) {
+            const donorIndex = donations.findIndex(d => d.nome.toLowerCase() === name.toLowerCase());
+            if (donorIndex > -1) {
+                donations.splice(donorIndex, 1);
+            }
+            this.logger.warn(`Doador "${name}" foi removido da lista.`);
+        }
+        
+        this.cache.donations = donations;
+        this.dirtyFlags.donations = true;
+        
+        return true;
     } catch (error) {
-      this.logger.error('Erro ao atualizar valor da doação:', error);
-      return false;
+        this.logger.error('Erro ao atualizar valor da doação:', error);
+        return false;
     }
   }
 
@@ -1145,47 +1151,49 @@ class Database {
    */
   async mergeDonors(targetName, sourceName) {
     try {
-      // Obtém doações existentes
-      const donations = await this.getDonations();
-      
-      // Encontra ambos os doadores
-      const targetIndex = donations.findIndex(d => d.nome.toLowerCase() === targetName.toLowerCase());
-      const sourceIndex = donations.findIndex(d => d.nome.toLowerCase() === sourceName.toLowerCase());
-      
-      if (targetIndex === -1 || sourceIndex === -1) {
-        this.logger.warn(`Um ou ambos os doadores não encontrados para união: "${targetName}", "${sourceName}"`);
-        return false;
-      }
-      
-      const targetDonor = donations[targetIndex];
-      const sourceDonor = donations[sourceIndex];
+        const donations = await this.getDonations();
+        const targetIndex = donations.findIndex(d => d.nome.toLowerCase() === targetName.toLowerCase());
+        const sourceIndex = donations.findIndex(d => d.nome.toLowerCase() === sourceName.toLowerCase());
 
-      // Une valores
-      targetDonor.valor += sourceDonor.valor;
-      
-      // Mantém número de origem se o alvo não tiver um
-      if (!targetDonor.numero && sourceDonor.numero) {
-        targetDonor.numero = sourceDonor.numero;
-      }
+        if (targetIndex === -1 || sourceIndex === -1) {
+            this.logger.warn(`Um ou ambos os doadores não encontrados para união: "${targetName}", "${sourceName}"`);
+            return false;
+        }
 
-      // Mantém o timestamp mais recente
-      if (sourceDonor.timestamp && (!targetDonor.timestamp || sourceDonor.timestamp > targetDonor.timestamp)) {
-        targetDonor.timestamp = sourceDonor.timestamp;
-      }
-      
-      // Remove doador de origem
-      donations.splice(sourceIndex, 1);
-      
-      // Atualiza cache
-      this.cache.donations = donations;
-      
-      // Marca como modificado
-      this.dirtyFlags.donations = true;
-      
-      return true;
+        const targetDonor = donations[targetIndex];
+        const sourceDonor = donations[sourceIndex];
+
+        // Une valores
+        targetDonor.valor += sourceDonor.valor;
+
+        // Une históricos e ordena por data
+        const sourceHistory = sourceDonor.historico || [];
+        const targetHistory = targetDonor.historico || [];
+        targetDonor.historico = [...targetHistory, ...sourceHistory].sort((a, b) => a.ts - b.ts);
+        
+        // Mantém número de origem se o alvo não tiver um
+        if (!targetDonor.numero && sourceDonor.numero) {
+            targetDonor.numero = sourceDonor.numero;
+        }
+
+        // Atualiza para o timestamp mais recente do histórico combinado
+        if (targetDonor.historico.length > 0) {
+            targetDonor.timestamp = targetDonor.historico[targetDonor.historico.length - 1].ts;
+        } else if (sourceDonor.timestamp && (!targetDonor.timestamp || sourceDonor.timestamp > targetDonor.timestamp)) {
+             // Fallback para dados antigos sem histórico
+            targetDonor.timestamp = sourceDonor.timestamp;
+        }
+        
+        // Remove doador de origem
+        donations.splice(sourceIndex, 1);
+        
+        this.cache.donations = donations;
+        this.dirtyFlags.donations = true;
+        
+        return true;
     } catch (error) {
-      this.logger.error('Erro ao unir doadores:', error);
-      return false;
+        this.logger.error('Erro ao unir doadores:', error);
+        return false;
     }
   }
 
@@ -1376,3 +1384,4 @@ class Database {
 }
 
 module.exports = Database;
+
