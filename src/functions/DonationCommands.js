@@ -172,8 +172,8 @@ async function showTopDonors(bot, message, args, group) {
     
     // 3. Obtém o top 5 doadores recentes
     const topRecentDonors = [...recentDonations] // Cria uma cópia para não alterar a original
-        .sort((a, b) => b.valor - a.valor)
-        .slice(0, 5);
+        .sort((a, b) => b.valor - a.valor);
+        //.slice(0, 5);
 
     // Ordena doações por valor (maior primeiro) para a lista geral
     donations.sort((a, b) => b.valor - a.valor);
@@ -185,18 +185,18 @@ async function showTopDonors(bot, message, args, group) {
     let donorsMsg = await readDonationHeader();
     
     // Adiciona as novas seções
-    donorsMsg += `A última doação foi recebida ${timeSinceLastDonation}.\n\n`;
-    donorsMsg += `💰 *Total nos últimos 3 meses:* R$${totalRecentAmount.toFixed(2)}\n\n`;
+    donorsMsg += `🕙 A última doação foi recebida ${timeSinceLastDonation}.\n\n`;
+    donorsMsg += `💰 *Últimos 3 meses:* R$${totalRecentAmount.toFixed(2)}\n\n`;
 
     if (topRecentDonors.length > 0) {
-        donorsMsg += '🏆 *Top 5 doadores (Últimos 3 meses):*\n';
+        donorsMsg += '🏆 *Top Doadores (Últimos 3 meses):*\n';
         topRecentDonors.forEach((donor, index) => {
             donorsMsg += `${index + 1}. *${donor.nome}*: R$${donor.valor.toFixed(2)}\n`;
         });
         donorsMsg += '\n';
     }
     
-    donorsMsg += '--- *Todos os Doadores* ---\n';
+    donorsMsg += '🏆 *Top Doadores (desde o início):*\n';
     
     // Adiciona a lista geral de doadores
     topDonors.forEach((donor, index) => {
