@@ -278,7 +278,7 @@ class EventHandler {
         }
 
         // Processa comando normal
-        if(!bot.ignorePV || message.group){
+        if(!bot.ignorePV || message.group || textContent.includes("sa-")){
           this.commandHandler.handleCommand(bot, message, commandText, group).catch(error => {
             this.logger.error('Erro em handleCommand:', error);
           });
