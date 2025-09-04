@@ -162,6 +162,10 @@ class Management {
         method: 'openGroup',
         description: 'Abre o grupo (todos podem envar msgs)' 
       },
+      'setPersonalidade': { 
+        method: 'setPersonalidadeIA',
+        description: 'Define uma personalidade para os comandos de IA (max. 150 caractere)' 
+      },
       'setApelido': { 
         method: 'setUserNicknameAdmin',
         description: 'Define um apelido para um usuário específico' 
@@ -1723,6 +1727,53 @@ async setWelcomeMessage(bot, message, args, group) {
       });
     }
   }
+
+  
+  /**
+   * Define uma personalidade customizada para os comandos de IA
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async setPersonalidadeIA(bot, message, args, group) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    if (!group.customAIPrompt) {
+      group.customAIPrompt = "";
+    }
+
+    if(args.length === 0){
+      // Zera mensagem
+      group.customAIPrompt = "";
+    } else {
+      group.customAIPrompt = args.join(" ").slice(0,150);
+    }
+    
+    
+    // Alterna estado do filtro
+    await this.database.saveGroup(group);
+    
+    if (group.customAIPrompt.length > 0) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `✅🤖 Personalidade IA definida como: \`${group.customAIPrompt}\``
+      });
+    } else {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: '❌🤖 A personalidade IA foi removida, usando padrão'
+      });
+    }
+  }
+
+
 
 
 

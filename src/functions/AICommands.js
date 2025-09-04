@@ -41,6 +41,13 @@ async function aiCommand(bot, message, args, group) {
 
   ctxContent += `\n\n## Comandos que você pode processar:\n\n${cmdSimpleList}\n\nPara os comandos personalizados criados com g-addCmd, você pode usar variáveis:\n${variaveisList}\n\nEstes são os comandos usados apenas por administradores para gerenciarem seus grupos: ${cmdGerenciaSimplesList}\n\nSempre que for informar uma variável em um comando, use {} para encapsular ela, como {titulo}, {pessoa}. Quando o comando de gerencia pedir mídia, o comando deve ser enviado na legenda da foto/vídeo ou em resposta (reply) à mensagem que contém midia. Lembre o usuário que com o comando !g-painel algumas configurações do gerenciar são mais fáceis de fazer, como mensagem de boas vindas e canais da twitch/youtube`;
   
+  const customPersonalidade = (group.customAIPrompt && group.customAIPrompt.length > 0) ? `\n\n((Sua personalidade: '${group.customAIPrompt}'))\n\n` : "";
+
+  if(customPersonalidade.length > 0){
+    logger.info(`[aiCommand][${group.name}] Personalidade custom: ${group.customAIPrompt}`);
+    ctxContent += customPersonalidade;
+  }
+
   let question = message.caption ?? message.content;
   const quotedMsg = await message.origin.getQuotedMessage();
   if(quotedMsg){
@@ -87,6 +94,7 @@ async function aiCommand(bot, message, args, group) {
       // Quando interpretar imagens, usar um contexto diferente
       const ctxPath = path.join(database.databasePath, 'textos', 'llm_context_images.txt');
       completionOptions.systemContext = await fs.readFile(ctxPath, 'utf8') || "Você se chama ravenabot e deve inter esta imagem enviada no WhatsApp";
+      completionOptions.systemContext += customPersonalidade;
     } else {
       return new ReturnMessage({
         chatId: chatId,

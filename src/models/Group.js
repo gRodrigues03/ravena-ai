@@ -51,7 +51,7 @@ class Group {
     this.mutedStrings = data.mutedStrings || [];
     this.mutedCategories = data.mutedCategories || [];
     this.nicks = data.nicks || [];
-    
+    this.customAIPrompt = data.customAIPrompt || [];
     
     // Metadados
     this.createdAt = data.createdAt || Date.now();
@@ -86,6 +86,7 @@ class Group {
       ignoredUsers: this.ignoredUsers, 
       mutedStrings: this.mutedStrings,
       nicks: this.nicks,
+      customAIPrompt: this.customAIPrompt,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };
@@ -150,6 +151,7 @@ class Group {
     if (data.ignoredUsers) this.ignoredUsers = data.ignoredUsers;
     if (data.mutedStrings) this.mutedStrings = data.mutedStrings;
     if (data.nicks) this.nicks = data.nicks;
+    if (data.customAIPrompt) this.customAIPrompt = data.customAIPrompt;
     
     // Atualiza carimbos de data/hora
     this.updatedAt = Date.now();

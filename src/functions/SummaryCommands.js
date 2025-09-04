@@ -85,14 +85,17 @@ async function summarizeConversation(bot, message, args, group) {
     
     // Formata mensagens para prompt
     const formattedMessages = formatMessagesForPrompt(recentMessages);
-    
+      
+    const customPersonalidade = (group.customAIPrompt && group.customAIPrompt.length > 0) ? `\n\n((Sua personalidade: '${group.customAIPrompt}'))\n\n` : "";
+
     // Cria prompt para LLM
     const prompt = `Abaixo está uma conversa recente de um grupo de WhatsApp. Por favor, resuma os principais pontos discutidos de forma concisa:
-
+${customPersonalidade}
 ${formattedMessages}
 
 Resumo:`;
     
+
     
     // Obtém resumo do LLM
     const summary = await llmService.getCompletion({ prompt: prompt });
@@ -191,10 +194,11 @@ async function interactWithConversation(bot, message, args, group) {
     
     // Formata mensagens para prompt
     const formattedMessages = formatMessagesForPrompt(recentMessages);
-    
+
+    const customPersonalidade = (group.customAIPrompt && group.customAIPrompt.length > 0) ? `\n\n((Sua personalidade: '${group.customAIPrompt}'))\n\n` : "";
     // Cria prompt para LLM
     const prompt = `Responda apenas em português do brasil. A seguir anexei uma conversa recente de um grupo de WhatsApp. Crie uma única mensagem curta para interagir com o grupo de forma natural, como se você entendesse o assunto e quisesse participar da conversa com algo relevante. Tente usar o mesmo tom e estilo informal que as pessoas estão usando. A mensagem deve ser curta e natural:
-
+${customPersonalidade}
 ${formattedMessages}`;
     
     logger.info(`[interactWithConversation] Enviando prompt: ${prompt.substring(0, 500)}`);
@@ -272,7 +276,7 @@ async function storeMessage(message, group) {
       if(message.content){
         const completionOptions = {
           prompt: "Analise a foto e retorne apenas uma sucinta descrição (em pt-BR) do que vê na imagem no formato, máximo 200 caracteres: Imagem[xxxx xxxx xxx]",
-          systemContext: "Você é um bot especialista em interpretação de imagens.",
+          systemContext: `Você é um bot especialista em interpretação de imagens.`,
           //provider: 'lmstudio',
           image: message.content.data
         };
