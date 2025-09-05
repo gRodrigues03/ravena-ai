@@ -45,6 +45,7 @@ class SuperAdmin {
       'unblockList': {'method': 'unblockList', 'description': 'Desbloqueia todos os contatos recebidos separados por vírgula'},
       'listaGruposPessoa': {'method': 'listaGruposPessoa', 'description': 'Lista todos os grupos em comum com uma pessoa'},
       'blockTudoPessoa': {'method': 'blockTudoPessoa', 'description': 'Sai de todos os grupos em comum com uma pessoa e bloqueia todos os membros'},
+      'reagir': {'method': 'reagir', 'description': 'Reage com o emoji informado [debug apenas]'},
       'wol': {'method': 'wakeOnLan', 'description': 'Envia pacote wake-on-lan na rede'}
     };
   }
@@ -833,6 +834,28 @@ class SuperAdmin {
     }
   }
 
+
+  /**
+   * Pra testar reacts
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @returns {Promise<ReturnMessage>} - Retorna mensagem de sucesso ou erro
+   */
+  async reagir(bot, message, args) {
+    try {
+      const chatId = message.group || message.author;
+      
+      try {
+        const emoji = args[0] ?? "✅";
+        await message.origin.react(emoji);
+      } catch (e) {
+        this.logger.error('Erro ao reagir:', e);
+      }
+    } catch (error) {
+      this.logger.error('Erro no comando reagir:', error);
+    }
+  }
 
   /**
    * Simula um evento de stream online/offline
