@@ -194,7 +194,7 @@ async function jogarRoletaRussa(bot, message, args, group) {
       
       // Reage com emoji de caixão se estiver em timeout
       try {
-        await message.origin.react("⚰️");
+        await message.origin.react("☠️");
       } catch (reactError) {
         logger.error('Erro ao aplicar reação de caixão:', reactError);
       }
@@ -261,7 +261,7 @@ async function jogarRoletaRussa(bot, message, args, group) {
       
       // Reage com emoji de caixão
       try {
-        await message.origin.react("⚰️");
+        await message.origin.react("☠️");
       } catch (reactError) {
         logger.error('Erro ao aplicar reação de caixão:', reactError);
       }
