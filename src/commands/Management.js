@@ -1381,7 +1381,7 @@ async setWelcomeMessage(bot, message, args, group) {
         
         // Mostra contagem de respostas
         if (cmd.responses && cmd.responses.length > 0) {
-          infoMessage += `${cmd.responses.length} respostas`;
+          infoMessage += `${cmd.responses.length} respostas\n`;
 
           for(let resp of cmd.responses){
             infoMessage += `> ${resp}\n`;
