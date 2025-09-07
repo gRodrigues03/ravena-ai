@@ -1382,6 +1382,10 @@ async setWelcomeMessage(bot, message, args, group) {
         // Mostra contagem de respostas
         if (cmd.responses && cmd.responses.length > 0) {
           infoMessage += `${cmd.responses.length} respostas\n`;
+          // Mostra contador de uso
+          if (cmd.count) {
+            infoMessage += `, usado ${cmd.count} vezes`;
+          }
 
           for(let resp of cmd.responses){
             infoMessage += `> ${resp}\n`;
@@ -1398,10 +1402,6 @@ async setWelcomeMessage(bot, message, args, group) {
             }
           }
           
-          // Mostra contador de uso
-          if (cmd.count) {
-            infoMessage += `, usado ${cmd.count} vezes`;
-          }
         } else {
           infoMessage += 'Sem respostas';
         }
@@ -1414,7 +1414,7 @@ async setWelcomeMessage(bot, message, args, group) {
         infoMessage += `_... e mais ${activeCommands.length - maxCommands} comandos_\n`;
       }
 
-      infoMessage += `*Armazenamento:*\n`;
+      infoMessage += `\n*Armazenamento:*\n`;
       infoMessage += `- *Arquivos:* ${filesInfo.totalFiles} arquivos\n`;
       infoMessage += `- *Espaço usado:* ${formatSize(filesInfo.totalSize)}\n\n`;
       
