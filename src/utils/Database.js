@@ -692,6 +692,16 @@ class Database {
   }
 
   /**
+   * Obtém um grupo específico por nome
+   * @param {string} groupId - O ID do grupo
+   * @returns {Object|null} - O objeto do grupo ou null se não encontrado
+   */
+  async getGroupByName(groupName) {
+    const groups = await this.getGroups();
+    return groups.find(group => group.name === groupName) || null;
+  }
+
+  /**
    * Salva um grupo (apenas em cache)
    * @param {Object} group - O objeto do grupo a ser salvo
    * @returns {boolean} - Status de sucesso

@@ -17,7 +17,7 @@ class Management {
     
     // Mapeamento de comando para método
     this.commandMap = {
-      'setName': {
+      'setNome': {
         method: 'setGroupName',
         description: 'ID/Nome do grupo (nome stickers, gerenciamento)'
       },
@@ -349,6 +349,16 @@ class Management {
     
     const newName = args.join(' ');
     
+    const grupoExistente = await this.database.getGroupByName(newName);
+
+    if(grupoExistente){
+      this.logger.info(`[setGroupName] ${message.author} tentou renomear grupo '${group.name}' para '${newName}', mas já existe um!`, [group,grupoExistente]);
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Já existe um grupo chamado '${newName}', por favor, escolha outro nome.`
+      });
+    }
+
     // Atualiza nome do grupo no banco de dados
     group.name = newName.toLowerCase().replace(/\s+/g, '').substring(0, 16);
     await this.database.saveGroup(group);
