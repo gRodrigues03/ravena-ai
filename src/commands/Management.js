@@ -1381,10 +1381,10 @@ async setWelcomeMessage(bot, message, args, group) {
         
         // Mostra contagem de respostas
         if (cmd.responses && cmd.responses.length > 0) {
-          infoMessage += `${cmd.responses.length} respostas\n`;
+          infoMessage += `${cmd.responses.length} respostas`;
           // Mostra contador de uso
           if (cmd.count) {
-            infoMessage += `, usado ${cmd.count} vezes`;
+            infoMessage += `, usado ${cmd.count} vezes\n`;
           }
 
           for(let resp of cmd.responses){
