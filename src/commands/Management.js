@@ -1374,7 +1374,7 @@ async setWelcomeMessage(bot, message, args, group) {
       infoMessage += `*Comandos Personalizados (${activeCommands.length}):*\n`;
       
       // Lista comandos personalizados com suas informações detalhadas
-      const maxCommands = 1000; // Math.min(5, activeCommands.length);
+      const maxCommands = Math.min(1000, activeCommands.length);
       for (let i = 0; i < maxCommands; i++) {
         const cmd = activeCommands[i];
         infoMessage += `- *${group.prefix}${cmd.startsWith}*: `;
