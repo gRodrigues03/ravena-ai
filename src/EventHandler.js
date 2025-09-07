@@ -71,9 +71,19 @@ class EventHandler {
           this.groups[groupId] = new Group(existingGroup);
         } else {
           // Cria novo grupo
-          const displayName = name || 
+          let displayName = name || 
             (groupId.split('@')[0].toLowerCase().replace(/\s+/g, '').substring(0, 16));
-            
+          
+
+          // Verifica se já tem grupo com esse nome antes
+          let grupoExistente = await this.database.getGroupByName(displayName);
+          while(grupoExistente){
+            const rndG = Math.floor(Math.random() * 100);
+            this.logger.info(`[getOrCreateGroup] Tentei criar grupo '${displayName}', tentando agora '${displayName}${rndG}', mas já existe um!`, grupoExistente);
+            displayName = `${displayName}${rndG}`;
+            grupoExistente = await this.database.getGroupByName(displayName);            
+          }
+
           const group = new Group({
             id: groupId,
             name: displayName,
@@ -635,7 +645,7 @@ class EventHandler {
             // Envia a mensagem de boas-vindas gerada
             if (groupWelcomeMessage) {
               this.logger.debug(`[groupJoin] LLM Welcome: ${groupWelcomeMessage}`);
-              bot.senproedMessage(group.id, groupWelcomeMessage).catch(error => {
+              bot.sendMessage(group.id, groupWelcomeMessage).catch(error => {
                 this.logger.error('Erro ao enviar mensagem de boas-vindas do grupo:', error);
               });
             }
