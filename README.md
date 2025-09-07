@@ -151,6 +151,7 @@ DL_FOLDER=D:/downloads          # Pasta onde serão baixados mídias (youtube, e
 NOTIFY_UNKNOWN_COMMANDS=false   # Responder mensagens de "comando não encontrado"
 SUPER_ADMINS=12345@c.us         # Número de pessoas que podem dar comandos de SuperAdmin (padrão ID whats)
 MAX_BACKUPS=10
+CMD_WHITELIST=sa-,anoni     # Comandos pra considerar mesmo que o bot esteja com "ignorar PV" habilitado
 
 # API da RavenaBot
 # Completamente opcional, ainda mais pra quem vai rodar o bot particular

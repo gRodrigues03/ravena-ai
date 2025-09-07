@@ -27,6 +27,9 @@ class EventHandler {
     this.rankingMessages = RankingMessages;
     this.userGreetingManager = require('./utils/UserGreetingManager').getInstance();
     this.groups = {};
+    this.comandosWhitelist = process.env.CMD_WHITELIST ? process.env.CMD_WHITELIST.split(",") : ["sa-", "anoni"];
+
+    this.logger.info(`[EventHandler] CmdWhitelist:`, this.comandosWhitelist);
     this.loadGroups();
   }
 
@@ -128,9 +131,10 @@ class EventHandler {
    */
   async processMessage(bot, message) {
     try {
+      let ignorePV = bot.ignorePV && bot.notInWhitelist(message.author) && message.group === null; 
 
       // Verifica links de convite em chats privados
-      if (!message.group && !bot.ignorePV) {
+      if (!message.group && !ignorePV) {
         // Verifica se é uma mensagem de link de convite
         if(!bot.ignoreInvites){
           const isInviteHandled = await bot.inviteSystem.processMessage(message);
@@ -278,7 +282,7 @@ class EventHandler {
         }
 
         // Processa comando normal
-        if(!bot.ignorePV || message.group || textContent.includes("sa-")){
+        if(!ignorePV || message.group || this.comandosWhitelist.some(cW => textContent.includes(cW))){
           this.commandHandler.handleCommand(bot, message, commandText, group).catch(error => {
             this.logger.error('Erro em handleCommand:', error);
           });
@@ -306,7 +310,9 @@ class EventHandler {
     const processed = await SpeechCommands.processAutoSTT(bot, message, group);
     if (processed) return;
 
-    if (!group && !bot.ignorePV) {
+    let ignorePV = bot.ignorePV && bot.notInWhitelist(message.author) && message.group === null; 
+
+    if (!group && !ignorePV) {
       const stickerProcessed = await Stickers.processAutoSticker(bot, message, group);
       if (stickerProcessed) return;
     }

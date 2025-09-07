@@ -587,13 +587,7 @@ class CommandHandler {
       return;
     }
 
-    // Verifica se o bot deve ignorar mensagens no PV
-    let ignorePV = bot.ignorePV && bot.notInWhitelist(message.author);
-
-    if(ignorePV && message.group === null && !(command.startsWith('sa-'))){ // Recebeu mensagem no PV e não é de super admin
-      return;
-    }
-    
+        
     // Verifica se é um comando fixo
     const fixedCommand = this.fixedCommands.getCommand(command);
     if (fixedCommand) {

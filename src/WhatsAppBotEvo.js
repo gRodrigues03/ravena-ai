@@ -803,33 +803,11 @@ class WhatsAppBotEvo {
         });
 
       }
-
-      // 2. Configure Webhook in Evolution API
-      // const fullWebhookUrl = `${this.webhookHost.replace(/\/$/, '')}${webhookPath}`;
-      // this.logger.info(`Attempting to set Evolution API webhook for instance ${this.instanceName} to: ${fullWebhookUrl}`);
-      
-      // // IMPORTANT: Verify the exact event names your Evolution API version uses!
-      // const desiredEvents = [
-      //   "messages.upsert", 
-      //   "messages.update", // For reactions or edits, if applicable
-      //   "connection.update",
-      //   "group-participants.update", // For join/leave
-      //   // "groups.update", // For group subject/description changes
-      //   // "message.reaction" // If reactions are a separate event
-      // ];
-
-      // await this.apiClient.post(`/instance/webhook/set`, { // Pass instanceName via constructor to apiClient
-      //   enabled: true,
-      //   url: fullWebhookUrl,
-      //   // events: desiredEvents // Some Evolution API versions might not support granular events here, it might be all or none
-      // });
-      // this.logger.info(`Successfully requested webhook setup for instance ${this.instanceName}.`);
-
     } catch (error) {
       this.logger.error(`Error during webhook setup for instance ${this.instanceName}:`, error);
       // Decide if we should throw or try to continue without webhooks for sending only
     }
-
+    
     // 3. Load donations to whitelist (from original bot)
     this._loadDonationsToWhitelist();
 
