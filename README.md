@@ -42,17 +42,16 @@ Se você quer interagir com o bot e testar ele, eu disponibilizo o mesmo _gratui
 Lista completa do que já foi feito [aqui](docs/TODO.md)
 
 - [x] Migrar do **whatsapp-web.js** pro **EvolutionAPI**
-  - [ ] Sticker Animado
+  - [x] Sticker Animado (gambiarra com links)
   - [ ] Eventos de connection
-- [ ] Melhorias com redis
-  - [ ] Cache para !resumo e !interagir
-  - [ ] Cooldowns
+- [x] Melhorias com redis
+  - [x] Cache para !resumo e !interagir
+  - [x] Cooldowns
 - [x] Fix Reactions
 - [x] Bot tentando notificar sem estar nos grupos
+- [x] Novo Jogo: Anagrama (Obrigado, Zack!)
 - [ ] Add !g-resetFaladores
-- [ ] Novo Jogo: Anagrama
 - [ ] Novo Comando: busca no youtube
-- [ ] Downloader de SocialMedias (Insta, TikTok - dificil pois bloqueiam)
 
 ## 🔧 Como hospedar sua própria ravena
 Se você não entende nada de programação ou nunca rodou aplicativos via código fonte, o melhor mesmo é chamar seu amigo da TI pra dar aquele help.
@@ -85,6 +84,7 @@ Para funções bastante utilizadas do bot
 * [API - RiotGames](https://developer.riotgames.com/): Busca de ELO informações de jogos da Riot
 * [API - Placas](https://apiplacas.com.br/): API paga para busca de placas de carros (não é das melhores, mas é barato!)
 * [LM Studio](https://lmstudio.ai/): Caso não queira usar APIs para IA, hospede sua própria
+* [EvolutionAPI](https://github.com/EvolutionAPI/evolution-api): Alternativa ao wwebjs que roda no chrome, use _apenas_ se quiser rodar com MUITOS (200+) grupos
 
 
 ### Passo a passo
@@ -122,11 +122,18 @@ Edite o arquivo `bots.json` conforme instruções abaixo:
 ```json
 [
    {
-    "nome": "ravenabot",
-    "numero": "559912345678",
+    "enabled": true,            // Habilitar ou não essa entrada
+    "nome": "ravenabot",        // Identificador do bot para os logs e EvoAPI
+    "numero": "559912345678",   // Numero do celular do perfil do whatsapp, apenas números
     "ignorePV": false,          // Ignorar comandos no PV (menos de gerencia)
     "ignoreInvites": false,     // Não ativar sistema de invites
-    "customPrefix": "!"         // Prefixo padrão dos comandos (os grupos são criados com este prefixo, mas podem alterar depois)
+    "customPrefix": "!",         // Prefixo padrão dos comandos (os grupos são criados com este prefixo, mas podem alterar depois)
+
+    // Atualmente, eu migrei para a EvolutionAPI pois a ravena recebe mensagens demais que travam o Chrome do wweb.js
+    // Não recomendo configurar nele, é muito trabalho pra ter mais erros
+    "useEvo": false,            // Uso avançado usando a EvolutionAPI. O nome do bot deve ser o mesmo no painel da evo
+    "webhookPort": 3457,        // Apenas para EvolutionAPI, ignore 99% dos casos
+    "useWebsocket": true       // Apenas para EvolutionAPI, ignore 99% dos casos
    }
 ]
 ```
@@ -136,68 +143,92 @@ Edite o arquivo `.env` conforme instruções abaixo:
 
 ```env
 # Opções Gerais
-DEFAULT_PREFIX=!                    # Prefixo padrão de comandos
-SAFE_MODE=false                     # Apenas simula envio de mensagens e printa no terminal
-DEBUG=true                          # Mostra Mensagens de debug mais
-HEADLESS_MODE=false                 # false = mostra o navegador, true = navegador escondido
-DL_FOLDER=D:/downloads              # Pasta onde serão baixados mídias (youtube, etc)
-NOTIFY_UNKNOWN_COMMANDS=false       # Responder mensagens de "comando não encontrado"
-SUPER_ADMINS=12345@c.us             # Número de pessoas que podem dar comandos de SuperAdmin (padrão ID whats)
+DEFAULT_PREFIX=!                # Prefixo padrão de comandos
+SAFE_MODE=false                 # Apenas simula envio de mensagens e printa no terminal
+DEBUG=true                      # Mostra Mensagens de debug mais detalhadas
+HEADLESS_MODE=false             # false = mostra o navegador, true = navegador escondido
+DL_FOLDER=D:/downloads          # Pasta onde serão baixados mídias (youtube, etc)
+NOTIFY_UNKNOWN_COMMANDS=false   # Responder mensagens de "comando não encontrado"
+SUPER_ADMINS=12345@c.us         # Número de pessoas que podem dar comandos de SuperAdmin (padrão ID whats)
 MAX_BACKUPS=10
 
 # API da RavenaBot
-BOT_DOMAIN=https://seuhost.com/rv   # URL da API 
-API_PORT=5000                       # Porta da API
-BOTAPI_USER=admin                   # Usuário para comandos remotos
-BOTAPI_PASSWORD=senhaCecreta        # Senha para comandos Remotos
-MANAGEMENT_TOKEN_DURATION=30        # Tempo em minutos de duração da sessão para !g-painel
+# Completamente opcional, ainda mais pra quem vai rodar o bot particular
+# Eu uso cloudflare pra domínio externo ravena.moothz.win
+BOT_DOMAIN=https://seuhost.com/rv # URL da API 
+API_PORT=5000           # Porta da API
+BOTAPI_USER=admin         # Usuário para comandos remotos
+BOTAPI_PASSWORD=senhaCecreta    # Senha para comandos Remotos
+MANAGEMENT_TOKEN_DURATION=30    # Tempo em minutos de duração da sessão para !g-painel
 
 # Chaves de API Externas
-TWITCH_CLIENT_ID=                   # https://dev.twitch.tv/docs/api/
-TWITCH_CLIENT_SECRET=               # 
-GOOGLE_API_KEY=                     # https://ai.google.dev/
-GOOGLE_MAPS_API_KEY=                # https://developers.google.com/maps/documentation/javascript/get-api-key
-DEEPSEEK_API_KEY=                   # https://platform.deepseek.com/apiKeys
-OPENAI_API_KEY=                     # https://openai.com/api/
-OPENROUTER_API_KEY=                 # https://openrouter.ai/docs/api-reference/api-keys/get-api-key
-OPENWEATHER_API_KEY=                # https://openweathermap.org/api
-RIOT_GAMES=                         # https://developer.riotgames.com/
-GIPHY_API_KEY=                      # https://developers.giphy.com/
-OMDB_API_KEY=                       # https://www.omdbapi.com/apikey.aspx
-UNSPLASH_API_KEY=                   # https://unsplash.com/developers
-LASTFM_APIKEY=                      # https://www.last.fm/pt/api
-LASTFM_SECRET=                      # 
-API_PLACAS_COMUM=                   # https://apiplacas.com.br/
-API_PLACAS_PREMIUM=                 # https://apiplacas.com.br/
-TIPA_TOKEN=                         # https://tipa.ai/settings/apps (WEBHOOKS)
-#API_PLACAS_USAR_PREMIUM=TRUE       # Caso tenha comprad uma chave premium
+TWITCH_CLIENT_ID=         # https://dev.twitch.tv/docs/api/
+TWITCH_CLIENT_SECRET=       # 
+KICK_CLIENT_ID=           # https://docs.kick.com/getting-started/kick-apps-setup
+KICK_CLIENT_SECRET=         #
+GOOGLE_API_KEY=           # https://ai.google.dev/ + https://console.cloud.google.com/apis/credentials/key
+GOOGLE_MAPS_API_KEY=        # Habilite as APIs: Generative Language API, Map Static API, Places API, Places API (New), Street View Static API
+DEEPSEEK_API_KEY=         # https://platform.deepseek.com/apiKeys
+OPENAI_API_KEY=           # https://openai.com/api/
+OPENROUTER_API_KEY=         # https://openrouter.ai/docs/api-reference/api-keys/get-api-key
+OPENWEATHER_API_KEY=        # https://openweathermap.org/api
+RIOT_GAMES=             # https://developer.riotgames.com/
+GIPHY_API_KEY=            # https://developers.giphy.com/
+OMDB_API_KEY=           # https://www.omdbapi.com/apikey.aspx
+UNSPLASH_API_KEY=         # https://unsplash.com/developers
+LASTFM_APIKEY=            # https://www.last.fm/pt/api
+LASTFM_SECRET=            # 
+API_PLACAS_COMUM=         # https://apiplacas.com.br/
+API_PLACAS_PREMIUM=         # https://apiplacas.com.br/
+TIPA_TOKEN=             # https://tipa.ai/settings/apps (WEBHOOKS)
+#API_PLACAS_USAR_PREMIUM=TRUE   # Caso tenha comprad uma chave premium
 GRUPOS_PLACA_PREMIUM=grupo1,grupo2  # Nomes de grupos que podem usar a API placa premium
 
 # URL de APIs Locais
-API_TIMEOUT=10000                   # 
-SDWEBUI_URL=http://192.168.3.200:7860       # Porta padrão SDWebui
-LOCAL_LLM_ENDPOINT=http://localhost:9666/v1 # Porta padrão LMStudio
-ALLTALK_API=http://localhost:7851           # Porta padrão AllTalk v2
+API_TIMEOUT=10000           # 
+SDWEBUI_URL=http://192.168.3.200:7860     # Porta padrão SDWebui
+SDWEBUI_TOKEN=                # base64 de user:password de --api-auth
+LOCAL_LLM_ENDPOINT=http://localhost:9666  # Porta padrão LMStudio
+LOCAL_LLM_MODEL=google/gemma-3-12b      # Pegar nome do /v1/models
+OLLAMA_ENDPOINT=http://localhost:11434
+OLLAMA_MODEL=gemma3:12b
+#LMStudioToken=               # Não implementado ainda
+ALLTALK_API=http://localhost:7851       # Porta padrão AllTalk v2
 
 # Configuração das doações (provavelmente inútil pra ti que vai rodar o bot particular)
-DONATION_LINK=https://tipa.ai/user
+DONATION_LINK=https://tipa.ai/moothz
 DONATION_GOAL_AMOUNT=1000
 DONATION_GOAL_DESCRIPTION=Pagar o moothz!
 
 # Grupos para Desenvolvimento e debug do bot
-LINK_GRUPO_INTERACAO=https://chat.whatsapp.com/abc123   # Para !grupao
-LINK_GRUPO_AVISOS=https://chat.whatsapp.com/def456      # Para !avisos
-GRUPO_LOGS=1234678901234567890@g.us                     # ID WhatsApp de grupos para debug e monitoramento
-GRUPO_INVITES=1234678901234567890@g.us                  # 1. Adicione o bot nos grupos
-GRUPO_AVISOS=1234678901234567890@g.us                   # 2. Abra o arquivo data/groups.json
-GRUPO_INTERACAO=1234678901234567890@g.us                # 3. Pegueo o ID de lá! (pra facilitar, use !g-setName)
+# Completamente opcional, ainda mais pra quem vai rodar o bot particular
+LINK_GRUPO_INTERACAO=https://chat.whatsapp.com/abc123 # Para !grupao
+LINK_GRUPO_AVISOS=https://chat.whatsapp.com/def456    # Para !avisos
+GRUPO_LOGS=1234678901234567890@g.us           # ID WhatsApp de grupos para debug e monitoramento
+GRUPO_ESTABILIDADE=1234678901234567890        # 1. Adicione o bot nos grupos
+GRUPO_INVITES=1234678901234567890@g.us        # 2. Abra o arquivo data/groups.json
+GRUPO_AVISOS=1234678901234567890@g.us         # 3. Pegueo o ID de lá! (pra facilitar, use !g-setName)
+GRUPO_INTERACAO=1234678901234567890@g.us      # 
 
 
 # Programas
-# Eu rodo a ravena em um Windows Server, então vou deixar aqui os exemplos como seria em uma máquina Windows
+# Vou deixar aqui os exemplos como seria em uma máquina Windows
 WHISPER=C:/Apps/Faster-Whisper-XXL/faster-whisper-xxl.exe
+#WHISPER_USE_GPU=                     # Defina pra rodar na GPU ao invés de CPU, caso suporte
 FFMPEG_PATH=C:/Apps/ffmpeg.exe
 CHROME_PATH=C:/Program Files/Google/Chrome/Application/chrome.exe
+
+# EvolutionAPI - Apenas uso avançado, ignore
+#USE_EVOLUTION=         # Usar Evolution ao invés do whatsappweb-js
+#EVOLUTION_API_URL=       # http://localhost:1234
+#EVOLUTION_API_KEY=       # abcd12345*&¨%%
+#EVOLUTION_BOT_TOKEN=     # Não utilizado ainda
+#EVO_WEBHOOK_HOST=        # Prefiro usar websocket, mas se quiser
+#EVO_WEBHOOK_PORT=        # Configure webhook aqui
+
+# Outros
+# Nem todos emojis são suportados na EvoAPI para 'reagir' às mensagens
+LOADING_EMOJI=🌀
 ```
 ## 🧩 Criando Novos Comandos
 
