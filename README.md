@@ -10,8 +10,8 @@ RavenaBot é um bot para WhatsApp que vem sendo desenvolvido há quase 4 anos, a
 O foco deste bot é a utilização do mesmo em grupos, onde ele pode notificar status das lives, responder comandos com utilidades (!clima, !gpt, ..,), criar comandos personalizados do grupo (como nightbot, StreamElements, etc.).
 
 Este bot foi implemetado utilizando duas tecnologias:
-- [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js): Manipula o WhatsAppWeb através de um navegador controlado pelo puppeteer, fácil de configurar, mas com muitas mensagens fica com delay, trava e/ou desconecta. **Recomendo** *muito* utilizar ele, pela facilidade de configurar.
-- [EvoutionAPI](github.com/EvolutionAPI/evolution-api): Os bots ficam logados no Evolution que utiliza o [Baileys](https://github.com/WhiskeySockets/Baileys), direto no websocket do whatsapp. Extremamente rápido e não dá delays (até agora), mais difícil de implementar
+- [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js): Manipula o WhatsAppWeb através de um navegador controlado pelo puppeteer, fácil de configurar, mas com muitas mensagens fica com delay, trava e/ou desconecta. **Recomendo** *muito* utilizar ele, pela facilidade de configurar - o padrão do bot é usar isso, não se preocupe
+- [EvoutionAPI](github.com/EvolutionAPI/evolution-api): Os bots ficam logados no Evolution que utiliza o [Baileys](https://github.com/WhiskeySockets/Baileys), direto no websocket do whatsapp. Extremamente rápido e não dá delays (até agora), mais difícil de implementar. _Para ativar, é necessário definir no bots.json_
 
 Bots deste tipo **não são permitidos**, então não use em seu número principal - compre um chip só pra isso.
 
@@ -61,7 +61,7 @@ O programa foi feito para rodar em Windows e Linux (MacOS deve funcionar sem pro
 Sem isso, não vai dar pra rodar o bot.
 
 * Um servidor capaz de rodar o nodejs e todas as dependências
-* Um celular com whatsapp ativo (NÃO USE O SEU CHIP!)
+* Um celular com whatsapp ativo (NÃO USE O SEU CHIP PARTICULAR, COMPRE UM SÓ PRA ISSO!)
 * [Node.js](https://nodejs.org/)
 * [Google Chrome](https://www.google.com/chrome/): Para poder enviar vídeos é necessário o Chrome (somente para whatsapp-web.js)
 * [FFmpeg](https://ffmpeg.org/download.html): (para processamento de áudio e vídeo)
@@ -76,6 +76,8 @@ Para funções bastante utilizadas do bot
 * [API - OWM](https://openweathermap.org/api): API grátis de previsão do tempo
 
 ### Opcionais e Extras
+* [LM Studio](https://lmstudio.ai/): Caso não queira usar APIs para IA, que podem gerar custos, hospede sua própria. Recomendo utilizar o `google/gemma-3-12b` da google
+* [Ollama](https://github.com/ollama/ollama): Mesmo padrão do LM Studio, use um ou outro, os 2 juntos seria apenas para redundância
 * [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui): Para gerar imagens com IA localmente
 * [API - Giphy](https://developers.giphy.com/): Para busca de GIFs
 * [API - OMDB](https://www.omdbapi.com/apikey.aspx): Para busca de informação de filmes (IMDB Free)
@@ -83,7 +85,6 @@ Para funções bastante utilizadas do bot
 * [API - Last.fm](https://www.last.fm/pt/api): Busca no Last.fm (perfis, infos)
 * [API - RiotGames](https://developer.riotgames.com/): Busca de ELO informações de jogos da Riot
 * [API - Placas](https://apiplacas.com.br/): API paga para busca de placas de carros (não é das melhores, mas é barato!)
-* [LM Studio](https://lmstudio.ai/): Caso não queira usar APIs para IA, hospede sua própria
 * [EvolutionAPI](https://github.com/EvolutionAPI/evolution-api): Alternativa ao wwebjs que roda no chrome, use _apenas_ se quiser rodar com MUITOS (200+) grupos
 
 

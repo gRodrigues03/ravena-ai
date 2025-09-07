@@ -1211,6 +1211,11 @@ async setWelcomeMessage(bot, message, args, group) {
       }
       
       // Adiciona informações de armazenamento
+      if (group.customAIPrompt && group.customAIPrompt.length > 1) {
+        infoMessage += `*Personalidade IA*:\n`;
+        infoMessage += `- \`${group.customAIPrompt}\`\n\n`;
+      }
+      
       infoMessage += `*Armazenamento:*\n`;
       infoMessage += `- *Arquivos:* ${filesInfo.totalFiles} arquivos\n`;
       infoMessage += `- *Espaço usado:* ${formatSize(filesInfo.totalSize)}\n\n`;
