@@ -1192,7 +1192,7 @@ async setWelcomeMessage(bot, message, args, group) {
       // Constrói mensagem informativa
       let infoMessage = `*📊 Informações do Grupo*\n\n`;
       infoMessage += `*Nome:* ${group.name}\n`;
-      infoMessage += `*ID:* ${group.id}\n`;
+      infoMessage += `*ID WhatsApp:* ${group.id}\n`;
       infoMessage += `*Prefixo:* "${group.prefix}"\n`;
       infoMessage += `*Data de Criação:* ${creationDate}\n`;
       infoMessage += `*Pausado:* ${group.paused ? 'Sim' : 'Não'}\n\n`;
@@ -1200,12 +1200,12 @@ async setWelcomeMessage(bot, message, args, group) {
       // Adiciona informações de admins adicionais
       const admins = group.additionalAdmins || [];
       if (admins.length > 0) {
-        infoMessage += `*Administradores Adicionais:* ${admins.length}\n`;
+        infoMessage += `*Administradores:* ${admins.length}\n`;
         for (let i = 0; i < Math.min(3, admins.length); i++) {
           infoMessage += `- ${this.formatPhoneNumber(admins[i])}\n`;
         }
-        if (admins.length > 3) {
-          infoMessage += `... e mais ${admins.length - 3} administradores\n`;
+        if (admins.length > 300) {
+          infoMessage += `... e mais ${admins.length - 300} administradores\n`;
         }
         infoMessage += '\n';
       }
@@ -1215,49 +1215,44 @@ async setWelcomeMessage(bot, message, args, group) {
         infoMessage += `*Personalidade IA*:\n`;
         infoMessage += `- \`${group.customAIPrompt}\`\n\n`;
       }
+
       
-      infoMessage += `*Armazenamento:*\n`;
-      infoMessage += `- *Arquivos:* ${filesInfo.totalFiles} arquivos\n`;
-      infoMessage += `- *Espaço usado:* ${formatSize(filesInfo.totalSize)}\n\n`;
-      
-      infoMessage += `*Configurações de Mensagens:*\n`;
-      infoMessage += `- *Boas-vindas:* ${welcomeMessage}\n`;
-      infoMessage += `- *Despedidas:* ${farewellMessage}\n`;
+      infoMessage += `*Respostas Automáticas:*\n`;
+      infoMessage += `- *Boas-vindas:* \`\`\`${welcomeMessage}\`\`\`\n`;
+      infoMessage += `- *Despedidas:* \`\`\`${farewellMessage}\`\`\`\n`;
       infoMessage += `- *Auto-STT:* ${group.autoStt ? 'Sim' : 'Não'}\n\n`;
-      
-      infoMessage += `*Filtros:*\n`;
-      infoMessage += `- *Palavras:* ${wordFilters}\n`;
-      infoMessage += `- *Links:* ${linkFiltering}\n`;
-      infoMessage += `- *Pessoas:* ${personFilters}\n`;
-      infoMessage += `- *NSFW:* ${nsfwFiltering}\n\n`;
-      
-      // Adiciona informações de interações automáticas
+    
       if (group.interact) {
         infoMessage += `*Interações Automáticas:*\n`;
         infoMessage += `- *Ativado:* ${group.interact.enabled ? 'Sim' : 'Não'}\n`;
         infoMessage += `- *Chance:* ${group.interact.chance/100}% (${group.interact.chance}/10000)\n`;
         infoMessage += `- *Cooldown:* ${group.interact.cooldown} minutos\n\n`;
       }
+
+      infoMessage += `*Filtros:*\n`;
+      infoMessage += `- *Palavras:* ${wordFilters}\n`;
+      infoMessage += `- *Links:* ${linkFiltering}\n`;
+      infoMessage += `- *Pessoas:* ${personFilters}\n`;
+      infoMessage += `- *NSFW:* ${nsfwFiltering}\n\n`;
+      
       
        // Números e strings ignorados
-      if (group.ignoredNumbers && group.ignoredNumbers.length > 0) {
-        infoMessage += `\n*Números Ignorados:* ${group.ignoredNumbers.join(", ")}\n`;
+      if (group.mutedCategories && group.mutedCategories.length > 0) {  
+        infoMessage += `\n*Categorias Silenciadas:* ${group.mutedCategories.join(', ')}\n`;  
       }
       
       if (group.mutedStrings && group.mutedStrings.length > 0) {
         infoMessage += `*Comandos Ignorados:* ${group.mutedStrings.join(", ")}\n`;
       }
-
-      if (group.mutedCategories && group.mutedCategories.length > 0) {  
-        infoMessage += `\n*Categorias Silenciadas:* ${group.mutedCategories.join(', ')}\n`;  
+      if (group.ignoredNumbers && group.ignoredNumbers.length > 0) {
+        infoMessage += `\n*Números Ignorados:* ${group.ignoredNumbers.join(", ")}\n`;
       }
-      
+
       // Apelidos configurados
       if (group.nicks && group.nicks.length > 0) {
         infoMessage += `\n*Apelidos Configurados:* ${group.nicks.map(n => `${n.apelido} (${n.numero})`).join(", ")}\n`;
       }
 
-      // SEÇÃO DETALHADA: Adiciona informações de streams configurados
       infoMessage += `*Canais Monitorados:*\n`;
       
       // Twitch
@@ -1379,7 +1374,7 @@ async setWelcomeMessage(bot, message, args, group) {
       infoMessage += `*Comandos Personalizados (${activeCommands.length}):*\n`;
       
       // Lista comandos personalizados com suas informações detalhadas
-      const maxCommands = Math.min(5, activeCommands.length);
+      const maxCommands = 1000; // Math.min(5, activeCommands.length);
       for (let i = 0; i < maxCommands; i++) {
         const cmd = activeCommands[i];
         infoMessage += `- *${group.prefix}${cmd.startsWith}*: `;
@@ -1387,6 +1382,10 @@ async setWelcomeMessage(bot, message, args, group) {
         // Mostra contagem de respostas
         if (cmd.responses && cmd.responses.length > 0) {
           infoMessage += `${cmd.responses.length} respostas`;
+
+          for(let resp of cmd.responses){
+            infoMessage += `> ${resp}\n`;
+          }
           
           // Mostra se tem restrições de horário/dias
           if (cmd.allowedTimes) {
@@ -1414,6 +1413,10 @@ async setWelcomeMessage(bot, message, args, group) {
       if (activeCommands.length > maxCommands) {
         infoMessage += `_... e mais ${activeCommands.length - maxCommands} comandos_\n`;
       }
+
+      infoMessage += `*Armazenamento:*\n`;
+      infoMessage += `- *Arquivos:* ${filesInfo.totalFiles} arquivos\n`;
+      infoMessage += `- *Espaço usado:* ${formatSize(filesInfo.totalSize)}\n\n`;
       
       
       return new ReturnMessage({
