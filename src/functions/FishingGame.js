@@ -85,7 +85,7 @@ const TRASH_ITEMS = [
 // Upgrades para pesca
 const UPGRADES = [
   { name: "Chapéu de Pescador", chance: 0.05, emoji: "👒", effect: "weight_boost", value: 0.2, duration: 3, description: "Aumenta o peso dos próximos 3 peixes em 20%." },
-  { name: "Minhocão", chance: 0.05, emoji: "🪱", effect: "next_fish_bonus", minValue: 10, maxValue: 80, description: "Adiciona um bônus de 10 a 80kg ao próximo peixe." },
+  { name: "Minhocão", chance: 0.05, emoji: "🐛", effect: "next_fish_bonus", minValue: 10, maxValue: 80, description: "Adiciona um bônus de 10 a 80kg ao próximo peixe." },
   //{ name: "Rede", chance: 0.01, emoji: "🕸️", effect: "double_catch", description: "Pega 2 peixes na próxima pescaria." },
   { name: "Carretel", chance: 0.02, emoji: "🧵", effect: "weight_boost", value: 0.75, duration: 3, description: "Aumenta o peso dos próximos 3 peixes em 75%." },
   { name: "Pacote de Iscas", chance: 0.1, emoji: "🎁", effect: "extra_baits", minValue: 1, maxValue: 3, description: "Ganha de 1 a 3 iscas extras." }
@@ -837,7 +837,7 @@ async function fishCommand(bot, message, args, group) {
       // Apenas reage com emoji de balde vazio, sem mensagem
       try {
         setTimeout((mo) => {
-          mo.react("🪣");
+          mo.react("🍥");
         }, 3000, message.origin);
       } catch (reactError) {
         logger.error('Erro ao reagir com emoji de balde:', reactError);
@@ -993,7 +993,7 @@ async function fishCommand(bot, message, args, group) {
     if (caughtFishes.length === 0) {
       return new ReturnMessage({
         chatId,
-        content: `🎣 ${userName} jogou a linha... ${effectMessage}\n\n> 🪱 Iscas restantes: ${fishingData.fishingData[userId].baits}/${MAX_BAITS}`,
+        content: `🎣 ${userName} jogou a linha... ${effectMessage}\n\n> 🐛 Iscas restantes: ${fishingData.fishingData[userId].baits}/${MAX_BAITS}`,
         reactions: {
           after: "🎣"
         },
@@ -1062,7 +1062,7 @@ async function fishCommand(bot, message, args, group) {
     fishMessage += `\n\n> 🐳 Seu maior peixe: ${userBiggest.name} (${userBiggest.weight.toFixed(2)} kg)`;
     
     // Adiciona informação sobre as iscas restantes
-    fishMessage += `\n> 🪱 Iscas restantes: ${fishingData.fishingData[userId].baits}/${MAX_BAITS}`;
+    fishMessage += `\n> 🐛 Iscas restantes: ${fishingData.fishingData[userId].baits}/${MAX_BAITS}`;
     
     // Adiciona as mensagens de efeito (itens, buffs, etc)
     fishMessage += effectMessage;
@@ -1241,7 +1241,7 @@ async function myFishCommand(bot, message, args, group) {
               fishMessage += `👒 +${buff.value*100}% peso (${buff.remainingUses} peixes restantes)\n`;
               break;
             case 'next_fish_bonus':
-              fishMessage += `🪱 +${buff.value}kg no próximo peixe\n`;
+              fishMessage += `🐛 +${buff.value}kg no próximo peixe\n`;
               break;
             case 'double_catch':
               fishMessage += `🕸️ Próxima pescaria pega 2 peixes\n`;
@@ -1587,7 +1587,7 @@ async function listFishTypesCommand(bot, message, args, group) {
     });
     
 
-    fishMessage += `\n🪱 Use \`!pesca-info\` para mais informações`;
+    fishMessage += `\n🐛 Use \`!pesca-info\` para mais informações`;
     
     return new ReturnMessage({
       chatId,
@@ -1651,10 +1651,10 @@ async function showBaitsCommand(bot, message, args, group) {
     await saveFishingData(fishingData);
     
     // Prepara a mensagem
-    let baitMessage = `🪱 *Iscas de ${userName}*\n\n`;
+    let baitMessage = `🐛 *Iscas de ${userName}*\n\n`;
     
     // Adiciona emojis de isca para representar visualmente
-    const baitEmojis = Array(MAX_BAITS).fill('⚪').fill('🪱', 0, fishingData.fishingData[userId].baits).join(' ');
+    const baitEmojis = Array(MAX_BAITS).fill('⚪').fill('🐛', 0, fishingData.fishingData[userId].baits).join(' ');
     
     baitMessage += `${baitEmojis}\n\n`;
     baitMessage += `Você tem ${fishingData.fishingData[userId].baits}/${MAX_BAITS} iscas.\n`;
@@ -1917,7 +1917,7 @@ async function fishingInfoCommand(bot, message) {
 
         infoMessage += "📊 *Estatísticas Globais de Pesca*\n";
         infoMessage += `🐟 *Total de Peixes Pescados:* ${stats.totalFishCaught}\n`;
-        infoMessage += `🪱 *Total de Iscas Usadas:* ${stats.totalBaitsUsed}\n`;
+        infoMessage += `🐛 *Total de Iscas Usadas:* ${stats.totalBaitsUsed}\n`;
         infoMessage += `🗑️ *Total de Lixo Coletado:* ${stats.totalTrashCaught}\n`;
         infoMessage += `🐲 *Total de Lendas Encontradas:* ${stats.totalLegendaryCaught}\n`;
         if (stats.heaviestFishEver.weight > 0) {
@@ -2108,7 +2108,7 @@ const commands = [
     category: "jogos",
     cooldown: 5,
     reactions: {
-      after: "🪱",
+      after: "🐛",
       error: "❌"
     },
     method: showBaitsCommand

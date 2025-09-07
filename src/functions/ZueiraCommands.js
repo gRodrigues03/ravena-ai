@@ -291,7 +291,7 @@ const commands = [
     description: 'de gue?',
     category: "zoeira",
     reactions: {
-      after: "⚰️"
+      after: "💀"
     },
     method: async (bot, message, args, group) => {
       return await handleComandoVariavelSimples(bot, message, args, group, "morreu");

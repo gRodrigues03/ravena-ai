@@ -505,7 +505,7 @@ const commands = [
     needsMedia: true,
     reactions: {
       before: process.env.LOADING_EMOJI ?? "🌀",
-      after: "✂️",
+      after: "🔪",
       error: "❌"
     },
     method: handleRemoveBg
@@ -534,7 +534,7 @@ const commands = [
     needsMedia: true,
     reactions: {
       before: process.env.LOADING_EMOJI ?? "🌀",
-      after: "✂️",
+      after: "🔪",
       error: "❌"
     },
     method: handleStickerBg
@@ -547,7 +547,7 @@ const commands = [
     needsMedia: true,
     reactions: {
       before: process.env.LOADING_EMOJI ?? "🌀",
-      after: "✂️",
+      after: "🔪",
       error: "❌"
     },
     method: handleStickerBg
@@ -560,7 +560,7 @@ const commands = [
     needsMedia: true,
     reactions: {
       before: process.env.LOADING_EMOJI ?? "🌀",
-      after: "✂️",
+      after: "🔪",
       error: "❌"
     },
     method: handleRemoveBg

@@ -194,14 +194,14 @@ async function jogarRoletaRussa(bot, message, args, group) {
       
       // Reage com emoji de caixão se estiver em timeout
       try {
-        await message.origin.react("⚰️");
+        await message.origin.react("💀");
       } catch (reactError) {
         logger.error('Erro ao aplicar reação de caixão:', reactError);
       }
       
       return new ReturnMessage({
         chatId: groupId,
-        content: `☠️ ${userName} já está morto na roleta russa. Ressuscita em ${minutos}m${segundos}s.`,
+        content: `💀 ${userName} já está morto na roleta russa. Ressuscita em ${minutos}m${segundos}s.`,
         options: {
           quotedMessageId: message.origin.id._serialized,
           evoReply: message.origin
@@ -261,7 +261,7 @@ async function jogarRoletaRussa(bot, message, args, group) {
       
       // Reage com emoji de caixão
       try {
-        await message.origin.react("⚰️");
+        await message.origin.react("💀");
       } catch (reactError) {
         logger.error('Erro ao aplicar reação de caixão:', reactError);
       }
