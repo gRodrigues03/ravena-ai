@@ -781,7 +781,11 @@ class StreamMonitor extends EventEmitter {
    * Poll YouTube channels for status updates and new videos
    * @private
    */
-   async getYtChannelID(channel){
+   async getYtChannelID(ch){
+    // Aberrações que tentam definir
+    let channel = ch.includes("/") ? ch.split("/").at(-1) : ch;
+    channel = channel.replace("@", "");
+
     const channelsIdCachePath = path.join(this.database.databasePath, "yt-channelsID-cache.json");
 
     if (!fs.existsSync(channelsIdCachePath)) {
@@ -951,7 +955,7 @@ class StreamMonitor extends EventEmitter {
         }
       } catch (error) {
         // Verifica se é um erro 404 (canal não encontrado)
-        if (false && error.response && error.response.status === 404) {
+        if (error.response && error.response.status === 404) {
           this.logger.warn(`Canal do YouTube não encontrado: '${channel.name}'. Removendo do monitoramento.`);
           
           // Remove o canal do monitoramento

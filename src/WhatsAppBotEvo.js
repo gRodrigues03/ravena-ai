@@ -1112,259 +1112,259 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         if (!key || !waMessage) {
           this.logger.warn(`[${this.id}] Incomplete Evolution message data for formatting:`, evoMessageData);
           resolve(null);
-        }
-
-        const chatId = key.remoteJid;
-        const isGroup = chatId.endsWith('@g.us');
-        let isSentMessage = false;
-        // Added evoMessageData.author as a potential source
-        let author = isGroup ? (evoMessageData.author || key.participant || key.remoteJid) : key.remoteJid;
-
-        const messageTimestamp = typeof evoMessageData.messageTimestamp === 'number' 
-            ? evoMessageData.messageTimestamp 
-            : (typeof evoMessageData.messageTimestamp === 'string' ? parseInt(evoMessageData.messageTimestamp, 10) : Math.floor(Date.now()/1000));
-        const responseTime = Math.max(0, this.getCurrentTimestamp() - messageTimestamp);
-
-        if(evoMessageData.event === "send.message"){
-          isSentMessage = true;
-          if(evoMessageData.sender){
-            author = evoMessageData.sender.split("@")[0]+"@c.us";
-          } else {
-            author = evoMessageData.key.remoteJid.split("@")[0]+"@c.us";
-          }
+          return;
         } else {
-          // send.message é evento de enviadas, então se não for, recebeu uma
-          this.loadReport.trackReceivedMessage(isGroup, responseTime, author);
-        }
+          const chatId = key.remoteJid;
+          const isGroup = chatId.endsWith('@g.us');
+          let isSentMessage = false;
+          // Added evoMessageData.author as a potential source
+          let author = isGroup ? (evoMessageData.author || key.participant || key.remoteJid) : key.remoteJid;
 
+          const messageTimestamp = typeof evoMessageData.messageTimestamp === 'number' 
+              ? evoMessageData.messageTimestamp 
+              : (typeof evoMessageData.messageTimestamp === 'string' ? parseInt(evoMessageData.messageTimestamp, 10) : Math.floor(Date.now()/1000));
+          const responseTime = Math.max(0, this.getCurrentTimestamp() - messageTimestamp);
 
-        const authorName = evoMessageData.pushName || author.split('@')[0]; // pushName is often sender's name
-        
-        
-
-        
-
-        let type = 'unknown';
-        let content = null;
-        let caption = null;
-        let mediaInfo = null; // To store { url, mimetype, filename, data (base64 if downloaded) }
-
-        // Determine message type and content
-        if (waMessage.conversation) {
-          type = 'text';
-          content = waMessage.conversation;
-        } else if (waMessage.extendedTextMessage) {
-          type = 'text';
-          content = waMessage.extendedTextMessage.text;
-        } else if (waMessage.imageMessage) {
-          type = 'image';
-          caption = waMessage.imageMessage.caption;
-          mediaInfo = {
-            isMessageMedia: true,
-            mimetype: waMessage.imageMessage.mimetype || 'image/jpeg',
-            url: waMessage.imageMessage.url, 
-            filename: waMessage.imageMessage.fileName || `image-${key.id}.${mime.extension(waMessage.imageMessage.mimetype || 'image/jpeg') || 'jpg'}`,
-            _evoMediaDetails: waMessage.imageMessage 
-          };
-          content = mediaInfo;
-        } else if (waMessage.videoMessage) {
-          type = 'video';
-          caption = waMessage.videoMessage.caption;
-          mediaInfo = {
-            isMessageMedia: true,
-            mimetype: waMessage.videoMessage.mimetype || 'video/mp4',
-            url: waMessage.videoMessage.url,
-            filename: waMessage.videoMessage.fileName || `video-${key.id}.${mime.extension(waMessage.videoMessage.mimetype || 'video/mp4') || 'mp4'}`,
-            seconds: waMessage.videoMessage.seconds,
-            _evoMediaDetails: waMessage.videoMessage
-          };
-          content = mediaInfo;
-        } else if (waMessage.audioMessage) {
-          type = waMessage.audioMessage.ptt ? 'ptt' : 'audio';
-          mediaInfo = {
-            isMessageMedia: true,
-            mimetype: waMessage.audioMessage.mimetype || (waMessage.audioMessage.ptt ? 'audio/ogg' : 'audio/mpeg'),
-            url: waMessage.audioMessage.url,
-            filename: `audio-${key.id}.${mime.extension(waMessage.audioMessage.mimetype || (waMessage.audioMessage.ptt ? 'audio/ogg' : 'audio/mpeg')) || (waMessage.audioMessage.ptt ? 'ogg' : 'mp3')}`,
-            seconds: waMessage.audioMessage.seconds,
-            ptt: waMessage.audioMessage.ptt,
-            _evoMediaDetails: waMessage.audioMessage
-          };
-          content = mediaInfo;
-        } else if (waMessage.documentMessage) {
-          type = 'document';
-          caption = waMessage.documentMessage.title || waMessage.documentMessage.fileName;
-          mediaInfo = {
-            isMessageMedia: true,
-            mimetype: waMessage.documentMessage.mimetype || 'application/octet-stream',
-            url: waMessage.documentMessage.url,
-            filename: waMessage.documentMessage.fileName || `document-${key.id}${waMessage.documentMessage.mimetype ? '.' + (mime.extension(waMessage.documentMessage.mimetype) || '') : ''}`.replace(/\.$/,''),
-            title: waMessage.documentMessage.title,
-            _evoMediaDetails: waMessage.documentMessage
-          };
-          content = mediaInfo;
-        } else if (waMessage.stickerMessage) {
-          type = 'sticker';
-          mediaInfo = {
-            isMessageMedia: true,
-            isAnimated: waMessage.stickerMessage.isAnimated ?? false,
-            mimetype: waMessage.stickerMessage.mimetype || 'image/webp',
-            url: waMessage.stickerMessage.url,
-            filename: `sticker-${key.id}.webp`,
-            _evoMediaDetails: waMessage.stickerMessage
-          };
-          content = mediaInfo;
-        } else if (waMessage.locationMessage) {
-          type = 'location';
-          content = {
-            isLocation: true,
-            latitude: waMessage.locationMessage.degreesLatitude,
-            longitude: waMessage.locationMessage.degreesLongitude,
-            name: waMessage.locationMessage.name,
-            address: waMessage.locationMessage.address,
-            description: waMessage.locationMessage.name || waMessage.locationMessage.address,
-            jpegThumbnail: waMessage.locationMessage.jpegThumbnail,
-          };
-        } else if (waMessage.contactMessage) {
-          type = 'contact';
-          content = {
-              isContact: true,
-              displayName: waMessage.contactMessage.displayName,
-              vcard: waMessage.contactMessage.vcard,
-              _evoContactDetails: waMessage.contactMessage
-          };
-        } else if (waMessage.contactsArrayMessage) {
-          type = 'contacts_array';
-          content = {
-              displayName: waMessage.contactsArrayMessage.displayName,
-              contacts: waMessage.contactsArrayMessage.contacts.map(contact => ({
-                  isContact: true,
-                  displayName: contact.displayName, 
-                  vcard: contact.vcard
-              })),
-              _evoContactsArrayDetails: waMessage.contactsArrayMessage
-          };
-        } 
-        else if(waMessage.reactionMessage && evoMessageData.event === "messages.upsert"){ // Pra evitar pegar coisa do send.message
-          const reactionData = waMessage.reactionMessage;
-          if (reactionData && reactionData.key && !reactionData.key.fromMe) {
-              if(reactionData.text !== ""){
-                //this.logger.debug(`[${this.id}] Received reaction:`, reactionData);
-                this.reactionHandler.processReaction(this, { // await is used here
-                  reaction: reactionData.text,
-                  senderId: reactionData.key?.participant ? reactionData.key.participant.split("@")[0]+"@c.us" : waMessage.sender, // waMessage.sender vem no send.message event
-                  msgId: {_serialized: reactionData.key.id}
-                });
-              }
-          }
-          resolve(null);
-          return;
-        }
-        else {
-          /*
-          if(!isSentMessage){
-            this.logger.warn(`[${this.id}] Unhandled Evolution message type:`, Object.keys(waMessage).join(', '));
-            this.logger.warn(`[${this.id}][ev-${evoMessageData.event}] Unhandled Evolution message type:`, waMessage);
-          }*/
-          resolve(null);
-          return;
-        }
-
-        const mentions = (evoMessageData.contextInfo?.mentionedJid ?? []).map(m => m.split("@")[0]+"@c.us");
-
-        const isLid = ((evoMessageData.key.remoteJid.includes('@lid') || evoMessageData.key.participant?.includes('@lid')) && (evoMessageData.key.senderPn || evoMessageData.key.participantPn));
-        const senderPn = isLid ? (evoMessageData.key.participantPn ?? evoMessageData.key.senderPn) : false; // quando vem @lid precisa pegar esse senderPn ou participantPn se for group (evo 2.3.0)
-
-        if(isLid){
-          this.logger.info(`[${this.id}][LID_WARNING] LID detectado. PN? ${JSON.stringify(senderPn)}\n---${JSON.stringify(evoMessageData)}\n---`);
-          author = senderPn;
-        }
-
-        const formattedMessage = {
-          evoMessageData: evoMessageData, // pra ser recuperada no cache
-          id: key.id,
-          fromMe: evoMessageData.key.fromMe,
-          group: isGroup ? chatId : null,
-          from: isGroup ? chatId : author,
-          author: author.replace("@s.whatsapp.net", "@c.us"),
-          name: authorName,
-          authorName: authorName,
-          pushname: authorName,
-          type: type,
-          content: content, 
-          body: content,
-          mentions: mentions,
-          caption: caption,
-          origin: {}, 
-          responseTime: responseTime,
-          timestamp: messageTimestamp,
-          key: key, 
-          secret: evoMessageData.message?.messageContextInfo?.messageSecret,
-          hasMedia: (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)),
-
-          getContact: async () => {
-              const contactIdToFetch = isGroup ? (key.participant || author) : author;
-              return await this.getContactDetails(contactIdToFetch, senderPn, authorName);
-          },
-
-          getChat: async () => {
-              return await this.getChatDetails(chatId);
-          },
-          delete: async (forEveryone = true) => { 
-              return this.deleteMessageByKey(evoMessageData.key);
-          },
-          downloadMedia: async (opts = {}) => {
-              if (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)) {
-                  const downloadedMedia = await this._downloadMediaAsBase64(mediaInfo, key, evoMessageData);
-                  let stickerGif = false;
-                  if(mediaInfo.isAnimated){
-                    stickerGif = await this.convertAnimatedWebpToGif(downloadedMedia, opts.keep ?? false);
-                    this.logger.debug(`[downloadMedia] isAnimated, gif salvo: '${stickerGif}'`);
-                  }
-                  return { mimetype: mediaInfo.mimetype, data: downloadedMedia, stickerGif, filename: mediaInfo.filename, source: 'file', isMessageMedia: true };
-              }
-              this.logger.warn(`[${this.id}] downloadMedia called for non-media or unfulfillable message:`, type, mediaInfo);
-              return null;
-          }
-        };
-        
-        if (['image', 'video', 'sticker'].includes(type)) {
-            try {
-              const media = await formattedMessage.downloadMedia(); // await is used here
-              if (media) {
-                  formattedMessage.content = media;
-              }
-            } catch (dlError) {
-                this.logger.error(`[${this.id}] Failed to pre-download media for NSFW check:`, dlError);
+          if(evoMessageData.event === "send.message"){
+            isSentMessage = true;
+            if(evoMessageData.sender){
+              author = evoMessageData.sender.split("@")[0]+"@c.us";
+            } else {
+              author = evoMessageData.key.remoteJid.split("@")[0]+"@c.us";
             }
+          } else {
+            // send.message é evento de enviadas, então se não for, recebeu uma
+            this.loadReport.trackReceivedMessage(isGroup, responseTime, author);
+          }
+
+
+          const authorName = evoMessageData.pushName || author.split('@')[0]; // pushName is often sender's name
+          
+          
+
+          
+
+          let type = 'unknown';
+          let content = null;
+          let caption = null;
+          let mediaInfo = null; // To store { url, mimetype, filename, data (base64 if downloaded) }
+
+          // Determine message type and content
+          if (waMessage.conversation) {
+            type = 'text';
+            content = waMessage.conversation;
+          } else if (waMessage.extendedTextMessage) {
+            type = 'text';
+            content = waMessage.extendedTextMessage.text;
+          } else if (waMessage.imageMessage) {
+            type = 'image';
+            caption = waMessage.imageMessage.caption;
+            mediaInfo = {
+              isMessageMedia: true,
+              mimetype: waMessage.imageMessage.mimetype || 'image/jpeg',
+              url: waMessage.imageMessage.url, 
+              filename: waMessage.imageMessage.fileName || `image-${key.id}.${mime.extension(waMessage.imageMessage.mimetype || 'image/jpeg') || 'jpg'}`,
+              _evoMediaDetails: waMessage.imageMessage 
+            };
+            content = mediaInfo;
+          } else if (waMessage.videoMessage) {
+            type = 'video';
+            caption = waMessage.videoMessage.caption;
+            mediaInfo = {
+              isMessageMedia: true,
+              mimetype: waMessage.videoMessage.mimetype || 'video/mp4',
+              url: waMessage.videoMessage.url,
+              filename: waMessage.videoMessage.fileName || `video-${key.id}.${mime.extension(waMessage.videoMessage.mimetype || 'video/mp4') || 'mp4'}`,
+              seconds: waMessage.videoMessage.seconds,
+              _evoMediaDetails: waMessage.videoMessage
+            };
+            content = mediaInfo;
+          } else if (waMessage.audioMessage) {
+            type = waMessage.audioMessage.ptt ? 'ptt' : 'audio';
+            mediaInfo = {
+              isMessageMedia: true,
+              mimetype: waMessage.audioMessage.mimetype || (waMessage.audioMessage.ptt ? 'audio/ogg' : 'audio/mpeg'),
+              url: waMessage.audioMessage.url,
+              filename: `audio-${key.id}.${mime.extension(waMessage.audioMessage.mimetype || (waMessage.audioMessage.ptt ? 'audio/ogg' : 'audio/mpeg')) || (waMessage.audioMessage.ptt ? 'ogg' : 'mp3')}`,
+              seconds: waMessage.audioMessage.seconds,
+              ptt: waMessage.audioMessage.ptt,
+              _evoMediaDetails: waMessage.audioMessage
+            };
+            content = mediaInfo;
+          } else if (waMessage.documentMessage) {
+            type = 'document';
+            caption = waMessage.documentMessage.title || waMessage.documentMessage.fileName;
+            mediaInfo = {
+              isMessageMedia: true,
+              mimetype: waMessage.documentMessage.mimetype || 'application/octet-stream',
+              url: waMessage.documentMessage.url,
+              filename: waMessage.documentMessage.fileName || `document-${key.id}${waMessage.documentMessage.mimetype ? '.' + (mime.extension(waMessage.documentMessage.mimetype) || '') : ''}`.replace(/\.$/,''),
+              title: waMessage.documentMessage.title,
+              _evoMediaDetails: waMessage.documentMessage
+            };
+            content = mediaInfo;
+          } else if (waMessage.stickerMessage) {
+            type = 'sticker';
+            mediaInfo = {
+              isMessageMedia: true,
+              isAnimated: waMessage.stickerMessage.isAnimated ?? false,
+              mimetype: waMessage.stickerMessage.mimetype || 'image/webp',
+              url: waMessage.stickerMessage.url,
+              filename: `sticker-${key.id}.webp`,
+              _evoMediaDetails: waMessage.stickerMessage
+            };
+            content = mediaInfo;
+          } else if (waMessage.locationMessage) {
+            type = 'location';
+            content = {
+              isLocation: true,
+              latitude: waMessage.locationMessage.degreesLatitude,
+              longitude: waMessage.locationMessage.degreesLongitude,
+              name: waMessage.locationMessage.name,
+              address: waMessage.locationMessage.address,
+              description: waMessage.locationMessage.name || waMessage.locationMessage.address,
+              jpegThumbnail: waMessage.locationMessage.jpegThumbnail,
+            };
+          } else if (waMessage.contactMessage) {
+            type = 'contact';
+            content = {
+                isContact: true,
+                displayName: waMessage.contactMessage.displayName,
+                vcard: waMessage.contactMessage.vcard,
+                _evoContactDetails: waMessage.contactMessage
+            };
+          } else if (waMessage.contactsArrayMessage) {
+            type = 'contacts_array';
+            content = {
+                displayName: waMessage.contactsArrayMessage.displayName,
+                contacts: waMessage.contactsArrayMessage.contacts.map(contact => ({
+                    isContact: true,
+                    displayName: contact.displayName, 
+                    vcard: contact.vcard
+                })),
+                _evoContactsArrayDetails: waMessage.contactsArrayMessage
+            };
+          } 
+          else if(waMessage.reactionMessage && evoMessageData.event === "messages.upsert"){ // Pra evitar pegar coisa do send.message
+            const reactionData = waMessage.reactionMessage;
+            if (reactionData && reactionData.key && !reactionData.key.fromMe) {
+                if(reactionData.text !== ""){
+                  //this.logger.debug(`[${this.id}] Received reaction:`, reactionData);
+                  this.reactionHandler.processReaction(this, { // await is used here
+                    reaction: reactionData.text,
+                    senderId: reactionData.key?.participant ? reactionData.key.participant.split("@")[0]+"@c.us" : waMessage.sender, // waMessage.sender vem no send.message event
+                    msgId: {_serialized: reactionData.key.id}
+                  });
+                }
+            }
+            resolve(null);
+            return;
+          }
+          else {
+            /*
+            if(!isSentMessage){
+              this.logger.warn(`[${this.id}] Unhandled Evolution message type:`, Object.keys(waMessage).join(', '));
+              this.logger.warn(`[${this.id}][ev-${evoMessageData.event}] Unhandled Evolution message type:`, waMessage);
+            }*/
+            resolve(null);
+            return;
+          }
+
+          const mentions = (evoMessageData.contextInfo?.mentionedJid ?? []).map(m => m.split("@")[0]+"@c.us");
+
+          const isLid = ((evoMessageData.key.remoteJid.includes('@lid') || evoMessageData.key.participant?.includes('@lid')) && (evoMessageData.key.senderPn || evoMessageData.key.participantPn));
+          const senderPn = isLid ? (evoMessageData.key.participantPn ?? evoMessageData.key.senderPn) : false; // quando vem @lid precisa pegar esse senderPn ou participantPn se for group (evo 2.3.0)
+
+          if(isLid){
+            this.logger.info(`[${this.id}][LID_WARNING] LID detectado. PN? ${JSON.stringify(senderPn)}\n---${JSON.stringify(evoMessageData)}\n---`);
+            author = senderPn;
+          }
+
+          const formattedMessage = {
+            evoMessageData: evoMessageData, // pra ser recuperada no cache
+            id: key.id,
+            fromMe: evoMessageData.key.fromMe,
+            group: isGroup ? chatId : null,
+            from: isGroup ? chatId : author,
+            author: author.replace("@s.whatsapp.net", "@c.us"),
+            name: authorName,
+            authorName: authorName,
+            pushname: authorName,
+            type: type,
+            content: content, 
+            body: content,
+            mentions: mentions,
+            caption: caption,
+            origin: {}, 
+            responseTime: responseTime,
+            timestamp: messageTimestamp,
+            key: key, 
+            secret: evoMessageData.message?.messageContextInfo?.messageSecret,
+            hasMedia: (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)),
+
+            getContact: async () => {
+                const contactIdToFetch = isGroup ? (key.participant || author) : author;
+                return await this.getContactDetails(contactIdToFetch, senderPn, authorName);
+            },
+
+            getChat: async () => {
+                return await this.getChatDetails(chatId);
+            },
+            delete: async (forEveryone = true) => { 
+                return this.deleteMessageByKey(evoMessageData.key);
+            },
+            downloadMedia: async (opts = {}) => {
+                if (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)) {
+                    const downloadedMedia = await this._downloadMediaAsBase64(mediaInfo, key, evoMessageData);
+                    let stickerGif = false;
+                    if(mediaInfo.isAnimated){
+                      stickerGif = await this.convertAnimatedWebpToGif(downloadedMedia, opts.keep ?? false);
+                      this.logger.debug(`[downloadMedia] isAnimated, gif salvo: '${stickerGif}'`);
+                    }
+                    return { mimetype: mediaInfo.mimetype, data: downloadedMedia, stickerGif, filename: mediaInfo.filename, source: 'file', isMessageMedia: true };
+                }
+                this.logger.warn(`[${this.id}] downloadMedia called for non-media or unfulfillable message:`, type, mediaInfo);
+                return null;
+            }
+          };
+          
+          if (['image', 'video', 'sticker'].includes(type)) {
+              try {
+                const media = await formattedMessage.downloadMedia(); // await is used here
+                if (media) {
+                    formattedMessage.content = media;
+                }
+              } catch (dlError) {
+                  this.logger.error(`[${this.id}] Failed to pre-download media for NSFW check:`, dlError);
+              }
+          }
+
+
+          formattedMessage.origin = {
+            mentionedIds: formattedMessage.mentions,
+            id: { _serialized: `${evoMessageData.key.remoteJid}_${evoMessageData.key.fromMe}_${evoMessageData.key.id}`},
+            author: formattedMessage.author,
+            from: formattedMessage.from,
+            // If this.sendReaction is async, this will correctly return a Promise
+            react: (emoji) => this.sendReaction(evoMessageData.key.remoteJid, evoMessageData.key.id, emoji), 
+            getContact: formattedMessage.getContact,
+            getChat: formattedMessage.getChat,
+            getQuotedMessage: async () => {
+              const quotedMsgId = evoMessageData.contextInfo?.quotedMessage ? evoMessageData.contextInfo?.stanzaId : null;
+              return await this.recoverMsgFromCache(quotedMsgId);
+            },
+            delete: async () => {
+              return this.deleteMessageByKey(evoMessageData.key);
+            },
+            body: content,
+            ...evoMessageData
+          };
+
+          if(!skipCache){
+            this.cacheManager.putMessageInCache(formattedMessage);
+          }
+          resolve(formattedMessage); // Resolve with the formatted message
         }
-
-
-        formattedMessage.origin = {
-          mentionedIds: formattedMessage.mentions,
-          id: { _serialized: `${evoMessageData.key.remoteJid}_${evoMessageData.key.fromMe}_${evoMessageData.key.id}`},
-          author: formattedMessage.author,
-          from: formattedMessage.from,
-          // If this.sendReaction is async, this will correctly return a Promise
-          react: (emoji) => this.sendReaction(evoMessageData.key.remoteJid, evoMessageData.key.id, emoji), 
-          getContact: formattedMessage.getContact,
-          getChat: formattedMessage.getChat,
-          getQuotedMessage: async () => {
-            const quotedMsgId = evoMessageData.contextInfo?.quotedMessage ? evoMessageData.contextInfo?.stanzaId : null;
-            return await this.recoverMsgFromCache(quotedMsgId);
-          },
-          delete: async () => {
-            return this.deleteMessageByKey(evoMessageData.key);
-          },
-          body: content,
-          ...evoMessageData
-        };
-
-        if(!skipCache){
-          this.cacheManager.putMessageInCache(formattedMessage);
-        }
-        resolve(formattedMessage); // Resolve with the formatted message
-
       } catch (error) {
         this.logger.error(`[${this.id}] Error formatting message from Evolution API:`, error, evoMessageData);
         // To match original behavior of returning null on error (which means promise resolves with null)
