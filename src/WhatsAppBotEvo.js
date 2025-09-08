@@ -737,7 +737,7 @@ class WhatsAppBotEvo {
     const wsUrl = `${this.evolutionWS}/${this.instanceName}`;
 
     const instanceDesc = this.websocket ? `Websocket to ${wsUrl}` : `Webhook on ${this.instanceName}:${this.webhookPort}`; 
-    this.logger.info(`Initializing Evolution API bot instance ${this.id} (Evo Instance: ${instanceDesc})`);
+    this.logger.info(`[${this.id}] Initializing Evolution API bot instance ${this.instanceName} (Evo Instance: ${instanceDesc})`);
     this.database.registerBotInstance(this);
     this.startupTime = Date.now();
 
@@ -750,7 +750,7 @@ class WhatsAppBotEvo {
         });
 
         socket.on('connect', () => {
-          this.logger.info('>>> Conectado ao WebSocket da Evolution API <<<');
+          this.logger.info(`>>> ${this.id} conectado ao WebSocket '${this.instanceName}' da Evolution API <<<`);
         });
 
         // Escutando eventos
@@ -789,15 +789,15 @@ class WhatsAppBotEvo {
       } else {
         this.webhookApp = express();
         this.webhookApp.use(express.json());
-        const webhookPath = `/webhook/evo/${this.id}`; // Unique path for this bot instance
+        const webhookPath = `/webhook/evo/${this.instanceName}`; // Unique path for this bot instance
         this.webhookApp.post(webhookPath, this._handleWebhook.bind(this));
 
         await new Promise((resolve, reject) => {
           this.webhookServer = this.webhookApp.listen(this.webhookPort, () => {
-            this.logger.info(`Webhook listener for bot ${this.id} started on http://localhost:${this.webhookPort}${webhookPath}`);
+            this.logger.info(`Webhook listener for bot ${this.instanceName} started on http://localhost:${this.webhookPort}${webhookPath}`);
             resolve();
           }).on('error', (err) => {
-            this.logger.error(`Failed to start webhook listener for bot ${this.id}:`, err);
+            this.logger.error(`Failed to start webhook listener for bot ${this.instanceName}:`, err);
             reject(err);
           });
         });
@@ -911,7 +911,7 @@ class WhatsAppBotEvo {
     //this.logger.debug(`[${this.id}] ${socket ? 'Websocket' : 'Webhook'} received: Event: ${payload.event}, Instance: ${payload.instance}`, payload.data?.key?.id || payload.data?.id);
 
     if (this.shouldDiscardMessage() && payload.event === 'messages.upsert') { // Only discard messages, not connection events
-      this.logger.debug(`[${this.id}] Discarding webhook message during initial ${this.id} startup period.`);
+      this.logger.debug(`[${this.id}] Discarding webhook message during initial ${this.instanceName} startup period.`);
       return res.sendStatus(200);
     }
     

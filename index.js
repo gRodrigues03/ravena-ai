@@ -76,7 +76,7 @@ async function main() {
           notificarDonate: rBot.notificarDonate ?? false, // Apenas um dos bots deve notificar donate
           
           // EvolutionAPI
-          evoInstanceName: rBot.nome,
+          evoInstanceName: rBot.evoID ?? rBot.nome,
           evolutionWS: process.env.EVOLUTION_WS,
           evolutionApiUrl: process.env.EVOLUTION_API_URL,
           evolutionApiKey: process.env.EVOLUTION_API_KEY,
