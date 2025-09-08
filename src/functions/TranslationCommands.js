@@ -294,7 +294,7 @@ const wrapWithRateLimit = (func, delay = 500, maxRetries = 3) => {
  * @param {string} targetLanguage - Código do idioma de destino
  * @returns {Promise<string>} - Texto traduzido
  */
-async function translateText(text, targetLanguage) {
+async function translateText(text, sourceLanguage, targetLanguage) {
   try {
     // Importar o módulo 'translate' dinamicamente
     const translateModule = await import('translate');
@@ -307,11 +307,13 @@ async function translateText(text, targetLanguage) {
     
     // Aplicar rate limiting à tradução
     const translateWithRateLimit = wrapWithRateLimit(async (text, options) => {
-      return await translate(text, options);
+      const resp = await translate(text, options);
+      console.log("trate", text, options, resp);
+      return resp;
     });
     
     // Traduzir o texto
-    const translatedText = await translateWithRateLimit(text, { to: targetLanguage });
+    const translatedText = await translateWithRateLimit(text, { from: sourceLanguage, to: targetLanguage });
     return translatedText;
   } catch (error) {
     logger.error('Erro ao traduzir texto:', error);
@@ -339,8 +341,8 @@ async function handleTranslation(bot, message, args, group) {
       return new ReturnMessage({
         chatId,
         content: 'Por favor, forneça o idioma de destino e o texto a ser traduzido.\n' +
-                 'Exemplo: !traduzir en Olá, mundo!\n' +
-                 'Ou responda a uma mensagem com: !traduzir en',
+                 'Exemplo: !traduzir pt en Olá, mundo!\n' +
+                 'Ou responda a uma mensagem com: !traduzir pt en',
         options: {
           quotedMessageId: message.origin.id._serialized,
           evoReply: message.origin
@@ -349,13 +351,17 @@ async function handleTranslation(bot, message, args, group) {
     }
     
     // Obter código do idioma de destino
-    const languageArg = args[0].toLowerCase();
-    const targetLanguage = getLanguageCode(languageArg);
+    const languageArgSource = args[0].toLowerCase();
+    const languageArgDest = args[1].toLowerCase();
+
+    const sourceLanguage = getLanguageCode(languageArgSource);
+    const targetLanguage = getLanguageCode(languageArgDest);
     
-    if (!targetLanguage) {
+
+    if (!sourceLanguage) {
       return new ReturnMessage({
         chatId,
-        content: `Idioma não reconhecido: "${args[0]}".\n` +
+        content: `Idioma de origem não reconhecido: "${args[0]}".\n` +
                  'Exemplo de idiomas suportados: en (inglês), es (espanhol), fr (francês), etc.',
         options: {
           quotedMessageId: message.origin.id._serialized,
@@ -363,12 +369,25 @@ async function handleTranslation(bot, message, args, group) {
         }
       });
     }
+
+    if (!targetLanguage) {
+      return new ReturnMessage({
+        chatId,
+        content: `Idioma desejado não reconhecido: "${args[1]}".\n` +
+                 'Exemplo de idiomas suportados: en (inglês), es (espanhol), fr (francês), etc.',
+        options: {
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
+        }
+      });
+    }
+
     
     let textToTranslate;
     let quotedText = '';
     
     // Verificar se é uma resposta a uma mensagem
-    if (args.length === 1) {
+    if (args.length === 2) {
       try {
         const quotedMsg = await message.origin.getQuotedMessage();
         if (!quotedMsg) {
@@ -397,7 +416,7 @@ async function handleTranslation(bot, message, args, group) {
       }
     } else {
       // Texto fornecido no comando
-      textToTranslate = args.slice(1).join(' ');
+      textToTranslate = args.slice(2).join(' ');
     }
     
     if (!textToTranslate || textToTranslate.trim() === '') {
@@ -412,11 +431,12 @@ async function handleTranslation(bot, message, args, group) {
     }
     
     // Traduzir o texto
-    const translatedText = await translateText(textToTranslate, targetLanguage);
+    const translatedText = await translateText(textToTranslate, sourceLanguage, targetLanguage);
     
     // Criar a resposta
-    const languageName = LANGUAGE_NAMES[targetLanguage];
-    const response = `🌐 *Tradução para ${languageName}*\n\n${translatedText}`;
+    const sourceLanguageName = LANGUAGE_NAMES[sourceLanguage];
+    const destLanguageName = LANGUAGE_NAMES[targetLanguage];
+    const response = `🌐 *Tradução de ${sourceLanguageName} para ${destLanguageName}*\n\n${translatedText}`;
     
     return new ReturnMessage({
       chatId,
@@ -461,7 +481,7 @@ async function processTranslationReaction(bot, message, args, group) {
     const chatId = message.group || message.author;
     
     // Traduzir o texto
-    const translatedText = await translateText(textToTranslate, targetLanguage);
+    const translatedText = await translateText(textToTranslate, "pt", targetLanguage);
     
     // Criar a resposta
     const languageName = LANGUAGE_NAMES[targetLanguage];
@@ -488,7 +508,7 @@ const commands = [
     name: 'traduzir',
     description: 'Traduz um texto para o idioma especificado',
     category: "utilidades",
-    usage: '!traduzir [idioma] [texto] ou !traduzir [idioma] em resposta a uma mensagem',
+    usage: '!traduzir [idiomaOriginal] [idiomaDesjado] [texto] ou !traduzir [idioma] em resposta a uma mensagem',
     reactions: {
       before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🌐",

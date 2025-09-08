@@ -5,6 +5,7 @@ const Logger = require('../utils/Logger');
 const NSFWPredict = require('../utils/NSFWPredict');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
+const { translateText } = require('./TranslationCommands');
 
 const logger = new Logger('stable-diffusion-commands');
 const nsfwPredict = NSFWPredict.getInstance();
@@ -37,7 +38,7 @@ const DEFAULT_PARAMS = {
   sampler_name: 'k_dpmpp_2m_sde',
   batch_size: 1,
   n_iter: 1,
-  negative_prompt: "ass bum poop woman dick nsfw porn boobs tits vagina child kid gore infant"
+  negative_prompt: "low quality pixelated blurry bad missing fingers ass bum poop woman dick nsfw porn boobs tits vagina child kid gore infant"
 };
 
 
@@ -70,7 +71,9 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
     });
   }
 
-  logger.info(`Gerando imagem com prompt: ${prompt}`);
+  prompt = await translateText(prompt, "pt", "en");
+
+  logger.info(`Gerando imagem com prompt: '${prompt}'`);
   
   try {
   

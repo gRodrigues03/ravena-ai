@@ -161,7 +161,7 @@ async function buscarImdb(bot, message, args, group) {
         data.Plot.substring(0, 297) + '...' : 
         data.Plot;
       
-      sinopse = (await translateText(sinopse, "pt")) || sinopse;
+      sinopse = (await translateText(sinopse, "en", "pt")) || sinopse;
       mensagem += `\n📝 *Sinopse:* ${sinopse}\n`;
     }
     

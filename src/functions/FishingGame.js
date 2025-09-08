@@ -186,7 +186,7 @@ async function saveToFile(data) {
     const tempPath = `${FISHING_DATA_PATH}.temp`;
     await fs.writeFile(tempPath, JSON.stringify(data, null, 2));
     
-    logger.info(`[saveToFile] ${tempPath}`);
+    //logger.info(`[saveToFile] ${tempPath}`);
 
     // Renomeia o arquivo temporário para o arquivo final
     // Isso reduz o risco de corrupção durante a gravação
@@ -196,14 +196,14 @@ async function saveToFile(data) {
       // Arquivo pode não existir, ignoramos o erro
     }
 
-    logger.info(`[saveToFile] Rename: ${tempPath} => FISHING_DATA_PATH`);
+    //logger.info(`[saveToFile] Rename: ${tempPath} => FISHING_DATA_PATH`);
     await fs.rename(tempPath, FISHING_DATA_PATH);
     
     // Atualiza o tempo da última gravação
     lastSaveTime = Date.now();
     hasUnsavedChanges = false;
     
-    logger.debug('Dados de pesca salvos no arquivo');
+    //logger.debug('Dados de pesca salvos no arquivo');
     return true;
   } catch (error) {
     logger.error('Erro ao salvar dados de pesca no arquivo:', error);

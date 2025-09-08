@@ -1388,7 +1388,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
     }
 
     if (messageKey && messageKey.id && messageKey.remoteJid && this.evolutionApiUrl && this.evolutionApiKey && this.instanceName) {
-      this.logger.info(`[${this.id}] Attempting media download via Evolution API POST /chat/getBase64FromMediaMessage for: ${mediaInfo.filename}`);
+      //this.logger.info(`[${this.id}] Attempting media download via Evolution API POST /chat/getBase64FromMediaMessage for: ${mediaInfo.filename}`);
       try {
         const endpoint = `${this.evolutionApiUrl}/chat/getBase64FromMediaMessage/${this.instanceName}`;
         const payload = {message: evoMessageData};
@@ -1441,7 +1441,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
   }
 
   async sendMessage(chatId, content, options = {}) {
-    this.logger.debug(`[${this.id}] sendMessage to ${chatId} (Type: ${typeof content} / ${JSON.stringify(options)})`); // , {content: typeof content === 'string' ? content.substring(0,30) : content, options}
+    this.logger.debug(`[${this.id}] sendMessage to ${chatId} (Type: ${typeof content} / ${JSON.stringify(options).substring(0,150)})`); // , {content: typeof content === 'string' ? content.substring(0,30) : content, options}
     try {
       const isGroup = chatId.endsWith('@g.us');
       this.loadReport.trackSentMessage(isGroup); // From original bot
@@ -2000,7 +2000,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         };
       }
     } catch (error) {
-      this.logger.error(`[${this.id}] Failed to get chat details for ${chatId}:`, error);
+      //this.logger.error(`[${this.id}] Failed to get chat details for ${chatId}:`, error);
       // Se estiver buscando grupo, retorna null pra saber que o bot não faz parte
       // Se for contato, cria um placeholder pra não bugar algumas coisas
       if(chatId.includes("@g")){

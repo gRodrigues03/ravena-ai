@@ -490,7 +490,7 @@ class LLMService {
 			} 
 			// Caso contrário, tente múltiplos provedores em sequência
 			else {
-				this.logger.debug('[LLMService] Nenhum provedor específico solicitado, tentando múltiplos provedores em sequência');
+				//this.logger.debug('[LLMService] Nenhum provedor específico solicitado, tentando múltiplos provedores em sequência');
 
 				let response =	await this.getCompletionFromProviders(options);
 				response = response.replace(/<think>.*?<\/think>/gs, "").trim().replace(/^"|"$/g, ""); // Remove tags de think e frase entre aspas
@@ -608,7 +608,7 @@ class LLMService {
 		// Tenta cada provedor em sequência
 		for (const provider of providers) {
 			try {
-				this.logger.debug(`[LLMService] Tentando provedor: ${provider.name}`);
+				//this.logger.debug(`[LLMService] Tentando provedor: ${provider.name}`);
 				const result = await provider.method();
 				this.logger.debug(`[LLMService] Provedor ${provider.name} retornou resposta com sucesso`);
 				return result;

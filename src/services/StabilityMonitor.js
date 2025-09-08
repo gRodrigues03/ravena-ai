@@ -29,7 +29,7 @@ class StabilityMonitor {
         // então é o tempo limite pra não ver msgs uma das outras
         if(dif > 660){ // 11 Minutos
           logg.warn(`[checkStability] ${bIns.id}: DELAY ELEVADO! (${dif}s) Reiniciando.`)
-          bIns.restartBot(`O delay está elevado (${responseTime}s), por isso o bot será reiniciado.`).catch(err => this.logger.error(`Erro ao reiniciar bot ${bIns.id} por delay elevado:`, err));
+          bIns.restartBot(`O delay está elevado, por isso o bot será reiniciado.`).catch(err => this.logger.error(`Erro ao reiniciar bot ${bIns.id} por delay elevado:`, err));
           hst = currentTs + 60 * 5; // Pra evitar que seja reiniciado novamente, adiciona 5 minutos no tempo
         }
       }
