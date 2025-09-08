@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 const Logger = require('../utils/Logger');
 const ytSearch = require('youtube-search-api');
 const youtubedl = require('youtube-dl-exec')
@@ -88,7 +88,7 @@ async function processYoutubeReaction(bot, message, emoji) {
     
     // Envia reação de processamento
     try {
-      await message.origin.react('⏳');
+      await message.origin.react('🌀');
     } catch (reactError) {
       logger.error('Erro ao reagir à mensagem:', reactError);
     }
