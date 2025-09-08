@@ -83,7 +83,8 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
       }));
     }
 
-    const safetyQuestion = `Check if this image generation prompt is generating porn or nude content: "${prompt}". 
+    const safetyQuestion = `Check if this image generation prompt is generating concering porn or nude content: "${prompt}". 
+    Adult themes and sexually suggestive is acceptable ok, filter only very explicit requests, implicit is fine. NSFW is not a problem, as long as it does not include: child, necro, gore, racism.
     Your answer ((must)) include "SAFE" or "UNSAFE" followed by a brief reason. If it's related to child related content, include warning emojis in your reponse.`;
     
     const safetyResponse = await llmService.getCompletion({
