@@ -290,7 +290,7 @@ class WhatsAppBotEvo {
         throw new Error('Invalid base64ImageContent: Must be a non-empty string.');
       }
 
-      this.logger.info(`[convertToSquarePNGImage] [${tempId}] Input is base64. Decoding...`);
+      //this.logger.info(`[convertToSquarePNGImage] [${tempId}] Input is base64. Decoding...`);
       const base64Data = base64ImageContent.includes(',') ? base64ImageContent.split(',')[1] : base64ImageContent;
 
       if (!base64Data) {
@@ -298,10 +298,10 @@ class WhatsAppBotEvo {
       }
 
       const imageBuffer = Buffer.from(base64Data, 'base64');
-      this.logger.info(`[convertToSquarePNGImage] [${tempId}] Base64 decoded to buffer. Input buffer length: ${imageBuffer.length}`);
+      //this.logger.info(`[convertToSquarePNGImage] [${tempId}] Base64 decoded to buffer. Input buffer length: ${imageBuffer.length}`);
 
       const targetSize = 800; // Target dimension for the square output
-      this.logger.info(`[convertToSquarePNGImage] [${tempId}] Starting square PNG image conversion with Sharp. Target size: ${targetSize}x${targetSize}`);
+      //this.logger.info(`[convertToSquarePNGImage] [${tempId}] Starting square PNG image conversion with Sharp. Target size: ${targetSize}x${targetSize}`);
 
       // 1. Resize the image to fit within targetSize, preserving aspect ratio.
       //    'sharp.fit.inside' is equivalent to ffmpeg's 'force_original_aspect_ratio=decrease'.
@@ -317,7 +317,7 @@ class WhatsAppBotEvo {
         })
         .toBuffer(); // Get the resized image as a buffer
 
-      this.logger.info(`[convertToSquarePNGImage] [${tempId}] Image resized with Sharp.`);
+      //this.logger.info(`[convertToSquarePNGImage] [${tempId}] Image resized with Sharp.`);
 
       // 2. Create a new transparent square canvas and composite the resized image onto it.
       //    The 'gravity: sharp.gravity.center' option will center the resized image.
@@ -341,11 +341,11 @@ class WhatsAppBotEvo {
       })
       .toBuffer();
 
-      this.logger.info(`[convertToSquarePNGImage] [${tempId}] Square PNG image created and composited with Sharp.`);
+      //this.logger.info(`[convertToSquarePNGImage] [${tempId}] Square PNG image created and composited with Sharp.`);
 
       // Convert the final image buffer to a base64 string
       const base64Png = finalImageBuffer.toString('base64');
-      this.logger.info(`[convertToSquarePNGImage] [${tempId}] Final PNG image converted to base64.`);
+      //this.logger.info(`[convertToSquarePNGImage] [${tempId}] Final PNG image converted to base64.`);
 
       return base64Png; // Return raw base64 string
 
@@ -876,8 +876,11 @@ class WhatsAppBotEvo {
       this.eventHandler.onConnected(this);
     }
 
-    await this._sendStartupNotifications();
-    await this.fetchAndPrepareBlockedContacts(); // Fetch initial blocklist
+    setTimeout((snf,blck) => {
+      snf();
+      blck();
+    }, 5000, this._sendStartupNotifications, this.fetchAndPrepareBlockedContacts);
+
   }
 
   _onInstanceDisconnected(reason = 'Unknown') {
@@ -1522,7 +1525,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         }
 
         if (options.sendMediaAsSticker){
-          this.logger.debug(`[sendMessage] sendMediaAsSticker: ${formattedContent}`);
+          this.logger.debug(`[sendMessage] sendMediaAsSticker: ${formattedContent.substring(0,150)}`);
           if(!formattedContent.startsWith("http")){
             if(mediaType == 'video' || mediaType == 'gif'){
               // Converter pra aceitar sticker animado
@@ -2260,7 +2263,6 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
     try {
       await this.initialize(); // Re-run the initialization process
       this.logger.info(`[${this.id}] Bot ${this.id} (Evo) re-initialization process started.`);
-      // Success notification will be handled by _onInstanceConnected -> _sendStartupNotifications if grupoAvisos configured
     } catch (error) {
       this.logger.error(`[${this.id}] CRITICAL ERROR during bot restart:`, error);
       if (this.grupoLogs) {
