@@ -14,7 +14,8 @@ const database = Database.getInstance();
 async function pingCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
 
-  const delayMsg = bot.getCurrentTimestamp() - (message.origin.timestamp ?? bot.getCurrentTimestamp());
+  const delayMsg = bot.getCurrentTimestamp() - (message.origin.timestamp ?? message.origin.messageTimestamp ?? bot.getCurrentTimestamp());
+  console.log(message.origin);
   logger.debug(`Executando comando ping para ${chatId}`);
   
   return new ReturnMessage({

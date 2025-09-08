@@ -134,7 +134,8 @@ class LoadReport {
         const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         
         // Constrói string de status com informação de atraso médio
-        const status = `Envie !cmd | https://ravena.moothz.win | ${loadEmoji} ${dateString} ${timeString} | ${report.messages.messagesPerHour}msg/h`; //  | delay: ${avgResponseTime.toFixed(1)}s
+        const msgPv = this.bot.ignorePV ? "PV desabilitado" : "Envie !cmd";
+        const status = `${msgPv} | https://ravena.moothz.win | ${dateString} ${timeString}`;
         
         // Atualiza status do bot
         if (this.bot.client && this.bot.isConnected) {
@@ -152,7 +153,7 @@ class LoadReport {
           this.logger.info(reportMessage);
           await this.bot.sendMessage(this.bot.grupoEstabilidade, reportMessage);
         } catch (error) {
-          this.logger.error('Erro ao enviar relatório de carga para o grupo de estatbilidade:', error);
+          this.logger.error('Erro ao enviar relatório de carga para o grupo de estabilidade:', error);
         }
       }
 
