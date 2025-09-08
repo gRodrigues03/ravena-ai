@@ -991,7 +991,7 @@ async function fishCommand(bot, message, args, group) {
     
     let extraMsg = "";
 
-    if(args[0].match(/^@\d\d/g)){ // @55....
+    if(args[0]?.match(/^@\d\d/g)){ // @55....
        const extraPegada = [
         `, segurando firme na vara de ${args[0]}, `,
         `, agarrado com vigor na vara de ${args[0]}, `,
