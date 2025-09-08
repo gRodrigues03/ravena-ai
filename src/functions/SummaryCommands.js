@@ -41,7 +41,7 @@ async function summarizeConversation(bot, message, args, group) {
       });
     }
     
-    logger.info(`Resumindo conversa para o grupo ${message.group}`);
+    logger.info(`[${group.id}] Resumindo conversa para o grupo ${message.group}`);
     
     // Tenta buscar mensagens do histórico de chat
     const chat = await message.origin.getChat();
@@ -113,7 +113,7 @@ Resumo:`;
       content: `📋 *Resumo da conversa:*\n\n${summary}`
     });
     
-    logger.info(`Resumo de conversa enviado com sucesso para ${message.group}`);
+    logger.info(`[${group.id}]Resumo de conversa enviado com sucesso para ${message.group}`);
   } catch (error) {
     logger.error('Erro ao resumir conversa:', error);
     return new ReturnMessage({
@@ -142,7 +142,7 @@ async function interactWithConversation(bot, message, args, group) {
 
     const retornarErro = args[0] ?? true;
     
-    logger.info(`[interactWithConversation] Gerando interação para o grupo ${message.group}`);
+    logger.info(`[${group.id}][interactWithConversation] Gerando interação para o grupo ${message.group}`);
     
     // Tenta buscar mensagens do histórico de chat
     const chat = await message.origin.getChat();
@@ -173,12 +173,12 @@ async function interactWithConversation(bot, message, args, group) {
       }
 
     } catch (fetchError) {
-      logger.error('[interactWithConversation] Erro ao buscar mensagens do chat:', fetchError);
+      logger.error('[${group.id}][interactWithConversation] Erro ao buscar mensagens do chat:', fetchError);
       // Recorre a mensagens armazenadas
       recentMessages = await getRecentMessages(message.group);
     }
 
-    logger.info(`[interactWithConversation] Mensagens recentes: ${recentMessages.length}`);
+    logger.info(`[${group.id}][interactWithConversation] Mensagens recentes: ${recentMessages.length}`);
     
     if (!recentMessages || recentMessages.length === 0) {
       if(retornarErro){
@@ -201,7 +201,7 @@ async function interactWithConversation(bot, message, args, group) {
 ${customPersonalidade}
 ${formattedMessages}`;
     
-    logger.info(`[interactWithConversation] Enviando prompt: ${prompt.substring(0, 500)}`);
+    logger.info(`[${group.id}][interactWithConversation] Enviando prompt: ${prompt.substring(0, 500)}`);
 
     // Obtém interação do LLM
     const interaction = await llmService.getCompletion({prompt: prompt});
@@ -222,10 +222,10 @@ ${formattedMessages}`;
 
     // Envia a mensagem de interação
     if(interaction.includes("Não foi poss") && !retornarErro){
-      logger.info(`Mensagem de interação ignorada pois ocorreu um erro na hora de gerar (${message.group}/'${interaction}')`);
+      logger.info(`[${group.id}]Mensagem de interação ignorada pois ocorreu um erro na hora de gerar (${message.group}/'${interaction}')`);
       return [];
     } else {
-      logger.info(`Mensagem de interação enviada com sucesso para ${message.group}`);
+      logger.info(`[${group.id}]Mensagem de interação enviada com sucesso para ${message.group}`);
 
       return new ReturnMessage({
         chatId: message.group,
@@ -235,7 +235,7 @@ ${formattedMessages}`;
     }
     
   } catch (error) {
-    logger.error('Erro ao gerar interação:', error);
+    logger.error(`[${group.id}] Erro ao gerar interação:`, error);
     if(retornarErro){
       return new ReturnMessage({
         chatId: message.group || message.author,
@@ -287,7 +287,7 @@ async function storeMessage(message, group) {
 
         if(response && !response.includes("Não foi poss") && !response.includes("Ocorreu um erro")){
           textContent = message.caption ? `${response}\nLegenda: ${message.caption}` : response;
-          logger.info(`[storeMessage] Imagem interpretada: ${textContent}`);
+          logger.info(`[${group.id}][storeMessage] Imagem interpretada: ${textContent}`);
         }
       }
     }

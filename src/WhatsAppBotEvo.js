@@ -69,7 +69,7 @@ class WhatsAppBotEvo {
     this.redisTTL = options.redisTTL || 604800;
     this.maxCacheSize = 3000;
 
-
+    this.streamIgnoreGroups = [];
     this.messageCache = [];
     this.contactCache = [];
     this.sentMessagesCache = [];
@@ -1504,7 +1504,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       } else if (content instanceof MessageMedia || content.isMessageMedia || options.sendMediaAsSticker) {
 
         endpoint = '/message/sendMedia';
-        this.logger.debug(`[sendMessage] ${endpoint} (${content.mimetype ?? '?mimetype?'} / ${JSON.stringify(options)})`);
+        this.logger.debug(`[sendMessage] ${endpoint} (${content.mimetype ?? '?mimetype?'} / ${JSON.stringify(options).substring(0,150)})`);
         
 
         let mediaType = 'image';
@@ -1769,7 +1769,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       // }
 
       if(!contato){
-        this.logger.debug(`[getContactDetails][${this.id}] Fetching contact details for: ${contactId}`);
+        //this.logger.debug(`[getContactDetails][${this.id}] Fetching contact details for: ${contactId}`);
         const profileData = await this.apiClient.post(`/chat/fetchProfile`, {number});
         if(profileData){
           contato = {

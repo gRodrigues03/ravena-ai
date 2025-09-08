@@ -52,6 +52,7 @@ class WhatsAppBot {
     this.linkGrupao = options.linkGrupao || process.env.LINK_GRUPO_INTERACAO;
     this.linkAvisos = options.linkAvisos || process.env.LINK_GRUPO_AVISOS;
     this.userAgent = options.userAgent ||  process.env.USER_AGENT || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0";
+    this.streamIgnoreGroups = [];
 
     this.lastMessageReceived = Date.now();
 

@@ -352,6 +352,10 @@ class StreamSystem {
         }
         
         return;
+      } else
+      if(this.bot.streamIgnoreGroups.includes(group.id)){
+        this.logger.info(`Ignorando notificação de stream para grupo que o bot ${this.bot.id} não pertence: ${group.id}`);
+        return;
       }
 
       // Verifica se o bot ainda faz parte do grupo (usando o método da plataforma específica)
@@ -370,16 +374,9 @@ class StreamSystem {
 
       // Se não for mais membro, pausa o grupo e salva no banco de dados
       if (!isMember) {
-        this.logger.info(`Bot não é mais membro do grupo ${group.id}, definindo como pausado`);
-        
-        if (this.debugNotificacoes && this.bot.grupoLogs) {
-          await this.bot.sendMessage(
-            this.bot.grupoLogs, 
-            `👋 [DEBUG] Bot não é mais membro do grupo ${group.id} (${group.name || 'sem nome'}), configurando como pausado`
-          );
-        }
-        
-        //await this.bot.database.saveGroup(group);
+        this.logger.info(`Bot não é mais membro do grupo ${group.id}, ignorando nesta instancia`);
+    
+        this.bot.streamIgnoreGroups.push(group.id);
         return;
       }
 
