@@ -189,7 +189,7 @@ class InviteSystem {
       const invitesPosPath = path.join(this.database.databasePath, 'textos', 'invites_pos.txt');
       const posConvite = await fs.readFile(invitesPosPath, 'utf8');
 
-      await this.bot.sendMessage(authorId, "Seu convite foi recebido e será analisado.\n"+posConvite);
+      await this.bot.sendMessage(authorId, "Seu convite foi recebido e será analisado."+posConvite);
       
       // Envia notificações para o grupoInvites se configurado
       if (this.bot.grupoInvites) {
