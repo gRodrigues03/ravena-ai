@@ -1,4 +1,4 @@
-const { Contact, LocalAuth, MessageMedia, Location, Poll } = require('whatsapp-web.js');
+﻿const { Contact, LocalAuth, MessageMedia, Location, Poll } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { randomBytes } = require('crypto');
 const imagemagick = require('imagemagick');
@@ -1127,7 +1127,11 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
         if(evoMessageData.event === "send.message"){
           isSentMessage = true;
-          author = evoMessageData.sender.split("@")[0]+"@c.us";
+          if(evoMessageData.sender){
+            author = evoMessageData.sender.split("@")[0]+"@c.us";
+          } else {
+            author = evoMessageData.key.remoteJid.split("@")[0]+"@c.us";
+          }
         } else {
           // send.message é evento de enviadas, então se não for, recebeu uma
           this.loadReport.trackReceivedMessage(isGroup, responseTime, author);

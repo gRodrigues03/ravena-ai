@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 const fs = require('fs').promises;
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
@@ -582,7 +582,7 @@ async function definirTempoRoleta(bot, message, args, group) {
     
     return new ReturnMessage({
       chatId: groupId,
-      content: `⏱️ Tempo de "morte" na roleta russa definido para ${tempoFormatado}.`
+      content: `🕐 Tempo de "morte" na roleta russa definido para ${tempoFormatado}.`
     });
   } catch (error) {
     logger.error('Erro ao definir tempo de roleta:', error);
@@ -707,7 +707,7 @@ const commands = [
     adminOnly: true,
     cooldown: 10,
     reactions: {
-      after: "⏱️",
+      after: "🕐",
       error: "❌"
     },
     method: definirTempoRoleta

@@ -1,4 +1,4 @@
-# Manipulação de Imagens
+﻿# Manipulação de Imagens
 
 O módulo `ImageManipulation.js` fornece comandos para modificar, transformar e aplicar efeitos em imagens, incluindo remoção de fundo, distorção e efeitos artísticos.
 

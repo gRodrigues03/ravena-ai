@@ -1,4 +1,4 @@
-# Sistema de Gerenciamento de Bot WhatsApp
+﻿# Sistema de Gerenciamento de Bot WhatsApp
 
 Este documento explica o funcionamento da classe `Management`, responsável pelo gerenciamento de comandos administrativos do bot, incluindo detalhes de implementação e exemplos de uso.
 

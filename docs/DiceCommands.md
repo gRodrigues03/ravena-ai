@@ -1,4 +1,4 @@
-# Comandos de Dados (Dice)
+﻿# Comandos de Dados (Dice)
 
 Este módulo fornece funcionalidades para rolar dados virtuais, com suporte a vários formatos e tipos de dados comuns em jogos de RPG.
 

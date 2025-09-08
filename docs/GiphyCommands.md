@@ -1,4 +1,4 @@
-# Comandos Giphy
+﻿# Comandos Giphy
 
 O módulo `GiphyCommands.js` implementa funcionalidades para buscar e enviar GIFs animados do serviço Giphy.
 
@@ -47,7 +47,7 @@ A resposta inclui:
 Isso retornará um GIF relacionado a "gato assustado" do serviço Giphy.
 
 #### Reações de emoji:
-- Antes de processar: ⏳
+- Antes de processar: 🌀
 - Após processamento bem-sucedido: 📱
 
 #### Limitações:

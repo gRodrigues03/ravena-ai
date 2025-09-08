@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 const Logger = require('../utils/Logger');
 const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
@@ -139,7 +139,7 @@ async function anonymousMessage(bot, message, args, group) {
     if (cooldownCheck.onCooldown) {
       return new ReturnMessage({
         chatId: senderId,
-        content: `⏳ Você precisa esperar ${cooldownCheck.timeLeft} hora(s) para enviar outra mensagem anônima.`
+        content: `🌀 Você precisa esperar ${cooldownCheck.timeLeft} hora(s) para enviar outra mensagem anônima.`
       });
     }
     

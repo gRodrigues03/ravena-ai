@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 const axios = require('axios');
 const fs = require('fs').promises;
 const Logger = require('../utils/Logger');
@@ -78,7 +78,7 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
       // Envia mensagem de processamento
       await bot.sendReturnMessages(new ReturnMessage({
         chatId: chatId,
-        content: `🖼️ Gerando imagem para '${prompt}', isso pode levar alguns segundos...`,
+        content: `📷 Gerando imagem para '${prompt}', isso pode levar alguns segundos...`,
         reaction: process.env.LOADING_EMOJI ?? "🌀"
       }));
     }
@@ -173,7 +173,7 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
     }, 30000, tempImagePath);
     
     // Prepara a legenda com informações sobre a geração
-    const caption = `🎨 *Prompt:* ${prompt}\n📊 *Modelo:* ${modelName}\n⏱️ *Tempo:* ${generationTime}s${safetyMsg}`;
+    const caption = `🎨 *Prompt:* ${prompt}\n📊 *Modelo:* ${modelName}\n🕐 *Tempo:* ${generationTime}s${safetyMsg}`;
     
     const media = await bot.createMedia(tempImagePath);
     logger.info(media);

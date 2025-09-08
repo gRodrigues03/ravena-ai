@@ -1,4 +1,4 @@
-// src/functions/FishingGame.js
+﻿// src/functions/FishingGame.js
 const path = require('path');
 const fs = require('fs').promises;
 const fsSync = require('fs');
@@ -46,7 +46,7 @@ const TRASH_ITEMS = [
   { name: "Sacola plástica", emoji: "🛍️" },
   { name: "Latinha", emoji: "🥫" },
   { name: "Mochila rasgada", emoji: "🎒" },
-  { name: "Saco de lixo", emoji: "🗑️" },
+  { name: "Saco de lixo", emoji: "🧹" },
   { name: "Pneu furado", emoji: "🛞" },
   { name: "Garrafa vazia", emoji: "🍾" },
   { name: "Chapéu de pirata", emoji: "👒" },
@@ -1742,7 +1742,7 @@ async function legendaryFishCommand(bot, message, args, group) {
     
     // Adiciona mensagem sobre as imagens
     if (sortedLegendaryFishes.length > 0) {
-      textMessage += `🖼️ *Mostrando imagens das ${Math.min(5, sortedLegendaryFishes.length)} lendas mais recentes...*`;
+      textMessage += `📷 *Mostrando imagens das ${Math.min(5, sortedLegendaryFishes.length)} lendas mais recentes...*`;
     }
     
     // Mensagens a serem enviadas
@@ -1912,13 +1912,13 @@ async function fishingInfoCommand(bot, message) {
         });
         infoMessage += "\n";
 
-        infoMessage += "🗑️ *Lixos Pescáveis*\n_Nem tudo que reluz é peixe..._\n";
+        infoMessage += "🧹 *Lixos Pescáveis*\n_Nem tudo que reluz é peixe..._\n";
         infoMessage += `\`${TRASH_ITEMS.map(item => item.emoji + " " + item.name).join(', ')}\`\n\n`;
 
         infoMessage += "📊 *Estatísticas Globais de Pesca*\n";
         infoMessage += `🐟 *Total de Peixes Pescados:* ${stats.totalFishCaught}\n`;
         infoMessage += `🐛 *Total de Iscas Usadas:* ${stats.totalBaitsUsed}\n`;
-        infoMessage += `🗑️ *Total de Lixo Coletado:* ${stats.totalTrashCaught}\n`;
+        infoMessage += `🧹 *Total de Lixo Coletado:* ${stats.totalTrashCaught}\n`;
         infoMessage += `🐲 *Total de Lendas Encontradas:* ${stats.totalLegendaryCaught}\n`;
         if (stats.heaviestFishEver.weight > 0) {
             infoMessage += `🏆 *Maior Peixe da História:* ${stats.heaviestFishEver.name} com \`${stats.heaviestFishEver.weight.toFixed(2)} kg\`, pescado por _${stats.heaviestFishEver.userName}_\n`;

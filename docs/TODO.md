@@ -1,4 +1,4 @@
-- [x] Estrutura base do bot
+﻿- [x] Estrutura base do bot
 - [x] Sistema de comandos (fixos, personalizados, gerenciamento)
 - [x] Gerenciamento de grupos
 - [x] Variáveis personalizadas em respostas

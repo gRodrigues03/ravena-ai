@@ -1,4 +1,4 @@
-const fs = require('fs').promises;
+﻿const fs = require('fs').promises;
 const path = require('path');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
@@ -4204,7 +4204,7 @@ async setWelcomeMessage(bot, message, args, group) {
     
     if (group.interact.enabled) {
       response += `📊 Chance atual: ${group.interact.chance/100}%\n`;
-      response += `⏱️ Cooldown atual: ${group.interact.cooldown} minutos\n\n`;
+      response += `🕐 Cooldown atual: ${group.interact.cooldown} minutos\n\n`;
       response += 'Use `!g-interagir-chance` e `!g-interagir-cd` para ajustar estes valores.';
     }
     
@@ -4290,7 +4290,7 @@ async setWelcomeMessage(bot, message, args, group) {
     if (args.length === 0 || isNaN(parseInt(args[0]))) {
       return new ReturnMessage({
         chatId: group.id,
-        content: `⏱️ Cooldown atual: ${group.interact.cooldown} minutos\n\nUse !g-interagir-cd [minutos] para alterar. Valores entre 5 minutos e 30 dias (43200 minutos).`
+        content: `🕐 Cooldown atual: ${group.interact.cooldown} minutos\n\nUse !g-interagir-cd [minutos] para alterar. Valores entre 5 minutos e 30 dias (43200 minutos).`
       });
     }
     
@@ -4313,7 +4313,7 @@ async setWelcomeMessage(bot, message, args, group) {
     
     return new ReturnMessage({
       chatId: group.id,
-      content: `⏱️ Cooldown de interações definido para ${cooldown} minutos${textoMinimo}.`
+      content: `🕐 Cooldown de interações definido para ${cooldown} minutos${textoMinimo}.`
     });
   }
 
@@ -5066,7 +5066,7 @@ async setWelcomeMessage(bot, message, args, group) {
       response += '\n';
 
       // Adiciona variáveis de sistema
-      response += `⏱️ *Variáveis de Sistema*:\n`;
+      response += `🕐 *Variáveis de Sistema*:\n`;
       for (const variable of systemVariables) {
         response += `• ${variable.name} - ${variable.description}\n`;
       }

@@ -1,4 +1,4 @@
-# Design Patterns
+﻿# Design Patterns
 
 Este projeto incorpora diversos padrões de design para promover modularidade, extensibilidade e manutenibilidade. Abaixo estão os principais padrões adotados:
 
@@ -104,7 +104,7 @@ const message = new ReturnMessage({
     sendMediaAsSticker: false
   },
   reactions: {
-    before: "⏳",
+    before: "🌀",
     after: "✅"
   },
   delay: 500

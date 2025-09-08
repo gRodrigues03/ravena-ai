@@ -1,4 +1,4 @@
-# Resumos de Conversas
+﻿# Resumos de Conversas
 
 O módulo `SummaryCommands.js` implementa funcionalidades para resumir e interagir com conversas de grupo usando inteligência artificial, permitindo gerar resumos de discussões e mensagens interativas contextuais.
 

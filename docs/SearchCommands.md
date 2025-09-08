@@ -1,4 +1,4 @@
-# Comandos de Busca
+﻿# Comandos de Busca
 
 Este módulo implementa funcionalidades para realizar buscas na web e pesquisar imagens.
 

@@ -1,4 +1,4 @@
-const StreamMonitor = require('./services/StreamMonitor');
+﻿const StreamMonitor = require('./services/StreamMonitor');
 const Logger = require('./utils/Logger');
 const LLMService = require('./services/LLMService');
 const ReturnMessage = require('./models/ReturnMessage');
@@ -687,7 +687,7 @@ class StreamSystem {
             if (this.debugNotificacoes && this.bot.grupoLogs) {
               await this.bot.sendMessage(
                 this.bot.grupoLogs, 
-                `🖼️ [DEBUG] Foto alterada (online) para grupo ${group.id} (${group.name || 'sem nome'})`
+                `📷 [DEBUG] Foto alterada (online) para grupo ${group.id} (${group.name || 'sem nome'})`
               );
             }
           }
@@ -710,7 +710,7 @@ class StreamSystem {
             if (this.debugNotificacoes && this.bot.grupoLogs) {
               await this.bot.sendMessage(
                 this.bot.grupoLogs, 
-                `🖼️ [DEBUG] Foto alterada (offline) para grupo ${group.id} (${group.name || 'sem nome'})`
+                `📷 [DEBUG] Foto alterada (offline) para grupo ${group.id} (${group.name || 'sem nome'})`
               );
             }
           }

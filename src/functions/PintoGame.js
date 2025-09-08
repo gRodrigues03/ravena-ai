@@ -1,4 +1,4 @@
-// src/functions/PintoGame.js
+﻿// src/functions/PintoGame.js
 const path = require('path');
 const fs = require('fs').promises;
 const Logger = require('../utils/Logger');
@@ -263,7 +263,7 @@ async function pintoCommand(bot, message, args, group) {
     if (cooldownStatus.inCooldown) {
       return new ReturnMessage({
         chatId: groupId,
-        content: `⏳ ${userName}, você já realizou sua avaliação recentemente.\n\nPróxima avaliação disponível em ${cooldownStatus.daysUntil} dia(s), dia ${formatDate(cooldownStatus.nextAvailable)}.`,
+        content: `🌀 ${userName}, você já realizou sua avaliação recentemente.\n\nPróxima avaliação disponível em ${cooldownStatus.daysUntil} dia(s), dia ${formatDate(cooldownStatus.nextAvailable)}.`,
         options: {
           quotedMessageId: message.origin.id._serialized,
           evoReply: message.origin

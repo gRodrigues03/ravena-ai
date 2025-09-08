@@ -1,4 +1,4 @@
-# RavenaBot AI
+﻿# RavenaBot AI
 
 ![Ravenabot AI - img by chatgpt](ravenabanner.png)
 
@@ -249,7 +249,7 @@ const commands = [
     name: 'exemplo',
     description: 'Um comando de exemplo',
     reactions: {
-      before: "⏳",  // Emoji mostrado antes da execução
+      before: "🌀",  // Emoji mostrado antes da execução
       after: "✅"    // Emoji mostrado após a execução
     },
     method: async (bot, message, args, group) => {

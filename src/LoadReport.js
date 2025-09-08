@@ -1,4 +1,4 @@
-const Database = require('./utils/Database');
+﻿const Database = require('./utils/Database');
 const Logger = require('./utils/Logger');
 
 /**
@@ -189,7 +189,7 @@ class LoadReport {
            `- Mensagens/h: ${report.messages.messagesPerHour}\n`+
            `- Recebidas: ${report.messages.totalReceived} (${report.messages.receivedPrivate} pv/${report.messages.receivedGroup} gp)\n`+
            `- Enviadas: ${report.messages.totalSent} (${report.messages.sentPrivate} pv/${report.messages.sentGroup} gp)\n\n`+
-           `⏱️ *Tempo de Resposta:*\n` +
+           `🕐 *Tempo de Resposta:*\n` +
            `- Média: ${report.responseTime.average}s\n` +
            `- Máximo: ${report.responseTime.max}s\n` +
            `- Medições: ${report.responseTime.count}\n\n${rndString}`;

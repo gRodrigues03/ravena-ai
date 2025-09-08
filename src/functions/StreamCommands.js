@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
 const Command = require('../models/Command');
@@ -647,7 +647,7 @@ async function getStreamInformation(bot, chatId, platform, channelName) {
                      `📝 *Título:* ${status.title || 'Sem título'}\n` +
                      `🎮 *Jogo:* ${status.game || status.category || 'Não informado'}\n` +
                      `👁️ *Viewers:* ${status.viewerCount || 'Não informado'}\n` +
-                     `⏱️ *Duração:* ${streamDuration || 'Não informado'}\n\n` +
+                     `🕐 *Duração:* ${streamDuration || 'Não informado'}\n\n` +
                      `🔗 *Link:* ${linkSite}`;
       
       // Se o canal tem thumbnail, tenta baixá-la e enviar como imagem

@@ -1,4 +1,4 @@
-# Comandos de Clima
+﻿# Comandos de Clima
 
 O módulo `Weather.js` implementa funcionalidades para obter informações meteorológicas atuais e previsões para qualquer localização.
 
@@ -45,8 +45,8 @@ A resposta inclui:
 Isso retornará informações detalhadas sobre o clima atual em Paris, incluindo previsão.
 
 #### Reações de emoji:
-- Antes de processar: ⏳
-- Após processamento bem-sucedido: ☀️
+- Antes de processar: 🌀
+- Após processamento bem-sucedido: 🌞
 - Em caso de erro: ❌
 
 #### Limitações:

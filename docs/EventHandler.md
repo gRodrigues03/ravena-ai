@@ -1,4 +1,4 @@
-# EventHandler
+﻿# EventHandler
 
 O EventHandler é o componente central que gerencia todos os eventos recebidos do WhatsApp, coordenando as respostas do bot para mensagens, reações, entradas e saídas de grupos.
 

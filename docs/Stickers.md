@@ -1,4 +1,4 @@
-# Comandos de Stickers
+﻿# Comandos de Stickers
 
 Este módulo implementa funcionalidades para criar, editar e converter stickers a partir de imagens, vídeos e GIFs.
 

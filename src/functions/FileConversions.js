@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 const fs = require('fs').promises;
 const ffmpeg = require('fluent-ffmpeg');
 const { MessageMedia } = require('whatsapp-web.js');
@@ -185,7 +185,7 @@ async function handleGetAudio(bot, message, args, group) {
     returnMessages.push(
       new ReturnMessage({
         chatId: chatId,
-        content: '⏳ Processando áudio...'
+        content: '🌀 Processando áudio...'
       })
     );
     
@@ -272,7 +272,7 @@ async function handleGetVoice(bot, message, args, group) {
     returnMessages.push(
       new ReturnMessage({
         chatId: chatId,
-        content: '⏳ Processando áudio...'
+        content: '🌀 Processando áudio...'
       })
     );
     
@@ -377,7 +377,7 @@ async function handleVolumeAdjust(bot, message, args, group) {
     returnMessages.push(
       new ReturnMessage({
         chatId: chatId,
-        content: `⏳ Ajustando volume para ${volumeLevel}%...`
+        content: `🌀 Ajustando volume para ${volumeLevel}%...`
       })
     );
     

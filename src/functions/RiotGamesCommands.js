@@ -1,4 +1,4 @@
-const axios = require('axios');
+﻿const axios = require('axios');
 const Logger = require('../utils/Logger');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
@@ -62,7 +62,7 @@ const RANK_EMOJIS_VALORANT = {
     "Immortal 2": '☠️',
     "Immortal 3": '☠️',
     "Immortal":'☠️',
-    "Radiant": '☀️'
+    "Radiant": '🌞'
 };
 
 // Emoji mapping for positions/roles

@@ -1,4 +1,4 @@
-# Comandos de Ranking de Mensagens
+﻿# Comandos de Ranking de Mensagens
 
 O módulo `RankingMessages.js` implementa funcionalidades para rastrear a atividade dos membros em grupos e exibir rankings de participação.
 

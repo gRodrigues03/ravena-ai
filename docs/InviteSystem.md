@@ -1,4 +1,4 @@
-# Sistema de Convites
+﻿# Sistema de Convites
 
 O Sistema de Convites permite que usuários adicionem o bot a grupos através de um fluxo de aprovação controlado, garantindo que o bot seja adicionado apenas a grupos autorizados e rastreando quem fez cada convite.
 

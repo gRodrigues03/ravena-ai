@@ -1,4 +1,4 @@
-# Comandos de Wikipedia
+﻿# Comandos de Wikipedia
 
 Este módulo implementa funcionalidades para buscar e apresentar informações da Wikipedia.
 

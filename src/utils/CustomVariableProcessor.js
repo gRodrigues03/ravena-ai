@@ -1,4 +1,4 @@
-const Database = require('./Database');
+﻿const Database = require('./Database');
 const Logger = require('./Logger');
 const axios = require('axios').default;
 const { processFileVariable } = require('../functions/FileManager');
@@ -892,7 +892,7 @@ class CustomVariableProcessor {
             const media = await context.bot.createMediaFromURL(mediaUrl, opts);
 
             // Hijack as options pra fazer legenda
-            context.options.caption = `🖼️ [${selectedPost.data.subreddit_name_prefixed}] _${selectedPost.data.title}_
+            context.options.caption = `📷 [${selectedPost.data.subreddit_name_prefixed}] _${selectedPost.data.title}_
 > ${selectedPost.data.ups} 👍 ${selectedPost.data.downs} 👎
 > reddit.com/${selectedPost.data.permalink}`; // > reddit.com/u/${selectedPost.data.author
 

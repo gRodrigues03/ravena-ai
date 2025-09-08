@@ -1,4 +1,4 @@
-# Comandos Last.fm
+﻿# Comandos Last.fm
 
 O módulo `LastFMCommands.js` implementa funcionalidades para obter informações de perfis e estatísticas do Last.fm, o serviço de rastreamento musical.
 
@@ -48,7 +48,7 @@ A resposta inclui:
 Isso retornará informações detalhadas sobre o perfil do Last.fm do usuário especificado.
 
 #### Reações de emoji:
-- Antes de processar: ⏳
+- Antes de processar: 🌀
 - Após processamento bem-sucedido: 📻
 - Em caso de erro: ❌
 

@@ -1,4 +1,4 @@
-# Requisições API Personalizadas
+﻿# Requisições API Personalizadas
 
 O módulo `CustomVariableProcessor.js` implementa funcionalidades para realizar requisições a APIs externas diretamente de comandos personalizados, permitindo que usuários integrem dados dinâmicos de serviços web nas respostas do bot.
 

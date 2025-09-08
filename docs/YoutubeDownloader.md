@@ -1,4 +1,4 @@
-# Comandos para YouTube
+﻿# Comandos para YouTube
 
 Este módulo implementa funcionalidades para download de vídeos e áudios do YouTube.
 

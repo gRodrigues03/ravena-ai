@@ -1,4 +1,4 @@
-# Comandos de Inteligência Artificial
+﻿# Comandos de Inteligência Artificial
 
 Este módulo implementa funcionalidades que utilizam modelos de linguagem (LLM) para geração de texto, resumo, interação conversacional e geração de imagens.
 

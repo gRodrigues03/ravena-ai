@@ -1,4 +1,4 @@
-# Comandos de Riot Games
+﻿# Comandos de Riot Games
 
 Este módulo implementa funcionalidades para consultar informações de jogadores em jogos da Riot Games, incluindo League of Legends, Wild Rift e Valorant.
 

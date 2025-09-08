@@ -1,4 +1,4 @@
-const axios = require('axios');
+﻿const axios = require('axios');
 const cheerio = require('cheerio');
 const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
@@ -66,7 +66,7 @@ async function searchAircraftRAB(bot, message, args, group) {
       logger.info(`Matrícula ${marca} não encontrada.`);
       return new ReturnMessage({
         chatId: chatId,
-        content: `✈️ Consulta RAB - Matrícula '${marca}' não encontrada!`,
+        content: `🛄 Consulta RAB - Matrícula '${marca}' não encontrada!`,
         options: {
           quotedMessageId: message.origin.id._serialized,
           evoReply: message.origin
@@ -78,7 +78,7 @@ async function searchAircraftRAB(bot, message, args, group) {
     const table = $('.table.table-hover');
     
     // Inicializa a mensagem de retorno
-    let retorno = `✈️ *Consulta RAB - Matrícula ${marca}*\n\n`;
+    let retorno = `🛄 *Consulta RAB - Matrícula ${marca}*\n\n`;
     
     // Itera sobre cada linha da tabela
     table.find('tr').each((index, element) => {
@@ -489,7 +489,7 @@ const commands = [
     aliases: ['img', 'imagem'],
     reactions: {
       before: process.env.LOADING_EMOJI ?? "🌀",
-      after: "🖼️"
+      after: "📷"
     },
     method: searchImages
   }),
@@ -500,7 +500,7 @@ const commands = [
     category: "busca",
     reactions: {
       before: process.env.LOADING_EMOJI ?? "🌀",
-      after: "✈️"
+      after: "🛄"
     },
     method: searchAircraftRAB
   })

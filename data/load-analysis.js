@@ -1,4 +1,4 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 
 // Load the JSON file
 const data = JSON.parse(fs.readFileSync('load-reports.json', 'utf8'));
@@ -61,3 +61,4 @@ for (const [botId, stats] of Object.entries(bots)) {
   }
   */
 }
+

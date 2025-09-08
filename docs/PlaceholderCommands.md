@@ -1,4 +1,4 @@
-# Comandos Básicos
+﻿# Comandos Básicos
 
 O módulo `PlaceholderCommands.js` implementa comandos essenciais e utilitários que servem como base para o funcionamento do bot. Apesar do nome "placeholder" (espaço reservado), estes são comandos fundamentais que estarão disponíveis mesmo se outros módulos não forem carregados.
 
@@ -109,7 +109,7 @@ Os comandos utilizam reações com emojis para indicar diferentes estados:
 
 | Comando | Antes | Depois |
 |---------|-------|--------|
-| `!ping` | ⏳ | ✅ |
+| `!ping` | 🌀 | ✅ |
 | `!ai` | 🧠 | ✨ |
 | `!echo` | 📝 | 🔊 |
 | `!roll` | 🎲 | 🎯 |

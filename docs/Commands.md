@@ -1,4 +1,4 @@
-# Documentação de Comandos
+﻿# Documentação de Comandos
 
 ## FixedCommands.js
 

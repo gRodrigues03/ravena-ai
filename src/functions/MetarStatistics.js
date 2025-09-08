@@ -1,4 +1,4 @@
-const axios = require("axios");
+﻿const axios = require("axios");
 const Logger = require("../utils/Logger");
 const Command = require("../models/Command");
 const ReturnMessage = require("../models/ReturnMessage");
@@ -39,7 +39,7 @@ async function metarCommand(bot, message, args, group) {
     if (!args.length) {
       return new ReturnMessage({
         chatId,
-        content: "✈️ Informe o código ICAO do aeroporto. Exemplo: !metar SBGR",
+        content: "🛄 Informe o código ICAO do aeroporto. Exemplo: !metar SBGR",
         options: {
           quotedMessageId: message.origin?.id?._serialized,
           evoReply: message.origin
@@ -99,3 +99,4 @@ module.exports = {
   commands,
   buscarMetar
 };
+

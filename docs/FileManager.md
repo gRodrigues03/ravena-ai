@@ -1,4 +1,4 @@
-# Comandos de Gestão de Arquivos
+﻿# Comandos de Gestão de Arquivos
 
 Este módulo implementa um sistema de armazenamento e gerenciamento de arquivos dentro do bot, permitindo que grupos armazenem, organizem e compartilhem arquivos.
 

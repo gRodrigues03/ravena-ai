@@ -1,4 +1,4 @@
-const axios = require('axios');
+﻿const axios = require('axios');
 const Logger = require('../utils/Logger');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
@@ -16,7 +16,7 @@ const GEO_BASE_URL = 'https://api.openweathermap.org/geo/1.0/direct';
 // Mapeamento de códigos de clima para emojis
 const WEATHER_EMOJIS = {
   // Clima limpo
-  '01d': '☀️', // céu limpo (dia)
+  '01d': '🌞', // céu limpo (dia)
   '01n': '🌙', // céu limpo (noite)
   
   // Nuvens
@@ -52,7 +52,7 @@ const WIND_DIRECTIONS = [
   { name: 'NNE', emoji: '↗️', min: 11.25, max: 33.75 },
   { name: 'NE', emoji: '↗️', min: 33.75, max: 56.25 },
   { name: 'ENE', emoji: '↗️', min: 56.25, max: 78.75 },
-  { name: 'E', emoji: '➡️', min: 78.75, max: 101.25 },
+  { name: 'E', emoji: '👉', min: 78.75, max: 101.25 },
   { name: 'ESE', emoji: '↘️', min: 101.25, max: 123.75 },
   { name: 'SE', emoji: '↘️', min: 123.75, max: 146.25 },
   { name: 'SSE', emoji: '↘️', min: 146.25, max: 168.75 },
@@ -60,7 +60,7 @@ const WIND_DIRECTIONS = [
   { name: 'SSW', emoji: '↙️', min: 191.25, max: 213.75 },
   { name: 'SW', emoji: '↙️', min: 213.75, max: 236.25 },
   { name: 'WSW', emoji: '↙️', min: 236.25, max: 258.75 },
-  { name: 'W', emoji: '⬅️', min: 258.75, max: 281.25 },
+  { name: 'W', emoji: '👈', min: 258.75, max: 281.25 },
   { name: 'WNW', emoji: '↖️', min: 281.25, max: 303.75 },
   { name: 'NW', emoji: '↖️', min: 303.75, max: 326.25 },
   { name: 'NNW', emoji: '↖️', min: 326.25, max: 348.75 }
@@ -192,7 +192,7 @@ function formatWeatherMessage(weatherData) {
     message += `📊 *Pressão:* ${pressure} hPa\n\n`;
     
     // Adiciona previsão para próximas horas
-    message += `*⏱️ Próximas Horas:*\n`;
+    message += `*🕐 Próximas Horas:*\n`;
     
     // Pega próximas 6 previsões (24 horas, 3 em 3 horas)
     const hourlyForecasts = forecast.list.slice(0, 6);
@@ -414,7 +414,7 @@ const commands = [
     category: "utilidades",
     reactions: {
       before: process.env.LOADING_EMOJI ?? "🌀",
-      after: "☀️",
+      after: "🌞",
       error: "❌"
     },
     method: handleWeatherCommand

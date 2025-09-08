@@ -1,4 +1,4 @@
-// src/functions/StopGame.js
+﻿// src/functions/StopGame.js
 const path = require('path');
 const Logger = require('../utils/Logger');
 const ReturnMessage = require('../models/ReturnMessage');
@@ -111,7 +111,7 @@ async function startStopGame(bot, message, args, group) {
       
       return new ReturnMessage({
         chatId: groupId,
-        content: `🛑 Já existe um jogo de Stop/Adedonha em andamento! Me encaminhe as respostas no pv.\n\n- ⏱️ Tempo restante: ${minutes}m ${seconds}s.`
+        content: `🛑 Já existe um jogo de Stop/Adedonha em andamento! Me encaminhe as respostas no pv.\n\n- 🕐 Tempo restante: ${minutes}m ${seconds}s.`
       });
     }
     
@@ -164,7 +164,7 @@ async function startStopGame(bot, message, args, group) {
     const minutes = Math.floor(gameDuration / 60000);
     const seconds = Math.floor((gameDuration % 60000) / 1000);
     
-    let startMessage = `🛑 *STOP!* ✋ - Letra: *${selectedLetter}* - _Inicializando..._\n\nVocês tem ${minutes}m${seconds > 0 ? ` ${seconds}s` : ''} para responder! ⏱️\n`;
+    let startMessage = `🛑 *STOP!* ✋ - Letra: *${selectedLetter}* - _Inicializando..._\n\nVocês tem ${minutes}m${seconds > 0 ? ` ${seconds}s` : ''} para responder! 🕐\n`;
     startMessage += `Todas as respostas devem começar com a letra *${selectedLetter}*.\n`;
     startMessage += `Copie a mensagem a seguir, preencha as respostas e envie no meu pv!`;
     
@@ -297,7 +297,7 @@ function processStopGameResponse(bot, message) {
     message.origin.react(emoji);
     return new ReturnMessage({
       chatId: userId,
-      content: `${emoji} Recebi suas respostas!\n- ⏱️ Tempo restante: ${minutes}m ${seconds}s`
+      content: `${emoji} Recebi suas respostas!\n- 🕐 Tempo restante: ${minutes}m ${seconds}s`
     });
 
   } catch (error) {

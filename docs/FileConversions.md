@@ -1,4 +1,4 @@
-# Comandos de Conversão de Arquivos
+﻿# Comandos de Conversão de Arquivos
 
 Este módulo implementa funcionalidades para conversão e manipulação de arquivos de mídia, especialmente áudio.
 

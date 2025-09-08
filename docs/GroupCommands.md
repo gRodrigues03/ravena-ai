@@ -1,4 +1,4 @@
-# Comandos de Grupo
+﻿# Comandos de Grupo
 
 Este módulo implementa funcionalidades para gerenciamento e interação em grupos do WhatsApp.
 
@@ -50,7 +50,7 @@ Apaga a mensagem do bot quando usado em resposta a ela.
 - Apaga a mensagem do bot à qual o comando responde
 - Se o bot for administrador do grupo, pode apagar mensagens de outros usuários também (se solicitado por um administrador)
 - Apenas apaga mensagens do bot por padrão
-- Pode ser acionado pela reação 🗑️
+- Pode ser acionado pela reação 🧹
 - O bot tenta apagar também a mensagem do comando
 - Confirmação é dada através de reação ✅
 

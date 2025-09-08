@@ -1,4 +1,4 @@
-# Comandos de Lembretes
+﻿# Comandos de Lembretes
 
 O módulo `LembretesCommands.js` implementa funcionalidades para criar, gerenciar e visualizar lembretes programados com conteúdo de texto e mídia.
 
@@ -39,7 +39,7 @@ A resposta de confirmação inclui:
 - ID único do lembrete (necessário para cancelamento)
 
 #### Reações de emoji:
-- Antes de processar: ⏳
+- Antes de processar: 🌀
 - Após processamento bem-sucedido: ⏰
 
 #### Limitações:
@@ -66,7 +66,7 @@ A resposta inclui:
 - Indicador de mídia (📎) se o lembrete contiver mídia
 
 #### Reações de emoji:
-- Antes de processar: ⏳
+- Antes de processar: 🌀
 - Após processamento bem-sucedido: 📋
 
 ### !l-cancelar
@@ -88,7 +88,7 @@ A resposta inclui:
 - ID do lembrete cancelado
 
 #### Reações de emoji:
-- Antes de processar: ⏳
+- Antes de processar: 🌀
 - Após processamento bem-sucedido: 🗑
 
 #### Comportamento especial:

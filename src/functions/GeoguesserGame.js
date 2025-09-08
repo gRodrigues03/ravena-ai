@@ -1,4 +1,4 @@
-// src/functions/GeoguesserGame.js
+﻿// src/functions/GeoguesserGame.js
 const path = require('path');
 const fs = require('fs').promises;
 const axios = require('axios');
@@ -497,7 +497,7 @@ async function startGeoguesserGame(bot, message, args, group) {
     const returnMessages = [];
 
 
-    bot.sendReturnMessages(new ReturnMessage({chatId: chatId, content: "🌎 *Inicializando _Geoguesser_*, aguarde as imagens! ⏳"}));
+    bot.sendReturnMessages(new ReturnMessage({chatId: chatId, content: "🌎 *Inicializando _Geoguesser_*, aguarde as imagens! 🌀"}));
 
     try{
 
@@ -992,7 +992,7 @@ async function showGameStatus(bot, message, args, group) {
     
     // Prepara a mensagem de status
     let statusMessage = '🌎 *Status do jogo de Geoguesser*\n\n';
-    statusMessage += `⏱️ Tempo restante: ${minutes}m ${seconds}s\n\n`;
+    statusMessage += `🕐 Tempo restante: ${minutes}m ${seconds}s\n\n`;
     
     // Adiciona lista de participantes
     const guesses = activeGames[groupId].guesses;

@@ -1,4 +1,4 @@
-# Comandos de Listas
+﻿# Comandos de Listas
 
 Este módulo implementa funcionalidades para criar e gerenciar listas dentro dos grupos, permitindo que os membros participem ou saiam facilmente através de comandos ou reações.
 

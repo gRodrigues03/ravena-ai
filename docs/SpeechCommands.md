@@ -1,4 +1,4 @@
-# Comandos de Fala e Voz
+﻿# Comandos de Fala e Voz
 
 Este módulo implementa funcionalidades para conversão de texto para voz (TTS) e voz para texto (STT).
 

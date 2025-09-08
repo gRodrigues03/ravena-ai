@@ -1,4 +1,4 @@
-# Comandos de Menu
+﻿# Comandos de Menu
 
 Este módulo implementa funcionalidades para exibir listas de comandos disponíveis, comandos personalizados e comandos de gerenciamento.
 

@@ -1,4 +1,4 @@
-// src/functions/GroupCommands.js
+﻿// src/functions/GroupCommands.js
 
 const path = require('path');
 const Logger = require('../utils/Logger');
@@ -360,8 +360,8 @@ const commands = [
     description: 'Apaga a mensagem do bot quando usado em resposta a ela',
     category: 'grupo',
     reactions: {
-      trigger: "🗑️", 
-      before: "🗑️",
+      trigger: "🧹", 
+      before: "🧹",
       after: false
     },
     method: apagarMensagem

@@ -1,4 +1,4 @@
-// Variáveis globais
+﻿// Variáveis globais
 let lastHealthData = null;
 let isAdminMode = false;
 let selectedBots = [];
@@ -57,7 +57,7 @@ function getResponseTimeClass(seconds) {
 // Função para obter emoji baseado no tempo de resposta
 function getResponseTimeEmoji(seconds) {
     if (seconds < 5) return '⚡';
-    if (seconds < 30) return '⏱️';
+    if (seconds < 30) return '🕐';
     return '🐢';
 }
 
@@ -647,3 +647,4 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(fetchHealthData, 30000);
     setInterval(fetchTopDonates, 5 * 60 * 1000); // Atualiza doações a cada 5 minutos
 });
+

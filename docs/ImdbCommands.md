@@ -1,4 +1,4 @@
-# Comandos IMDB
+﻿# Comandos IMDB
 
 Este módulo implementa funcionalidades para buscar informações sobre filmes e séries no IMDB (Internet Movie Database).
 

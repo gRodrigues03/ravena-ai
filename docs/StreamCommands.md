@@ -1,4 +1,4 @@
-# Comandos de Monitoramento de Streams
+﻿# Comandos de Monitoramento de Streams
 
 Este módulo implementa funcionalidades para monitorar e exibir informações sobre canais de streaming do Twitch, Kick e YouTube.
 

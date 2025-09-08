@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Emojis para as categorias de comandos
  * A ordem das chaves define a ordem de apresentação das categorias
  */
@@ -19,7 +19,7 @@ const CATEGORY_EMOJIS = {
   "general": "🖨️",
   "diversao": "🎮",
   "info": "ℹ️",
-  "imagens": "🖼️",
+  "imagens": "📷",
   "zoeira": "🤪", 
   "resto": "❓"
 };

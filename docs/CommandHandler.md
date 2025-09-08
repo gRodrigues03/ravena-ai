@@ -1,4 +1,4 @@
-# CommandHandler
+﻿# CommandHandler
 
 O CommandHandler é o componente central responsável por processar e gerenciar todos os comandos do bot Ravenabot. Ele coordena a execução de comandos fixos, personalizados e de gerenciamento.
 

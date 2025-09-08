@@ -1,4 +1,4 @@
-# Stream Management Commands Guide
+﻿# Stream Management Commands Guide
 
 Este guia explicará como configurar e usar os comandos de gerenciamento de streams para Twitch, Kick e YouTube.
 

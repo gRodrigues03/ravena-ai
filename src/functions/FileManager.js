@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 const fs = require('fs').promises;
 const crypto = require('crypto');
 const { MessageMedia } = require('whatsapp-web.js');
@@ -1115,7 +1115,7 @@ const commands = [
     category: "arquivos",
     reactions: {
       before: process.env.LOADING_EMOJI ?? "🌀",
-      after: "🗑️"
+      after: "🧹"
     },
     method: deleteFile
   }),

@@ -1,4 +1,4 @@
-# Comandos de Doação
+﻿# Comandos de Doação
 
 Este módulo implementa comandos para visualização de informações sobre doações e doadores no bot WhatsApp. O sistema permite que usuários possam ver detalhes de doações, links de doação e um ranking dos principais doadores.
 

@@ -1,4 +1,4 @@
-# Comandos de Anime
+﻿# Comandos de Anime
 
 Este módulo fornece funcionalidades para buscar informações sobre animes utilizando a API MyAnimeList via mal-scraper.
 

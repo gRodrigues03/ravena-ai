@@ -1,4 +1,4 @@
-# Comandos de Roleta Russa
+﻿# Comandos de Roleta Russa
 
 Este módulo implementa um jogo de roleta russa no WhatsApp, onde os participantes podem testar sua sorte e são temporariamente silenciados se "perderem".
 

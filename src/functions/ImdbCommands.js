@@ -1,4 +1,4 @@
-const axios = require('axios');
+﻿const axios = require('axios');
 const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
 const Command = require('../models/Command');
@@ -124,7 +124,7 @@ async function buscarImdb(bot, message, args, group) {
     mensagem += '\n';
     
     // Adiciona informações básicas
-    if (duracao && duracao !== "N/A") mensagem += `⏱️ *Duração:* ${duracao}\n`;
+    if (duracao && duracao !== "N/A") mensagem += `🕐 *Duração:* ${duracao}\n`;
     if (data.Genre && data.Genre !== "N/A") mensagem += `🎭 *Gênero:* ${data.Genre}\n`;
     if (data.Director && data.Director !== "N/A") mensagem += `🎬 *Direção:* ${data.Director}\n`;
     if (data.Writer && data.Writer !== "N/A") {

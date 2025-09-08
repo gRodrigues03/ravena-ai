@@ -1,4 +1,4 @@
-# Comandos de Tradução
+﻿# Comandos de Tradução
 
 Este módulo implementa funcionalidades para traduzir textos entre diferentes idiomas e processamento de reações com bandeiras para tradução rápida.
 

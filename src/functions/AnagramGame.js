@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file Gerencia a lógica do jogo Anagrama para o bot.
  * @author Zacksb
  */
@@ -572,7 +572,7 @@ const commands = [
     cooldown: 60,
     method: resetCommand,
     reactions: {
-      before: '🗑️',
+      before: '🧹',
       after: '✅',
       error: '❌'
     }

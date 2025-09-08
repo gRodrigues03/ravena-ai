@@ -1,4 +1,4 @@
-# ReturnMessage Model
+﻿# ReturnMessage Model
 
 ## Overview
 
@@ -91,7 +91,7 @@ async function multiMessageCommand(bot, message, args, group) {
       chatId,
       content: "Third message (with reaction)",
       reactions: {
-        before: "⏳",
+        before: "🌀",
         after: "✅"
       }
     })

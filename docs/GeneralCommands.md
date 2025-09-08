@@ -1,4 +1,4 @@
-# Comandos Gerais
+﻿# Comandos Gerais
 
 O módulo `GeneralCommands.js` implementa funcionalidades básicas e essenciais do bot, incluindo comandos para verificação de status, interação com IA e configurações de apelidos.
 
@@ -26,7 +26,7 @@ Comando simples para verificar se o bot está online e respondendo aos comandos.
 - Responde com "Pong! 🏓" para indicar que está operacional
 
 #### Reações de emoji:
-- Antes de processar: ⏳
+- Antes de processar: 🌀
 - Após processamento bem-sucedido: ✅
 
 ### !ai (e aliases: !ia, !gpt, !gemini)
@@ -54,7 +54,7 @@ A resposta inclui:
 
 #### Reações de emoji:
 - Gatilho: 🤖
-- Antes de processar: ⏳
+- Antes de processar: 🌀
 - Após processamento bem-sucedido: 🤖
 
 #### Limitações:

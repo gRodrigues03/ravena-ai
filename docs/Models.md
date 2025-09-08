@@ -1,4 +1,4 @@
-# Documentação dos Models
+﻿# Documentação dos Models
 
 Aqui você encontrará a documentação detalhada de todos os modelos de dados utilizados no Ravenabot. Estes modelos definem as estruturas fundamentais usadas pelo bot para manipular e armazenar informações.
 

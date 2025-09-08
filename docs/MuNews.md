@@ -1,4 +1,4 @@
-# Comandos de MuNews
+﻿# Comandos de MuNews
 
 Este módulo implementa funcionalidades para acessar e gerenciar o sistema MuNews, um serviço de notícias e informações formatadas para o WhatsApp.
 
