@@ -790,6 +790,7 @@ async function fishCommand(bot, message, args, group) {
     const userId = message.author;
     const userName = message.authorName || "Pescador";
     const groupId = message.group; // ID do grupo, se for uma mensagem de grupo
+    const mentionPessoa = [];
     
     // Obtém dados de pesca
     const fishingData = await getFishingData();
@@ -988,17 +989,37 @@ async function fishCommand(bot, message, args, group) {
     // Define o cooldown
     fishingCooldowns[userId] = now + FISHING_COOLDOWN;
     
+    let extraMsg = "";
+
+    if(args[0].match(/^@\d\d/g)){ // @55....
+       const extraPegada = [
+        `, segurando firme na vara de ${args[0]}, `,
+        `, agarrado com vigor na vara de ${args[0]}, `,
+        `, com a vara de ${args[0]} na mão, `,
+        `, com as duas mãos firmes na vara de ${args[0]}, `,
+        `, acariciando com delicadeza a vara de ${args[0]}, `,
+        `, com a firme e ereta vara de ${args[0]}, `,
+        `, com a pequena mas efetiva vara de ${args[0]}, `,
+        `, apertando sem dó vara de ${args[0]}, `,
+      ];
+
+      const randomIndex = Math.floor(Math.random() * extraPegada.length);
+      extraMsg = extraPegada[randomIndex];
+
+      mentionPessoa.push(args[0].replace("@",""));
+    }
   
     // Se não pescou nenhum peixe (só lixo), retorna mensagem de lixo
     if (caughtFishes.length === 0) {
       return new ReturnMessage({
         chatId,
-        content: `🎣 ${userName} jogou a linha... ${effectMessage}\n\n> 🐛 Iscas restantes: ${fishingData.fishingData[userId].baits}/${MAX_BAITS}`,
+        content: `🎣 ${userName} jogou a linha ${extraMsg}e... ${effectMessage}\n\n> 🐛 Iscas restantes: ${fishingData.fishingData[userId].baits}/${MAX_BAITS}`,
         reactions: {
           after: "🎣"
         },
         options: {
           quotedMessageId: message.origin.id._serialized,
+          mentions: mentionPessoa,
           evoReply: message.origin
         }
       });
@@ -1016,10 +1037,10 @@ async function fishCommand(bot, message, args, group) {
       
       // Seleciona uma mensagem aleatória para peixes normais
       const fishingMessages = [
-        `🎣 ${userName} pescou um *${fish.name}* de _${fish.weight.toFixed(2)} kg_!`,
-        `🐟 Wow! ${userName} fisgou um(a) *${fish.name}* pesando _${fish.weight.toFixed(2)} kg_!`,
-        `🎣 Um(a) *${fish.name}* de ${fish.weight.toFixed(2)} kg mordeu a isca de ${userName}!`,
-        `🐠 ${userName} recolheu a linha e encontrou um(a) *${fish.name}* de _${fish.weight.toFixed(2)} kg_!`
+        `🎣 ${userName} ${extraMsg}pescou um *${fish.name}* de _${fish.weight.toFixed(2)} kg_!`,
+        `🐟 Wow! ${userName} ${extraMsg}fisgou um(a) *${fish.name}* pesando _${fish.weight.toFixed(2)} kg_!`,
+        `🎣 Um(a) *${fish.name}* de ${fish.weight.toFixed(2)} kg mordeu a isca de ${userName}${extraMsg}!`,
+        `🐠 ${userName} ${extraMsg}recolheu a linha e encontrou um(a) *${fish.name}* de _${fish.weight.toFixed(2)} kg_!`
       ];
       
       // Mensagens especiais para peixes raros
@@ -1038,6 +1059,8 @@ async function fishCommand(bot, message, args, group) {
         fishMessage = fishingMessages[randomIndex];
       }
     }
+
+
     
     // Adiciona informações adicionais para peixes grandes
     if (caughtFishes.length === 1) {
@@ -1131,6 +1154,7 @@ async function fishCommand(bot, message, args, group) {
             options: {
               caption: fishMessage,
               quotedMessageId: message.origin.id._serialized,
+              mentions: mentionPessoa,
               evoReply: message.origin
             },
             reactions: {
@@ -1152,6 +1176,7 @@ async function fishCommand(bot, message, args, group) {
       },
       options: {
         quotedMessageId: message.origin.id._serialized,
+        mentions: mentionPessoa,
         evoReply: message.origin
       }
     });
