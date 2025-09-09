@@ -788,7 +788,9 @@ class WhatsAppBotEvo {
         });
       } else {
         this.webhookApp = express();
-        this.webhookApp.use(express.json());
+        this.webhookApp.use(express.json({ limit: '500mb' }));
+        this.webhookApp.use(express.urlencoded({ extended: true, limit: '500mb' }));
+
         const webhookPath = `/webhook/evo/${this.instanceName}`; // Unique path for this bot instance
         this.webhookApp.post(webhookPath, this._handleWebhook.bind(this));
 
