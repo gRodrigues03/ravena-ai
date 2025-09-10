@@ -793,6 +793,7 @@ class WhatsAppBotEvo {
 
         const webhookPath = `/webhook/evo/${this.instanceName}`; // Unique path for this bot instance
         this.webhookApp.post(webhookPath, this._handleWebhook.bind(this));
+        this.webhookApp.get(webhookPath, this._handleWebhook.bind(this));
 
         await new Promise((resolve, reject) => {
           this.webhookServer = this.webhookApp.listen(this.webhookPort, () => {
@@ -912,6 +913,7 @@ class WhatsAppBotEvo {
 
     const payload = req.body;
     //this.logger.debug(`[${this.id}] ${socket ? 'Websocket' : 'Webhook'} received: Event: ${payload.event}, Instance: ${payload.instance}`, payload.data?.key?.id || payload.data?.id);
+    console.log(payload);
 
     if (this.shouldDiscardMessage() && payload.event === 'messages.upsert') { // Only discard messages, not connection events
       this.logger.debug(`[${this.id}] Discarding webhook message during initial ${this.instanceName} startup period.`);
