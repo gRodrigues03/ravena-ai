@@ -264,7 +264,7 @@ class EventHandler {
       }
       
       // Verifica menções ao bot
-      const isMentionHandled = await bot.mentionHandler.processMention(bot, message, textContent);
+      const isMentionHandled = await bot.mentionHandler.processMention(bot, message, group, textContent);
       if (isMentionHandled) return;
       
       // Obtém prefixo do grupo ou prefixo padrão do bot

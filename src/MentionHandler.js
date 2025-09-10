@@ -23,7 +23,7 @@ class MentionHandler {
    * @param {string} text - O texto da mensagem
    * @returns {Promise<boolean>} - Se a menção foi tratada
    */
-  async processMention(bot, message, text) {
+  async processMention(bot, message, group, text) {
     try {
       if (!text) return false;
 
@@ -66,7 +66,7 @@ class MentionHandler {
 
       this.logger.info(`Processando prompt para LLM: "${prompt}"`);
 
-      const msgsLLM = await aiCommand(bot, message, null, null)
+      const msgsLLM = await aiCommand(bot, message, prompt.split(" ") ?? [], group);
       await bot.sendReturnMessages(msgsLLM);
       return true;
     } catch (error) {
