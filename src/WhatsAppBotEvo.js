@@ -915,7 +915,7 @@ class WhatsAppBotEvo {
     //this.logger.debug(`[${this.id}] ${socket ? 'Websocket' : 'Webhook'} received: Event: ${payload.event}, Instance: ${payload.instance}`, payload.data?.key?.id || payload.data?.id);
     //console.log(payload);
 
-    if(!payload.event){
+    if(!payload?.event){
       return res.status(200).send(`hello-${this.instanceName}-${this.id}`);
     }
 
