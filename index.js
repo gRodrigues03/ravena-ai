@@ -99,6 +99,7 @@ async function main() {
         newRBot = new WhatsAppBot({
           id: rBot.nome,
           phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
+          vip: rBot.vip ?? false,
           eventHandler: eventHandler,
           stabilityMonitor: stabilityMonitor,
           prefix: rBot.customPrefix || process.env.DEFAULT_PREFIX || '!',
