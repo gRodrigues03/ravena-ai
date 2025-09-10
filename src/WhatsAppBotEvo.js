@@ -844,7 +844,7 @@ class WhatsAppBotEvo {
         this.logger.info(`[${this.id}] Connect Data: ${JSON.stringify(connectData)} `);
 
         if (connectData.pairingCode) {
-           this.logger.info(`[${this.id}] Instance ${this.instanceName} PAIRING CODE: ${connectData.pairingCode.code}. Enter this on your phone in Linked Devices -> Link with phone number.`);
+           this.logger.info(`[${this.id}] Instance ${this.instanceName} PAIRING CODE: ${connectData.pairingCode}. Enter this on your phone in Linked Devices -> Link with phone number.`);
         } else 
         if (connectData.code) {
           this.logger.info(`[${this.id}] QR Code for ${this.instanceName} (Scan with WhatsApp):`);
@@ -914,6 +914,10 @@ class WhatsAppBotEvo {
     const payload = req.body;
     //this.logger.debug(`[${this.id}] ${socket ? 'Websocket' : 'Webhook'} received: Event: ${payload.event}, Instance: ${payload.instance}`, payload.data?.key?.id || payload.data?.id);
     //console.log(payload);
+
+    if(!payload.event){
+      return res.status(200).send(`hello-${this.instanceName}-${this.id}`);
+    }
 
     if (this.shouldDiscardMessage() && payload.event === 'messages.upsert') { // Only discard messages, not connection events
       this.logger.debug(`[${this.id}] Discarding webhook message during initial ${this.instanceName} startup period.`);
