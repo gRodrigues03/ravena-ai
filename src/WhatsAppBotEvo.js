@@ -836,7 +836,7 @@ class WhatsAppBotEvo {
       const state = (instanceDetails?.instance?.state ?? "error").toUpperCase();
       if (state === 'CONNECTED' || state === 'OPEN') { // open não era pra ser
         this._onInstanceConnected();
-      } else if (state === 'CONNECTING' || state === 'PAIRING' || !state /* if undefined, try to connect */) {
+      } else if (state === 'CLOSE' || state === 'CONNECTING' || state === 'PAIRING' || !state) {
         this.logger.info(`Instance ${this.instanceName} is not connected (state: ${state}). Attempting to connect with num ber ${this.phoneNumber}...`);
         const connectData = await this.apiClient.get(`/instance/connect`, {number: this.phoneNumber});
 
@@ -896,7 +896,7 @@ class WhatsAppBotEvo {
       this.eventHandler.onDisconnected(this, reason);
     }
     // Optionally, attempt to reconnect after a delay
-    // setTimeout(() => this._checkInstanceStatusAndConnect(), 30000); // Reconnect after 30s
+    setTimeout(() => this._checkInstanceStatusAndConnect(), 30000); // Reconnect after 30s
   }
 
   async handleWebsocket(data){
@@ -921,7 +921,7 @@ class WhatsAppBotEvo {
     try {
       switch (payload.event) {
         case 'connection.update':
-          const connectionState = payload.data?.state;
+          const connectionState = payload.data?.state.toUpperCase();
           this.logger.info(`[${this.id}] Connection update: ${connectionState}`);
           if (connectionState === 'CONNECTED') {
             this._onInstanceConnected();
