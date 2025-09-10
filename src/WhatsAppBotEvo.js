@@ -1496,8 +1496,9 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       }
 
 
-      // Não usar o formato completo, apenas os dados `data:${content.mimetype};base64,${content.data}`
-      let formattedContent = (content.data && content.data?.length > 10) ? content.data : (content.url ?? content);
+      // Se tiver URL, usa ela, se não, default pra conteudo em base64
+      // Para base64 na EvoAPI: Não usar o formato completo, apenas os dados `data:${content.mimetype};base64,${content.data}`
+      let formattedContent = (content.url && contentToSend.url?.length > 10) ? content.url : (content.data ?? content);
 
       // Cada tipo de mensagem tem um endpoint diferente
       let endpoint = null;
@@ -1705,14 +1706,42 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
   async createMedia(filePath, customMime = false) {
     try {
       if (!fs.existsSync(filePath)) {
-          throw new Error(`File not found: ${filePath}`);
+        throw new Error(`File not found: ${filePath}`);
       }
+
+      // ## 1. Define output directory and ensure it exists
+      const outputDir = path.join(__dirname, '..', 'public', 'attachments');
+      // Use the promise-based version of mkdir with recursive option
+      await fs.mkdirSync(outputDir, { recursive: true });
+
+      // ## 2. Generate a random filename with the correct extension
+      const extension = path.extname(filePath); // e.g., '.mp4'
+      const tempId = randomBytes(8).toString('hex');
+      const outputFileName = `${tempId}${extension}`;
+      const outputFilePath = path.join(outputDir, outputFileName);
+
+      // ## 3. Copy the file to the public directory
+      await fs.copyFileSync(filePath, outputFilePath);
+
+      // ## 4. Schedule the copied file for deletion after 10 minutes
+      setTimeout((ofp,ofn) => {
+        fs.unlinkSync(ofp)
+          .then(() => console.log(`[createMedia] Deleted temporary file: ${ofn}`))
+          .catch(err => console.error(`[createMedia] Error deleting temp file ${ofn}:`, err));
+      }, 10 * 60 * 1000,outputFilePath,ofoutputFileNamen); // 10 minutes in milliseconds
+
+      // ## 5. Prepare data for the return object
       const data = fs.readFileSync(filePath, { encoding: 'base64' });
       const filename = path.basename(filePath);
       const mimetype = customMime ? customMime : (mime.lookup(filePath) || 'application/octet-stream');
-      return { mimetype, data, filename, source: 'file', isMessageMedia: true }; // MessageMedia compatible
+      const fileUrl = `${process.env.BOT_DOMAIN}/attachments/${outputFileName}`;
+
+      console.log(`[createMedia] ${fileUrl}`);
+      // Return an object compatible with the MessageMedia structure
+      return { mimetype, data, filename, source: 'file', url: fileUrl, isMessageMedia: true };
     } catch (error) {
-      this.logger.error(`[${this.id}] Evo: Error creating media from ${filePath}:`, error);
+      // Assuming 'this.logger' is defined in your class context
+      console.error(`Error creating media from ${filePath}:`, error);
       throw error;
     }
   }
@@ -1728,11 +1757,11 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           // Try to get Content-Type header if it's a direct download
           try {
               const headResponse = await axios.head(url);
-              this.logger.info("mimetype do hedaer? ", headResponse);
+              this.logger.info("mimetype do header? ", headResponse);
               mimetype = options.customMime ? options.customMime : (headResponse.headers['content-type']?.split(';')[0] || 'application/octet-stream');
           } catch(e) { /* ignore */ }
       }
-      return { url, mimetype, filename, source: 'url', isMessageMedia: true}; // MessageMedia compatible for URL sending
+      return { url, mimetype, filename, source: 'url', url, isMessageMedia: true}; // MessageMedia compatible for URL sending
     } catch (error) {
       this.logger.error(`[${this.id}] Evo: Error creating media from URL ${url}:`, error);
       throw error;
