@@ -27,6 +27,7 @@ class SuperAdmin {
     this.commandMap = {
       'testeMsg': {'method': 'testeMsg', 'description': 'Testar Retorno msg'},
       'joinGrupo': {'method': 'joinGroup', 'description': 'Entra em um grupo via link de convite'},
+      'addDonate': {'method': 'addNewDonate', 'description': 'Adiciona novo donate'},
       'addDonateNumero': {'method': 'addDonorNumber', 'description': 'Adiciona número de um doador'},
       'addDonateValor': {'method': 'updateDonationAmount', 'description': 'Atualiza valor de doação'},
       'mergeDonates': {'method': 'mergeDonors', 'description': 'Une dois doadores em um'},
@@ -212,6 +213,72 @@ class SuperAdmin {
     return `+${country} (${area}) ${part1}-${part2}`;
   }
 
+
+  /**
+   * Adiciona novo doador na lista
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @returns {Promise<ReturnMessage>} - Retorna mensagem de sucesso ou erro
+   */
+  async addNewDonate(bot, message, args) {
+    try {
+      const chatId = message.group || message.author;
+      
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
+      
+      if (args.length < 2) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça um número e nome do doador. Exemplo: !sa-addDonateNumero 5512345678901 João Silva'
+        });
+      }
+      
+      // Extrai número e nome
+      const numero = args[0].replace(/\D/g, ''); // Remove não-dígitos
+      const donorName = args.slice(1).join(' ');
+      
+      if (!numero || numero.length < 10) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça um número válido com código de país. Exemplo: 5512345678901'
+        });
+      }
+      
+      // Atualiza número do doador no banco de dados
+      const success = await this.database.addDonation(donorName, 0, numero);
+      
+      if (success) {
+
+        bot.whitelist.push(numero);
+
+        return [
+          new ReturnMessage({
+            chatId: chatId,
+            content: `✅ ${donorName}, ${numero} adicionado com sucesso à lista!`
+          })
+        ];
+      } else {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `❌ Falha ao atualizar doador.`
+        });
+      }
+    } catch (error) {
+      this.logger.error('Erro no comando addNewDonate:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Erro ao processar comando.'
+      });
+    }
+  }
 
   /**
    * Adiciona ou atualiza o número de WhatsApp de um doador
