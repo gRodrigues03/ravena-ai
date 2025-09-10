@@ -788,13 +788,15 @@ class WhatsAppBotEvo {
         });
       } else {
         this.webhookApp = express();
-        this.webhookApp.use(express.json());
+        this.webhookApp.use(express.json({ limit: '500mb' }));
+        this.webhookApp.use(express.urlencoded({ extended: true, limit: '500mb' }));
+
         const webhookPath = `/webhook/evo/${this.instanceName}`; // Unique path for this bot instance
         this.webhookApp.post(webhookPath, this._handleWebhook.bind(this));
 
         await new Promise((resolve, reject) => {
           this.webhookServer = this.webhookApp.listen(this.webhookPort, () => {
-            this.logger.info(`Webhook listener for bot ${this.instanceName} started on http://localhost:${this.webhookPort}${webhookPath}`);
+            this.logger.info(`Webhook listener for bot ${this.instanceName} started on http://${this.webhookHost}:${this.webhookPort}${webhookPath}`);
             resolve();
           }).on('error', (err) => {
             this.logger.error(`Failed to start webhook listener for bot ${this.instanceName}:`, err);
@@ -1089,8 +1091,8 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           }
           break;
 
-        default:
-          this.logger.debug(`[${this.id}] Unhandled webhook event: ${payload.event}`);
+        //default:
+          //this.logger.debug(`[${this.id}] Unhandled webhook event: ${payload.event}`);
       }
     } catch (error) {
       this.logger.error(`[${this.id}] Error processing webhook for event ${payload.event}:`, error);
