@@ -837,8 +837,10 @@ class WhatsAppBotEvo {
       if (state === 'CONNECTED' || state === 'OPEN') { // open não era pra ser
         this._onInstanceConnected();
       } else if (state === 'CONNECTING' || state === 'PAIRING' || !state /* if undefined, try to connect */) {
-        this.logger.info(`Instance ${this.instanceName} is not connected (state: ${state}). Attempting to connect...`);
+        this.logger.info(`Instance ${this.instanceName} is not connected (state: ${state}). Attempting to connect with num ber ${this.phoneNumber}...`);
         const connectData = await this.apiClient.get(`/instance/connect`, {number: this.phoneNumber});
+
+        this.logger.info(`[${this.id}] Connect Data: ${JSON.stringify(connectData)} `);
 
         if (connectData.pairingCode) {
            this.logger.info(`[${this.id}] Instance ${this.instanceName} PAIRING CODE: ${connectData.pairingCode.code}. Enter this on your phone in Linked Devices -> Link with phone number.`);
@@ -847,7 +849,6 @@ class WhatsAppBotEvo {
           this.logger.info(`[${this.id}] QR Code for ${this.instanceName} (Scan with WhatsApp):`);
           qrcode.generate(connectData.code, { small: true });
 
-          // TODO: Save QR to file as in original bot:
           // const qrCodeLocal = path.join(this.database.databasePath, `qrcode_evo_${this.id}.png`);
           // fs.writeFileSync(qrCodeLocal, Buffer.from(connectData.qrcode.base64, 'base64'));
           // this.logger.info(`QR Code saved to ${qrCodeLocal}`);
