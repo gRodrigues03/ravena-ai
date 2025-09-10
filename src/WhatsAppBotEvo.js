@@ -1498,7 +1498,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
       // Se tiver URL, usa ela, se não, default pra conteudo em base64
       // Para base64 na EvoAPI: Não usar o formato completo, apenas os dados `data:${content.mimetype};base64,${content.data}`
-      let formattedContent = (content.url && contentToSend.url?.length > 10) ? content.url : (content.data ?? content);
+      let formattedContent = (content.url && content.url?.length > 10) ? content.url : (content.data ?? content);
 
       // Cada tipo de mensagem tem um endpoint diferente
       let endpoint = null;
@@ -1728,7 +1728,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         fs.unlinkSync(ofp)
           .then(() => console.log(`[createMedia] Deleted temporary file: ${ofn}`))
           .catch(err => console.error(`[createMedia] Error deleting temp file ${ofn}:`, err));
-      }, 10 * 60 * 1000,outputFilePath,ofoutputFileNamen); // 10 minutes in milliseconds
+      }, 10 * 60 * 1000, outputFilePath, outputFileName); // 10 minutes in milliseconds
 
       // ## 5. Prepare data for the return object
       const data = fs.readFileSync(filePath, { encoding: 'base64' });
