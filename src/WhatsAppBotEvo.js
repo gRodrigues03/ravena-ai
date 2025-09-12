@@ -845,14 +845,16 @@ class WhatsAppBotEvo {
 
         if (connectData.pairingCode) {
            this.logger.info(`[${this.id}] Instance ${this.instanceName} PAIRING CODE: ${connectData.pairingCode}. Enter this on your phone in Linked Devices -> Link with phone number.`);
+           const pairingCodeLocation = path.join(this.database.databasePath, `pairingcode_${this.id}.txt`);
+           fs.writeFileSync(pairingCodeLocation, `[${new Date().toUTCString()}] ${connectData.pairingCode}`);
         } else 
         if (connectData.code) {
           this.logger.info(`[${this.id}] QR Code for ${this.instanceName} (Scan with WhatsApp):`);
           qrcode.generate(connectData.code, { small: true });
 
-          // const qrCodeLocal = path.join(this.database.databasePath, `qrcode_evo_${this.id}.png`);
-          // fs.writeFileSync(qrCodeLocal, Buffer.from(connectData.qrcode.base64, 'base64'));
-          // this.logger.info(`QR Code saved to ${qrCodeLocal}`);
+          //const qrCodeLocal = path.join(this.database.databasePath, `qrcode_${this.id}.png`);
+          //fs.writeFileSync(qrCodeLocal, Buffer.from(connectData.qrcode.base64, 'base64'));
+          //this.logger.info(`QR Code saved to ${qrCodeLocal}`);
         } else {
           this.logger.warn(`[${this.id}] Received connection response for ${this.instanceName}, but no QR/Pairing code found. State: ${connectData?.state}. Waiting for webhook confirmation.`, connectData);
         }
