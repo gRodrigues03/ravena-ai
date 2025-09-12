@@ -48,7 +48,10 @@ async function aiCommand(bot, message, args, group) {
     ctxContent += customPersonalidade;
   }
 
-  let question = message.caption ?? message.content;
+
+  
+  
+  let question = (args.length > 0) ? args.join(" ") : (message.caption ?? message.content);
   const quotedMsg = await message.origin.getQuotedMessage();
   if(quotedMsg){
     // Tem mensagem marcada, junta o conteudo (menos que tenha vindo de reação)
@@ -73,8 +76,7 @@ async function aiCommand(bot, message, args, group) {
     });
   }
   
-  //logger.debug(`Comando ai com pergunta: ctx: ${ctxContent}, \n Prompt: '${question}'`);
-  
+
   const completionOptions = {
     prompt: question,
     systemContext: ctxContent
@@ -107,10 +109,15 @@ async function aiCommand(bot, message, args, group) {
     }
   }
 
+  const promptAutor = message?.evoMessageData?.key?.pushName ?? message?.name ?? message?.authorName ?? message?.pushname;
+  if(promptAutor){
+    completionOptions.systemContext = `Nome de quem enviou o prompt: ${promptAutor}\n\n`+ completionOptions.systemContext;
+  }
+  
 
   // Obtém resposta da IA
   try {
-    logger.debug('[aiCommand] Tentando obter resposta do LLM', completionOptions);
+    logger.debug('[aiCommand] Tentando obter resposta do LLM', JSON.stringify(completionOptions).substring(0, 150));
     const response = await llmService.getCompletion(completionOptions);
     
     logger.debug('[aiCommand] Resposta LLM obtida, processando variaveis', response);

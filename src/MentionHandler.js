@@ -48,7 +48,7 @@ class MentionHandler {
       
       // Remove a menção do prompt
       const prompt = text.replace(mentionRegexStart, '').trim();
-      
+
       if (!prompt) {
         // Apenas uma menção sem texto, envia uma resposta padrão
         const chatId = message.group || message.author;
@@ -65,8 +65,9 @@ class MentionHandler {
       }
 
       this.logger.info(`Processando prompt para LLM: "${prompt}"`);
+      const args = prompt.split(" ") ?? [];
 
-      const msgsLLM = await aiCommand(bot, message, prompt.split(" ") ?? [], group);
+      const msgsLLM = await aiCommand(bot, message, args, group);
       await bot.sendReturnMessages(msgsLLM);
       return true;
     } catch (error) {
