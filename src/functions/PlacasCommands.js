@@ -2,10 +2,13 @@ const axios = require('axios');
 const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
 const Command = require('../models/Command');
+const Database = require('../utils/Database');
 const ReturnMessage = require('../models/ReturnMessage');
+const path = require('path');
 require('dotenv').config();
 
 const logger = new Logger('placas-commands');
+const database = Database.getInstance();
 
 /**
  * Valida e normaliza uma placa de carro brasileira
@@ -99,8 +102,9 @@ async function buscarPlaca(bot, message, args, group) {
     const resultado = await placaPromise;
     
     // Verifica se houve resposta
+    let retorno;
     if (!resultado || !resultado.msg) {
-      return new ReturnMessage({
+      retorno =  new ReturnMessage({
         chatId: chatId,
         content: `❌ Não foi possível consultar a placa "${placa}". Tente novamente mais tarde.`,
         options: {
@@ -108,20 +112,35 @@ async function buscarPlaca(bot, message, args, group) {
           evoReply: message.origin
         }
       });
+    } else {
+      retorno = [new ReturnMessage({
+        chatId: chatId,
+        content: resultado.msg,
+        options: {
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
+        },
+        reactions: {
+          after: resultado.react || "🚘"
+        }
+      })];
     }
     
+    if(placa === "lsj0023"){
+      const lsj0023 = path.join(database.databasePath, "media", "lsj0023.mp3");
+
+      const media = await bot.createMedia(lsj0023, "audio/mp3");
+      retorno.push(new ReturnMessage({
+        chatId: chatId,
+        content: media,
+        options: {
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
+        }
+      }));
+    }
     // Retorna o resultado da consulta
-    return new ReturnMessage({
-      chatId: chatId,
-      content: resultado.msg,
-      options: {
-        quotedMessageId: message.origin.id._serialized,
-        evoReply: message.origin
-      },
-      reactions: {
-        after: resultado.react || "🚘"
-      }
-    });
+    return retorno;
     
   } catch (error) {
     logger.error('Erro ao consultar placa:', error);
