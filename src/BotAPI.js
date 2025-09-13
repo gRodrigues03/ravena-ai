@@ -708,7 +708,7 @@ class BotAPI {
           </head>
           <body>
             <div class="container">
-              <h1>${botId}</h1>
+              <h1>${botId} - ${bot.phoneNumber}</h1>
               <h2>${formattedDate}</h2>
               
               
@@ -777,7 +777,7 @@ class BotAPI {
           </head>
           <body>
             <div class="container">
-              <h1>${botId}</h1>
+              <h1>${botId} - ${bot.phoneNumber}</h1>
               <h2>${formattedDate}</h2>
               
               <h2>QR Code</h2>
