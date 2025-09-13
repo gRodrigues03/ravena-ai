@@ -6,6 +6,7 @@ const path = require('path');
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 const fs = require('fs').promises;
+const qrcode = require("qr-base64");
 
 /**
  * Servidor API para o bot WhatsApp
@@ -718,52 +719,10 @@ class BotAPI {
         `;
         res.send(htmlResponse);
       } else {
-        const qrcodePath = path.join(this.database.databasePath, `qrcode_${botId}.png`);
-        const noqrPath = path.join(this.database.databasePath, `noqr.png`);
-        const pairingCodePath = path.join(this.database.databasePath, `pairingcode_${botId}.txt`);
+        const pairingCodeContent = instanceStatus.extra?.connectData?.pairingCode ?? "xxx xxx"; 
+        const qrCodeBase64 = qrcode(instanceStatus.extra?.connectData?.code ?? "");
+       
 
-        let pairingCodeContent = "--- ---";
-        let qrCodeBase64 = '';
-
-        try {
-          // Attempt to read the pairing code file. If it fails, the default value is used.
-          pairingCodeContent = await fs.readFile(pairingCodePath, 'utf8');
-
-          // Attempt to get stats for the QR code file to set the date.
-          const stats = await fs.stat(qrcodePath);
-          
-          // If successful, format the date from the file's modification time.
-          formattedDate = stats.mtime.toLocaleString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            timeZoneName: 'short',
-            timeZone: 'America/Sao_Paulo', // GMT-3
-          });
-        } catch (error) {
-          // If either file is not found, the default values for date and pairing code remain.
-          this.logger.error(`Could not find resource(s) for bot ${botId}: ${error.message}`);
-        }
-
-        try {
-          const qrCodeImage = await fs.readFile(qrcodePath);
-          qrCodeBase64 = qrCodeImage.toString('base64');
-        } catch (error) {
-          if (error.code === 'ENOENT') {
-            try {
-              const noQrImage = await fs.readFile(noqrPath);
-              qrCodeBase64 = noQrImage.toString('base64');
-            } catch (noqrError) {
-              this.logger.error(`QR code for ${botId} and fallback image not found.`);
-            }
-          } else {
-            this.logger.error(`Error reading QR code for ${botId}:`, error);
-          }
-        }
-        
         const htmlResponse = `
           <!DOCTYPE html>
           <html lang="en">
@@ -821,10 +780,14 @@ class BotAPI {
               <h1>${botId}</h1>
               <h2>${formattedDate}</h2>
               
-              <img src="data:image/png;base64,${qrCodeBase64}" alt="QR Code for ${botId}">
+              <h2>QR Code</h2>
+              <img src="${qrCodeBase64}" alt="QR Code for ${botId}">
 
               <h2>Pairing Code</h2>
-              <pre>${pairingCodeContent.split("] ").join("]")}</pre>
+              <pre style="text-align: center;">${pairingCodeContent.split("] ").join("]")}</pre>
+
+              <h2>Raw Instance Status</h2>
+              <pre>${JSON.stringify(instanceStatus, null, "\t")}</pre>
             </div>
           </body>
           </html>
