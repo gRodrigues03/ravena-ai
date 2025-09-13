@@ -266,7 +266,8 @@ function apiPlacas(msg, numeroAutor, placa, premium, callback) {
       // Update cache
       placasCache[cacheKey] = {
         timestamp: now,
-        data: retorno
+        data: retorno,
+        fullData: dados
       };
       fs.writeFile(cachePlacasPath, JSON.stringify(placasCache, null, 2)).catch(error => {
         logger.error('Erro ao salvar o cache de placas:', error);

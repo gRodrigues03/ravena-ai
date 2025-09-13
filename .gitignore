@@ -215,3 +215,4 @@ testes-evo.js
 data/pairingcode_*
 data/noqr.png
 /public/attachments
+data/placas-cache.json
