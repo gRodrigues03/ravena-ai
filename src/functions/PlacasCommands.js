@@ -5,10 +5,33 @@ const Command = require('../models/Command');
 const Database = require('../utils/Database');
 const ReturnMessage = require('../models/ReturnMessage');
 const path = require('path');
+const fs = require('fs').promises;
 require('dotenv').config();
 
 const logger = new Logger('placas-commands');
 const database = Database.getInstance();
+const cachePlacasPath = path.join(database.databasePath, "placas-cache.json");
+let placasCache = {};
+
+// Load cache from file at startup
+(async () => {
+  try {
+    const data = await fs.readFile(cachePlacasPath, 'utf8');
+    placasCache = JSON.parse(data);
+    logger.info('[PlacasCommands] Cache de placas carregado com sucesso.');
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      logger.info('[PlacasCommands] Arquivo de cache de placas não encontrado. Um novo será criado.');
+      try {
+        await fs.writeFile(cachePlacasPath, JSON.stringify({}));
+      } catch (writeError) {
+        logger.error('[PlacasCommands] Erro ao criar o arquivo de cache de placas:', writeError);
+      }
+    } else {
+      logger.error('[PlacasCommands] Erro ao carregar o cache de placas:', error);
+    }
+  }
+})();
 
 /**
  * Valida e normaliza uma placa de carro brasileira
@@ -166,6 +189,17 @@ async function buscarPlaca(bot, message, args, group) {
  * @param {Function} callback - Callback para retornar resultado
  */
 function apiPlacas(msg, numeroAutor, placa, premium, callback) {
+  const cacheKey = `${placa}_${premium}`;
+  const now = new Date().getTime();
+  const threeMonths = 3 * 30 * 24 * 60 * 60 * 1000; // 3 months in milliseconds
+
+  // Check in-memory cache first
+  if (placasCache[cacheKey] && (now - placasCache[cacheKey].timestamp < threeMonths)) {
+    logger.info(`[apiPlacas_cache] Usando cache para a placa: ${placa}`);
+    callback(placasCache[cacheKey].data);
+    return;
+  }
+
   // Configura a URL da API baseada no tipo de acesso
   const apiUrl = `https://wdapi2.com.br/consulta/${placa}/${premium ? process.env.API_PLACAS_PREMIUM : process.env.API_PLACAS_COMUM}`;
   
@@ -204,17 +238,7 @@ function apiPlacas(msg, numeroAutor, placa, premium, callback) {
         const municipio = dados.extra?.municipio ?? dados.municipio ?? "-";
         const estado = dados.extra?.uf ?? dados.uf ?? "-";
 
-        retorno.msg = `🔎 Resultado para *${dados.placa}/${dados.placa_alternativa}* _(${dados.extra?.tipo_veiculo ?? "?"})_:
-
-   🚘 *Modelo:* ${nomeCarro} (${dados.cor})
-   📅 *Ano:* ${dados.ano} / ${dados.anoModelo} (${dados.origem})
-   📍 *Localidade:* ${municipio} - ${estado}
-   🔢 *Chassi/Motor:* ${dados.extra?.chassi ?? "-"} / ${dados.extra?.motor ?? "-"}
-   🧍 *Passageiros:* ${dados.extra?.quantidade_passageiro ?? "-"}
-   ⚡️ *Performance:* (${dados.extra?.cilindradas ?? "-"} cc) | ${dados.extra?.combustivel ?? "-"}
-
-   🪙 *FIPE:* ${fipe.texto_valor} (${fipe.texto_modelo} (${fipe.codigo_fipe}), ${fipe.mes_referencia})${renavam}
-   ⚠️ *Obs:* ${dados.extra?.tipo_doc_prop ?? "-"}, ${restricoes}`;
+        retorno.msg = `🔎 Resultado para *${dados.placa}/${dados.placa_alternativa}* _(${dados.extra?.tipo_veiculo ?? "?"})_:\n\n   🚘 *Modelo:* ${nomeCarro} (${dados.cor})\n   📅 *Ano:* ${dados.ano} / ${dados.anoModelo} (${dados.origem})\n   📍 *Localidade:* ${municipio} - ${estado}\n   🔢 *Chassi/Motor:* ${dados.extra?.chassi ?? "-"} / ${dados.extra?.motor ?? "-"}\n   🧍 *Passageiros:* ${dados.extra?.quantidade_passageiro ?? "-"}\n   ⚡️ *Performance:* (${dados.extra?.cilindradas ?? "-"} cc) | ${dados.extra?.combustivel ?? "-"}\n\n   🪙 *FIPE:* ${fipe.texto_valor} (${fipe.texto_modelo} (${fipe.codigo_fipe}), ${fipe.mes_referencia})${renavam}\n   ⚠️ *Obs:* ${dados.extra?.tipo_doc_prop ?? "-"}, ${restricoes}`;
 
         // Verifica se é um Honda Civic Si entre 2006 e 2011
         if (nomeCarro.toLowerCase().includes("honda civic si") && (2006 <= ano && ano <= 2011)) {
@@ -239,6 +263,15 @@ function apiPlacas(msg, numeroAutor, placa, premium, callback) {
         }
       }
       
+      // Update cache
+      placasCache[cacheKey] = {
+        timestamp: now,
+        data: retorno
+      };
+      fs.writeFile(cachePlacasPath, JSON.stringify(placasCache, null, 2)).catch(error => {
+        logger.error('Erro ao salvar o cache de placas:', error);
+      });
+
       // Retorna resultado via callback
       callback(retorno);
     })
