@@ -202,8 +202,8 @@ async function baixarVideoYoutube(idVideo, dadosSolicitante, videoHD=false, call
       const tituloVideo = videoInfo.title;
       logger.info(`[baixarVideoYoutube][${nomeVideoTemp}] Info do video '${videoInfo.id}': ${tituloVideo}, ${autorVideo}, ${videoInfo.duration}s.\nFazendo download para ${destinoVideo}`);
 
-      if(videoInfo.duration > 15*60){
-        callback(new Error(`Atualmente, só consigo baixar vídeos/músicas de até 15 minutos.`), null);
+      if(videoInfo.duration > 20*60){
+        callback(new Error(`Atualmente, só consigo baixar vídeos/músicas de até 20 minutos.`), null);
       } else {      
         videoCacheManager.downloadVideoWithCache(urlSafe, 
           { 
