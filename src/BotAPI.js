@@ -632,57 +632,17 @@ class BotAPI {
       res.redirect('https://gemini.google.com/share/a03e1fe297de');
     });
 
-    this.app.get('/pairingcode/:botId', async (req, res) => {
-      const { botId } = req.params;    
-      const filePath = path.join(this.database.databasePath, `pairingcode_${botId}.txt`);
-
-      await fs.access(filePath).catch(() => {  
-          return res.status(404).send(`Pairing Code para '${botId}' não disponível.`);  
-      });  
-                
-      res.setHeader("Content-Type", "text/plain");  
-      res.sendFile(filePath); 
-    });
-
-
-    this.app.get('/qrcode-image/:botId', async (req, res) => {
+    this.app.get('/qrcode/:botId', authenticateBasic, async (req, res) => {
       const { botId } = req.params;
-      const filePath = path.join(this.database.databasePath, `qrcode_${botId}.png`);
-      const noqrPath = path.join(this.database.databasePath, `noqr.png`);
 
-      try {
-        // Check if the specific QR code file exists.
-        await fs.access(filePath);
-        
-        // If it exists, set the content type and send it.
-        res.setHeader("Content-Type", "image/png");
-        res.sendFile(filePath);
-      } catch (error) {
-        // If the file does not exist, send the fallback 'noqr.png'.
-        // The browser will handle the 200 OK status from the image.
-        if (error.code === 'ENOENT') {
-          try {
-            await fs.access(noqrPath);
-            res.setHeader("Content-Type", "image/png");
-            res.sendFile(noqrPath);
-          } catch (noqrError) {
-            // Fallback for if 'noqr.png' also doesn't exist.
-            res.status(404).send('No QR code or fallback image found.');
-          }
-        } else {
-          // For any other error, send a server error status.
-          res.status(500).send('An unexpected error occurred.');
-        }
+      const bot = this.bots.find(b => b.id === botId);
+      if (!bot) {
+        return res.status(404).json({
+          status: 'error',
+          message: `Bot com ID '${botId}' não encontrado`
+        });
       }
-    });
 
-
-    this.app.get('/qrcode/:botId', async (req, res) => {
-      const { botId } = req.params;
-      const qrcodePath = path.join(this.database.databasePath, `qrcode_${botId}.png`);
-      const pairingCodePath = path.join(this.database.databasePath, `pairingcode_${botId}.txt`);
-
-      let pairingCodeContent = "--- ---";
       let formattedDate = new Date().toLocaleString('en-US', {
         timeZone: 'America/Sao_Paulo',
         hour12: false,
@@ -690,95 +650,188 @@ class BotAPI {
         hour: '2-digit', minute: '2-digit', second: '2-digit',
       });
 
-      try {
-        // Attempt to read the pairing code file. If it fails, the default value is used.
-        pairingCodeContent = await fs.readFile(pairingCodePath, 'utf8');
+      const instanceStatus = await bot._checkInstanceStatusAndConnect(true); // no retry
 
-        // Attempt to get stats for the QR code file to set the date.
-        const stats = await fs.stat(qrcodePath);
+      if(instanceStatus.extra?.ok){
+        const htmlResponse = `
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${botId} - ${formattedDate}</title>
+            <style>
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                text-align: center;
+                background-color: #f7fafc;
+                padding-top: 2rem;
+                color: #2d3748;
+              }
+              .container {
+                max-width: 400px;
+                margin: 0 auto;
+                padding: 1.5rem;
+                background-color: white;
+                border-radius: 0.75rem;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+              }
+              h1 {
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+              }
+              h2 {
+                font-size: 1.25rem;
+                font-weight: 500;
+                margin-bottom: 0.5rem;
+              }
+              img {
+                max-width: 100%;
+                height: auto;
+                margin: 1.5rem 0;
+                border-radius: 0.5rem;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+              }
+              pre {
+                background-color: #e2e8f0;
+                padding: 1rem;
+                border-radius: 0.5rem;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                font-family: monospace;
+                color: #2d3748;
+                text-align: left;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>${botId}</h1>
+              <h2>${formattedDate}</h2>
+              
+              
+              <h2 style='color: green'>Conectado</h2>
+            </div>
+          </body>
+          </html>
+        `;
+        res.send(htmlResponse);
+      } else {
+        const qrcodePath = path.join(this.database.databasePath, `qrcode_${botId}.png`);
+        const noqrPath = path.join(this.database.databasePath, `noqr.png`);
+        const pairingCodePath = path.join(this.database.databasePath, `pairingcode_${botId}.txt`);
+
+        let pairingCodeContent = "--- ---";
+        let qrCodeBase64 = '';
+
+        try {
+          // Attempt to read the pairing code file. If it fails, the default value is used.
+          pairingCodeContent = await fs.readFile(pairingCodePath, 'utf8');
+
+          // Attempt to get stats for the QR code file to set the date.
+          const stats = await fs.stat(qrcodePath);
+          
+          // If successful, format the date from the file's modification time.
+          formattedDate = stats.mtime.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            timeZoneName: 'short',
+            timeZone: 'America/Sao_Paulo', // GMT-3
+          });
+        } catch (error) {
+          // If either file is not found, the default values for date and pairing code remain.
+          this.logger.error(`Could not find resource(s) for bot ${botId}: ${error.message}`);
+        }
+
+        try {
+          const qrCodeImage = await fs.readFile(qrcodePath);
+          qrCodeBase64 = qrCodeImage.toString('base64');
+        } catch (error) {
+          if (error.code === 'ENOENT') {
+            try {
+              const noQrImage = await fs.readFile(noqrPath);
+              qrCodeBase64 = noQrImage.toString('base64');
+            } catch (noqrError) {
+              this.logger.error(`QR code for ${botId} and fallback image not found.`);
+            }
+          } else {
+            this.logger.error(`Error reading QR code for ${botId}:`, error);
+          }
+        }
         
-        // If successful, format the date from the file's modification time.
-        formattedDate = stats.mtime.toLocaleString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          timeZoneName: 'short',
-          timeZone: 'America/Sao_Paulo', // GMT-3
-        });
-      } catch (error) {
-        // If either file is not found, the default values for date and pairing code remain.
-        console.error(`Could not find resource(s) for bot ${botId}:`, error.message);
+        const htmlResponse = `
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${botId} - ${formattedDate}</title>
+            <style>
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                text-align: center;
+                background-color: #f7fafc;
+                padding-top: 2rem;
+                color: #2d3748;
+              }
+              .container {
+                max-width: 400px;
+                margin: 0 auto;
+                padding: 1.5rem;
+                background-color: white;
+                border-radius: 0.75rem;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+              }
+              h1 {
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+              }
+              h2 {
+                font-size: 1.25rem;
+                font-weight: 500;
+                margin-bottom: 0.5rem;
+              }
+              img {
+                max-width: 100%;
+                height: auto;
+                margin: 1.5rem 0;
+                border-radius: 0.5rem;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+              }
+              pre {
+                background-color: #e2e8f0;
+                padding: 1rem;
+                border-radius: 0.5rem;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                font-family: monospace;
+                color: #2d3748;
+                text-align: left;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>${botId}</h1>
+              <h2>${formattedDate}</h2>
+              
+              <img src="data:image/png;base64,${qrCodeBase64}" alt="QR Code for ${botId}">
+
+              <h2>Pairing Code</h2>
+              <pre>${pairingCodeContent.split("] ").join("]")}</pre>
+            </div>
+          </body>
+          </html>
+        `;
+        res.send(htmlResponse);
       }
 
-      const htmlResponse = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${formattedDate}</title>
-          <style>
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-              text-align: center;
-              background-color: #f7fafc;
-              padding-top: 2rem;
-              color: #2d3748;
-            }
-            .container {
-              max-width: 400px;
-              margin: 0 auto;
-              padding: 1.5rem;
-              background-color: white;
-              border-radius: 0.75rem;
-              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            }
-            h1 {
-              font-size: 1.5rem;
-              font-weight: 600;
-              margin-bottom: 0.5rem;
-            }
-            h2 {
-              font-size: 1.25rem;
-              font-weight: 500;
-              margin-bottom: 0.5rem;
-            }
-            img {
-              max-width: 100%;
-              height: auto;
-              margin: 1.5rem 0;
-              border-radius: 0.5rem;
-              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-            }
-            pre {
-              background-color: #e2e8f0;
-              padding: 1rem;
-              border-radius: 0.5rem;
-              white-space: pre-wrap;
-              word-wrap: break-word;
-              font-family: monospace;
-              color: #2d3748;
-              text-align: left;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>${botId}</h1>
-            <h2>${formattedDate}</h2>
-            
-            <img src="/qrcode-image/${botId}" alt="QR Code for ${botId}">
-
-            <h2>Pairing Code</h2>
-            <pre>${pairingCodeContent.split("] ").join("]\n")}</pre>
-          </div>
-        </body>
-        </html>
-      `;
-      res.send(htmlResponse);
     });
 
     // Ciclo da vida da ravena

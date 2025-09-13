@@ -1,5 +1,6 @@
 ﻿const { Contact, LocalAuth, MessageMedia, Location, Poll } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+const qrimg = require('qr-image');
 const { randomBytes } = require('crypto');
 const imagemagick = require('imagemagick');
 const ffmpeg = require('fluent-ffmpeg');
@@ -835,14 +836,18 @@ class WhatsAppBotEvo {
       this.logger.info(`Instance ${this.instanceName} state: ${instanceDetails?.instance?.state}`, instanceDetails?.instance);
 
       const state = (instanceDetails?.instance?.state ?? "error").toUpperCase();
+      let extra = {};
+
       if (state === 'CONNECTED' || state === 'OPEN') { // open não era pra ser
         this._onInstanceConnected();
+        extra.ok = true;
       } else if (state === 'CLOSE' || state === 'CONNECTING' || state === 'PAIRING' || !state) {
         this.logger.info(`Instance ${this.instanceName} is not connected (state: ${state}). Attempting to connect with num ber ${this.phoneNumber}...`);
         const connectData = await this.apiClient.get(`/instance/connect`, {number: this.phoneNumber});
 
         this.logger.info(`[${this.id}] Connect Data: ${JSON.stringify(connectData)} `);
 
+        extra.connectData = connectData;
         if (connectData.pairingCode) {
            this.logger.info(`[${this.id}] Instance ${this.instanceName} PAIRING CODE: ${connectData.pairingCode}. Enter this on your phone in Linked Devices -> Link with phone number.`);
            const pairingCodeLocation = path.join(this.database.databasePath, `pairingcode_${this.id}.txt`);
@@ -852,9 +857,9 @@ class WhatsAppBotEvo {
           this.logger.info(`[${this.id}] QR Code for ${this.instanceName} (Scan with WhatsApp):`);
           qrcode.generate(connectData.code, { small: true });
 
-          //const qrCodeLocal = path.join(this.database.databasePath, `qrcode_${this.id}.png`);
-          //fs.writeFileSync(qrCodeLocal, Buffer.from(connectData.qrcode.base64, 'base64'));
-          //this.logger.info(`QR Code saved to ${qrCodeLocal}`);
+          const qrCodeLocal = path.join(this.database.databasePath, `qrcode_${this.id}.png`);
+          let qr_png = qrimg.image(connectData.code, { type: 'png' });
+          qr_png.pipe(fs.createWriteStream(qrCodeLocal));
         } else {
           this.logger.warn(`[${this.id}] Received connection response for ${this.instanceName}, but no QR/Pairing code found. State: ${connectData?.state}. Waiting for webhook confirmation.`, connectData);
         }
@@ -867,9 +872,12 @@ class WhatsAppBotEvo {
         this.logger.error(`Instance ${this.instanceName} is in an unhandled state: ${state}. Manual intervention may be required.`);
         // Consider calling onDisconnected here if it's a definitively disconnected state
       }
+
+      return { instanceDetails, extra };
     } catch (error) {
       this.logger.error(`Error checking/connecting instance ${this.instanceName}:`, error);
       // Schedule a retry or notify admin?
+      return { instanceDetails: {}, error };
     }
   }
 
