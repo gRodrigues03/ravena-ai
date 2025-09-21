@@ -168,6 +168,73 @@ class WhatsAppBot {
     return timeSinceStartup < 5000; // 5 segundos
   }
 
+
+  // Pra uso na interface web, adaptar
+  async _checkInstanceStatusAndConnect(isRetry = false) {
+    this.logger.info(`Checking instance status for ${this.instanceName}...`);
+    try {
+      /*
+      {
+        "instance": {
+          "instanceName": "teste-docs",
+          "state": "open"
+        }
+      }
+
+      const instanceDetails = await this.apiClient.get(`/instance/connectionState`);
+      this.logger.info(`Instance ${this.instanceName} state: ${instanceDetails?.instance?.state}`, instanceDetails?.instance);
+
+      const state = (instanceDetails?.instance?.state ?? "error").toUpperCase();
+      let extra = {};
+
+      if (state === 'CONNECTED' || state === 'OPEN') { // open não era pra ser
+        this._onInstanceConnected();
+        extra.ok = true;
+      } else if (state === 'CLOSE' || state === 'CONNECTING' || state === 'PAIRING' || !state) {
+        this.logger.info(`Instance ${this.instanceName} is not connected (state: ${state}). Attempting to connect with num ber ${this.phoneNumber}...`);
+        const connectData = await this.apiClient.get(`/instance/connect`, {number: this.phoneNumber});
+
+        this.logger.info(`[${this.id}] Connect Data: ${JSON.stringify(connectData)} `);
+
+        extra.connectData = connectData;
+        if (connectData.pairingCode) {
+           this.logger.info(`[${this.id}] Instance ${this.instanceName} PAIRING CODE: ${connectData.pairingCode}. Enter this on your phone in Linked Devices -> Link with phone number.`);
+           const pairingCodeLocation = path.join(this.database.databasePath, `pairingcode_${this.id}.txt`);
+           fs.writeFileSync(pairingCodeLocation, `[${new Date().toUTCString()}] ${connectData.pairingCode}`);
+        } else 
+        if (connectData.code) {
+          this.logger.info(`[${this.id}] QR Code for ${this.instanceName} (Scan with WhatsApp):`);
+          qrcode.generate(connectData.code, { small: true });
+
+          const qrCodeLocal = path.join(this.database.databasePath, `qrcode_${this.id}.png`);
+          let qr_png = qrimg.image(connectData.code, { type: 'png' });
+          qr_png.pipe(fs.createWriteStream(qrCodeLocal));
+        } else {
+          this.logger.warn(`[${this.id}] Received connection response for ${this.instanceName}, but no QR/Pairing code found. State: ${connectData?.state}. Waiting for webhook confirmation.`, connectData);
+        }
+        // After attempting to connect, we wait for a 'connection.update' webhook.
+      } else if (state === 'TIMEOUT' && !isRetry) {
+        this.logger.warn(`Instance ${this.instanceName} timed out. Retrying connection once...`);
+        await sleep(5000);
+        this._checkInstanceStatusAndConnect(true);
+      } else {
+        this.logger.error(`Instance ${this.instanceName} is in an unhandled state: ${state}. Manual intervention may be required.`);
+        // Consider calling onDisconnected here if it's a definitively disconnected state
+      }
+
+      return { instanceDetails, extra };
+    } catch (error) {
+      this.logger.error(`Error checking/connecting instance ${this.instanceName}:`, error);
+      // Schedule a retry or notify admin?
+      return { instanceDetails: {}, error };
+    }
+    */
+
+    return { instanceDetails: {} };
+  }
+
+
+
   /**
    * Registra manipuladores de eventos para o cliente WhatsApp
    */

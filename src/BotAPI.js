@@ -374,7 +374,7 @@ class BotAPI {
     this.app.get('/top-donates', async (req, res) => {
         const fs = require('fs');
         const donationsPath = path.join(this.database.databasePath, 'donations.json');
-        if (await fs.exists(donationsPath)) {
+        if (fs.existsSync(donationsPath)) {
             try {
                 const donationsData = await fs.readFile(donationsPath, 'utf8');
                 const donations = JSON.parse(donationsData);

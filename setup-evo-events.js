@@ -8,7 +8,7 @@
         'SEND_MESSAGE'
     ];
 
-    const delay = 200;
+    const delay = 100;
 
     const allLabels = document.querySelectorAll('label');
     
