@@ -633,6 +633,20 @@ class BotAPI {
       res.redirect('https://gemini.google.com/share/a03e1fe297de');
     });
 
+
+    // Serve media files
+    this.app.get('/qrimg/:botId', authenticateBasic, async (req, res) => {
+      const { botId } = req.params;    
+      const filePath = path.join(this.database.databasePath, `qrcode_${botId}.png`);
+
+      await fs.access(filePath).catch(() => {  
+          return res.status(404).send(`QRCode para '${botId}' não disponível.`);  
+      });  
+                
+      res.setHeader("Content-Type", "image/png");  
+      res.sendFile(filePath); 
+    });
+
     this.app.get('/qrcode/:botId', authenticateBasic, async (req, res) => {
       const { botId } = req.params;
 
