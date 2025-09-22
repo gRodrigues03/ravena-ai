@@ -1555,9 +1555,10 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
               formattedContent = await this.convertToSquarePNGImage(formattedContent);
             }
           }
+
           endpoint = '/message/sendSticker';
-          this.logger.debug(`[sendMessage] ${endpoint}`);
           evoPayload.sticker = formattedContent;
+          this.logger.debug(`[sendMessage] ${endpoint}: ${JSON.stringify(evoPayload)}`);
         }
 
         if (options.sendAudioAsVoice || mediaType === 'audio'){

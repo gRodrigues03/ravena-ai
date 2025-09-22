@@ -370,27 +370,35 @@ class BotAPI {
       }
     });
 
-    // Endpoint para Top Donates (modificado para privacidade)
+    // Endpoint para Top Donates
     this.app.get('/top-donates', async (req, res) => {
-        const fs = require('fs');
         const donationsPath = path.join(this.database.databasePath, 'donations.json');
-        if (fs.existsSync(donationsPath)) {
-            try {
-                const donationsData = await fs.readFile(donationsPath, 'utf8');
-                const donations = JSON.parse(donationsData);
 
-                // Mapeia para remover o campo 'numero' por privacidade
-                const publicDonations = donations.map(({ nome, valor }) => ({ nome, valor }));
+        try {
+            await fs.access(donationsPath);
 
-                res.json(publicDonations);
-            } catch (error) {
+            // Se a linha acima não lançar um erro, o arquivo existe.
+            const donationsData = await fs.readFile(donationsPath, 'utf8');
+            const donations = JSON.parse(donationsData);
+
+            // Mapeia para remover o campo 'numero' por privacidade
+            const publicDonations = donations.map(({ nome, valor }) => ({ nome, valor }));
+
+            res.json(publicDonations);
+
+        } catch (error) {
+            // O bloco catch lida com qualquer erro, seja o arquivo não encontrado ou um erro de processamento.
+            if (error.code === 'ENOENT') {
+                // Se o erro for 'ENOENT', o arquivo não foi encontrado.
+                res.status(404).json({ error: 'Arquivo de doações não encontrado' });
+            } else {
+                // Para outros erros, como falha ao ler ou processar o JSON.
                 this.logger.error('Erro ao ler ou processar o arquivo de doações:', error);
                 res.status(500).json({ error: 'Erro ao processar doações' });
             }
-        } else {
-            res.status(404).json({ error: 'Arquivo de doações não encontrado' });
         }
     });
+
 
     // Serve management page
     this.app.get('/manage/:token', (req, res) => {  
@@ -511,8 +519,6 @@ class BotAPI {
             await this.database.saveGroup(groupData);
             
             // Signal bots to reload the group config
-            const fs = require('fs').promises;
-            const path = require('path');
             const updatesPath = path.join(this.database.databasePath, 'group_updates.json');
             let updates = {};
             
