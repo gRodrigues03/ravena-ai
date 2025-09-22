@@ -26,6 +26,7 @@ const StreamSystem = require('./StreamSystem');
 const Database = require('./utils/Database');
 const LoadReport = require('./LoadReport');
 const Logger = require('./utils/Logger');
+const { toOpus } = require('./utils/Conversions');
 
 // Utils
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -1563,8 +1564,12 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
         if (options.sendAudioAsVoice || mediaType === 'audio'){
           endpoint = '/message/sendWhatsAppAudio';
-          evoPayload.audio = formattedContent;
           evoPayload.presence = "recording";
+
+          if(options.sendAudioAsVoice){
+            // Converter para ogg/opus antes
+            evoPayload.audio = await toOpus(formattedContent);
+          }
         } 
 
         if (options.sendVideoAsGif && mediaType === 'video'){

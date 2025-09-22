@@ -12,6 +12,8 @@ const InviteSystem = require('./InviteSystem');
 const StreamSystem = require('./StreamSystem');
 const LLMService = require('./services/LLMService');
 const AdminUtils = require('./utils/AdminUtils');
+const { messageMediaToOpus } = require('./utils/Conversions');
+
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 class WhatsAppBot {
@@ -591,6 +593,11 @@ class WhatsAppBot {
           sendMediaAsSticker: options.asSticker || false,
           ...options
         };
+
+        if(options.sendAudioAsVoice){
+          // Converter para ogg/opus antes
+          content = await messageMediaToOpus(content);
+        }
 
         try{
           return await this.client.sendMessage(chatId, content, fullOpts);

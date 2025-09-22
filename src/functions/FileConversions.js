@@ -1,15 +1,16 @@
-﻿const path = require('path');
-const fs = require('fs').promises;
-const ffmpeg = require('fluent-ffmpeg');
+﻿const ReturnMessage = require('../models/ReturnMessage');
 const { MessageMedia } = require('whatsapp-web.js');
-const Logger = require('../utils/Logger');
+const { toOpus, toMp3 } = require('../utils/Conversions');
 const Command = require('../models/Command');
-const ReturnMessage = require('../models/ReturnMessage');
+const Logger = require('../utils/Logger');
+const ffmpeg = require('fluent-ffmpeg');
+const fs = require('fs').promises;
+const crypto = require('crypto');
+const axios = require('axios');
+const path = require('path');
 
 const logger = new Logger('file-conversions');
 const tempDir = path.join(__dirname, '../../temp');
-
-//logger.info('Módulo FileConversions carregado');
 
 /**
  * Gera um nome de arquivo temporário único
@@ -50,44 +51,6 @@ async function saveMediaToTemp(media, extension) {
   return tempFilePath;
 }
 
-/**
- * Converte mídia para MP3
- * @param {string} inputPath - Caminho do arquivo de entrada
- * @returns {Promise<string>} - Caminho do arquivo de saída
- */
-async function convertToMp3(inputPath) {
-  const outputPath = generateTempFilePath('mp3');
-  
-  return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .output(outputPath)
-      .audioCodec('libmp3lame')
-      .audioBitrate(128)
-      .on('end', () => resolve(outputPath))
-      .on('error', (err) => reject(err))
-      .run();
-  });
-}
-
-/**
- * Converte mídia para OGG (formato de voz)
- * @param {string} inputPath - Caminho do arquivo de entrada
- * @returns {Promise<string>} - Caminho do arquivo de saída
- */
-async function convertToOgg(inputPath) {
-  const outputPath = generateTempFilePath('ogg');
-  
-  return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .output(outputPath)
-      .audioCodec('libopus')
-      .audioBitrate(128)
-      .addOutputOption('-vn')
-      .on('end', () => resolve(outputPath))
-      .on('error', (err) => reject(err))
-      .run();
-  });
-}
 
 /**
  * Ajusta o volume de uma mídia
@@ -197,7 +160,7 @@ async function handleGetAudio(bot, message, args, group) {
     tempFiles.push(inputPath);
     
     // Converte para MP3
-    const outputPath = await convertToMp3(inputPath);
+    const outputPath = await toMp3(inputPath);
     tempFiles.push(outputPath);
     
     // Cria objeto de mídia
@@ -284,7 +247,7 @@ async function handleGetVoice(bot, message, args, group) {
     tempFiles.push(inputPath);
     
     // Converte para OGG (formato de voz)
-    const outputPath = await convertToOgg(inputPath);
+    const outputPath = await toOpus(inputPath);
     tempFiles.push(outputPath);
     
     // Cria objeto de mídia
