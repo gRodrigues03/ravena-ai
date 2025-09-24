@@ -838,6 +838,7 @@ class WhatsAppBotEvo {
       this.logger.info(`Instance ${this.instanceName} state: ${instanceDetails?.instance?.state}`, instanceDetails?.instance);
 
       instanceDetails.version = this.version;
+      instanceDetails.tipo = "evo";
       const state = (instanceDetails?.instance?.state ?? "error").toUpperCase();
       let extra = {};
 

@@ -193,6 +193,7 @@ class WhatsAppBot {
       }
 
       instanceDetails.version = this.version;
+      instanceDetails.tipo = "wwebjs";
       if (this.status === 'CONNECTED') { // open não era pra ser
         extra.ok = true;
       } else if(this.status === 'INITIALIZING'){
@@ -209,7 +210,7 @@ class WhatsAppBot {
         extra.connectData.code = this.lastQR; // código cru da leitura do qrcode
       }
 
-      return { instanceDetails: {}, extra };
+      return { instanceDetails , extra };
     } catch (error) {
       this.logger.error(`Error checking/connecting instance ${this.id}:`, error);
       // Schedule a retry or notify admin?

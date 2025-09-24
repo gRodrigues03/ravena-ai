@@ -672,8 +672,9 @@ class BotAPI {
       });
 
       const instanceStatus = await bot._checkInstanceStatusAndConnect(true); // no retry
-      const version = instanceStatus.version ?? "?";
-
+      const version = instanceStatus.instanceDetails.version ?? "?";
+      const tipo = instanceStatus.instanceDetails.tipo ?? "?";
+      console.log(instanceStatus);
       if(instanceStatus.extra?.ok){
         const htmlResponse = `
           <!DOCTYPE html>
@@ -730,7 +731,7 @@ class BotAPI {
           <body>
             <div class="container">
               <h1>${botId} - ${bot.phoneNumber}</h1>
-              <h2>${formattedDate} - ${version}</h2>
+              <h2>${formattedDate} - ${tipo} ${version}</h2>
               
               
               <h2 style='color: green'>Conectado</h2>
@@ -799,7 +800,7 @@ class BotAPI {
           <body>
             <div class="container">
               <h1>${botId} - ${bot.phoneNumber}</h1>
-              <h2>${formattedDate} - ${version}</h2>
+              <h2>${formattedDate} - ${tipo} ${version}</h2>
               
               <h2>QR Code</h2>
               <img src="${qrCodeBase64}" alt="QR Code for ${botId}">
