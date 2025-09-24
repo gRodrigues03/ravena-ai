@@ -672,8 +672,8 @@ class BotAPI {
       });
 
       const instanceStatus = await bot._checkInstanceStatusAndConnect(true); // no retry
-      const version = instanceDetails.instance?.version ?? "?";
-      
+      const version = instanceStatus.version ?? "?";
+
       if(instanceStatus.extra?.ok){
         const htmlResponse = `
           <!DOCTYPE html>
