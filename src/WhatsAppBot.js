@@ -237,6 +237,7 @@ class WhatsAppBot {
       qr_png.pipe(fs.createWriteStream(qrCodeLocal));
 
       this.logger.info(`QR Code recebido, escaneie para autenticar a '${this.id}'\n\t-> ${qrCodeLocal}`);
+      this.logger.info(qr);
       qrcode.generate(qr, { small: true });
       this.logger.info(`------------ qrcode '${this.id}' -----------`);
     });
