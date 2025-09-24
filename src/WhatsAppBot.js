@@ -1,4 +1,4 @@
-const { Client, Contact, LocalAuth, MessageMedia, Location } = require('whatsapp-web.js');
+const { Client, Contact, LocalAuth, MessageMedia, Location, version } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const qrimg = require('qr-image');
 const Database = require('./utils/Database');
@@ -37,6 +37,7 @@ class WhatsAppBot {
     this.client = null;
     this.database = Database.getInstance(); // Instância de banco de dados compartilhada
     this.isConnected = false;
+    this.version = version ?? "wwebjs";
     this.safeMode = options.safeMode !== undefined ? options.safeMode : (process.env.SAFE_MODE === 'true');
     this.puppeteerOptions = options.puppeteerOptions || {};
     this.otherBots = options.otherBots || [];
@@ -175,7 +176,7 @@ class WhatsAppBot {
 
   // Pra uso na interface web, adaptar
   async _checkInstanceStatusAndConnect(isRetry = false) {
-    this.logger.info(`Checking instance status for ${this.instanceName}...`);
+    this.logger.info(`Checking instance status for ${this.id}...`);
     try {
       let extra = {ok: false, connectData: {}};
 
@@ -184,13 +185,14 @@ class WhatsAppBot {
       // PAIRING (qrcode ou código)
       // CONNECTED
       // DISCONNECTED
-      const instanceDetail= {
+      const instanceDetails = {
         "instance": {
           "instanceName": this.id,
-          "state": this.status
+          "state": this.status,
         }
       }
 
+      instanceDetails.version = this.version;
       if (this.status === 'CONNECTED') { // open não era pra ser
         extra.ok = true;
       } else if(this.status === 'INITIALIZING'){
@@ -209,7 +211,7 @@ class WhatsAppBot {
 
       return { instanceDetails: {}, extra };
     } catch (error) {
-      this.logger.error(`Error checking/connecting instance ${this.instanceName}:`, error);
+      this.logger.error(`Error checking/connecting instance ${this.id}:`, error);
       // Schedule a retry or notify admin?
       return { instanceDetails: {}, error };
     }

@@ -65,6 +65,7 @@ class WhatsAppBotEvo {
     this.webhookHost = options.webhookHost; // e.g., from cloudflared tunnel
     this.webhookPort = options.webhookPort || process.env.WEBHOOK_PORT_EVO || 3000;
     this.notificarDonate = options.notificarDonate;
+    this.version = "Evolution";
 
     this.redisURL = options.redisURL;
     this.redisDB = options.redisDB || 0;
@@ -836,6 +837,7 @@ class WhatsAppBotEvo {
       const instanceDetails = await this.apiClient.get(`/instance/connectionState`);
       this.logger.info(`Instance ${this.instanceName} state: ${instanceDetails?.instance?.state}`, instanceDetails?.instance);
 
+      instanceDetails.version = this.version;
       const state = (instanceDetails?.instance?.state ?? "error").toUpperCase();
       let extra = {};
 
