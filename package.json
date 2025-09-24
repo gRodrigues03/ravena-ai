@@ -31,7 +31,7 @@
     "socket.io-client": "^4.8.1",
     "translate": "^3.0.1",
     "uuid": "^9.0.1",
-    "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#main",
+    "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#auto-wa-web-update/patch",
     "xml2js": "^0.6.2",
     "youtube-dl-exec": "^3.0.20",
     "youtube-search-api": "^1.2.2"
