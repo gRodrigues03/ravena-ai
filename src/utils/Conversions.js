@@ -66,7 +66,7 @@ async function toOpus(inputFile, opts = { b64: false, url: false, returnAsURL: f
     console.log(outputPath);
 
     if (opts.url || opts.returnAsURL) {
-      return `${process.env.BOT_DOMAIN}/audios/${outputFileName}`;
+      return `${process.env.BOT_DOMAIN_LOCAL ?? process.env.BOT_DOMAIN}/audios/${outputFileName}`;
     } else if (opts.b64) {
       const outputBuffer = await fs.readFile(outputPath);
       return outputBuffer.toString('base64');

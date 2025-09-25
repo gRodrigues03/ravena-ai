@@ -53,8 +53,7 @@ async function summarizeConversation(bot, message, args, group) {
       
       if (fetchedMessages && fetchedMessages.length > 0) {
         recentMessages = await Promise.all(fetchedMessages.map(async (msg) => {
-          const contact = await msg.getContact();
-          const authorName = contact.pushname || contact.name || "Desconhecido";
+          const authorName = message.name ?? message.authorName ?? message.pushname ?? "Desconhecido";
           const textContent = msg.body || msg.caption || "";
           
           return {
@@ -154,8 +153,7 @@ async function interactWithConversation(bot, message, args, group) {
       
       if (fetchedMessages && fetchedMessages.length > 0) {
         recentMessages = await Promise.all(fetchedMessages.map(async (msg) => {
-          const contact = await msg.getContact();
-          const authorName = contact.pushname || contact.name || "Desconhecido";
+          const authorName = message.name ?? message.authorName ?? message.pushname ?? "Desconhecido";
           const textContent = msg.body || msg.caption || "";
           
           return {
@@ -293,14 +291,7 @@ async function storeMessage(message, group) {
     }
 
     if (textContent) {
-      // Obtém detalhes do contato
-      let authorName = "Desconhecido";
-      try {
-        const contact = await message.origin.getContact();
-        authorName = contact.pushname || contact.name || "Desconhecido";
-      } catch (error) {
-        logger.error('Erro ao obter nome do contato:', error);
-      }
+      const authorName = message.name ?? message.authorName ?? message.pushname ?? "Desconhecido";
       
       messages.push({
         author: authorName,
