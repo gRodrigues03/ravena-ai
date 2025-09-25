@@ -26,16 +26,14 @@ class EvolutionApiClient {
 
   async get(endpoint, params = {}) {
     const url = `${endpoint}/${this.instanceName}`;
-    //this.logger.debug(`Evo API GET: ${url}`, params);
     try {
       const response = await this.client.get(url, { params });
-      //this.logger.debug(`Evo API GET Response from ${url}:`, response.status);
       return response.data;
     } catch (error) {
       this.logger.error(`Evo API GET Error from ${url}:`, error.response?.status, error.response?.data || error.message);
-      this.logger.error('\t- Error Message:', error.response.data.message || 'An error occurred.');
-      this.logger.error('\t- Status Code:', error.response.status);
-      this.logger.error('\t- Error Details:', error.response.data);
+      this.logger.error(`\t- ${url}`, params);
+      this.logger.error(`\t- ${error.response.status} - ${error.response.data.message || 'An error occurred.'}`);
+      this.logger.error('\t- Details:', error.response.data);
       throw error.response?.data || error;
     }
   }
@@ -45,16 +43,14 @@ class EvolutionApiClient {
         ? endpoint.replace('{instanceName}', this.instanceName) // For endpoints like /instance/webhook/set/{instanceName}
         : `${endpoint}/${this.instanceName}`;
     
-    //this.logger.debug(`Evo API POST: ${url}`, data);
     try {
       const response = await this.client.post(url, data, { params });
-      //this.logger.debug(`Evo API POST Response from ${url}:`, response.status, response.data?.status || response.data?.key?.id);
       return response.data;
     } catch (error) {
       this.logger.error(`Evo API POST Error from ${url}:`, error.response?.status, error.response?.data || error.message);
-      this.logger.error('\t- Error Message:', error.response.data.message || 'An error occurred.');
-      this.logger.error('\t- Status Code:', error.response.status);
-      this.logger.error('\t- Error Details:', error.response.data);
+      this.logger.error(`\t- ${url}`, data);
+      this.logger.error(`\t- ${error.response.status} - ${error.response.data.message || 'An error occurred.'}`);
+      this.logger.error('\t- Details:', error.response.data);
       throw error.response?.data || error;
     }
   }

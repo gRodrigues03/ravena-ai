@@ -1854,7 +1854,6 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       return contato;
     } catch (error) {
       this.logger.error(`[${this.id}] Failed to get contact ${cid ?? ""}/${senderPn ?? ""} details.`); //, error
-      this.logger.error(error)
       return { id: { _serialized: "000000000000@c.us" }, name: "000000000000", pushname: "000000000000", number: "000000000000", isUser: true, _isPartial: true }; // Basic fallback
     }
   }
