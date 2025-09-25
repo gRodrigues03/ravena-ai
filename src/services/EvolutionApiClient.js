@@ -33,6 +33,9 @@ class EvolutionApiClient {
       return response.data;
     } catch (error) {
       this.logger.error(`Evo API GET Error from ${url}:`, error.response?.status, error.response?.data || error.message);
+      this.logger.error('\t- Error Message:', error.response.data.message || 'An error occurred.');
+      this.logger.error('\t- Status Code:', error.response.status);
+      this.logger.error('\t- Error Details:', error.response.data);
       throw error.response?.data || error;
     }
   }
@@ -49,6 +52,9 @@ class EvolutionApiClient {
       return response.data;
     } catch (error) {
       this.logger.error(`Evo API POST Error from ${url}:`, error.response?.status, error.response?.data || error.message);
+      this.logger.error('\t- Error Message:', error.response.data.message || 'An error occurred.');
+      this.logger.error('\t- Status Code:', error.response.status);
+      this.logger.error('\t- Error Details:', error.response.data);
       throw error.response?.data || error;
     }
   }

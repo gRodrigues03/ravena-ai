@@ -1800,22 +1800,6 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
     try {
       let contato;
-      /*if(contactId.includes("@lid")){ // Consertado na evo 2.3.0
-        this.logger.debug(`[getContactDetails][${this.id}] IGNORING contact with LID: ${contactId}`);
-        contato = {
-          isContact: false,
-          id: { _serialized: contactId },
-          name: `Pessoa Misteriosa`,
-          pushname: `Pessoa Misteriosa`,
-          number: contactId.split('@')[0],
-          isUser: true,
-          status: "",
-          isBusiness: false,
-          picture: ""
-        };
-      } else {
-      */
-
       let contactId = ((typeof cid === "object") ? cid.id : cid) ?? null;
 
       const isLid = contactId.includes("@lid") && senderPn;
@@ -1867,53 +1851,10 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           };
         }
       }
-      
-      //this.logger.debug(`[getContactDetails][${this.id}] Dados do cache para '${number}'`);
-
       return contato;
-      /*
-      profileData
-      {
-        wuid: '555598273712@s.whatsapp.net',
-        name: 'moothz',
-        numberExists: true,
-        picture: 'https://pps.whatsapp.net/v/t61.24694-24/366408615_6228517803924212_5681812432108429726_n.jpg?ccb=11-4&oh=01_Q5Aa1gGsIN043_6xCmfA-TTP9uy_1ZSPWtWoZjCiQ1opre47HQ&oe=68458BB2&_nc_sid=5e03e0&_nc_cat=105',
-        status: { status: 'mude mesas', setAt: '2019-12-07T23:02:57.000Z' },
-        isBusiness: false
-      }
-      */
-      /*
-      // Aqui vem um array com todos os contatos do celular...
-      this.logger.debug(`[${this.id}] Fetching contact details for: ${contactId}`);
-      // Aqui vem um array com todos os contatos do celular...
-      const contactsData = await this.apiClient.post(`/chat/findContacts`); // { where: {id: contactId} }
-      //this.logger.debug(`[${this.id}] contactsData:`, contactsData);
-
-      const contactData = contactsData.find(c => c.remoteJid == contactId);
-      if(contactData){
-        return {
-          isContact: true,
-          id: { _serialized: contactData.jid || contactId },
-          name: contactData.pushName || contactData.name || contactData.notify, // 'name' is usually the saved name, 'notify' is pushName
-          pushname: contactData.pushName || contactData.name || contactData.notify,
-          number: (contactData.remoteJid || contactId).split('@')[0],
-          isUser: true, // Assume
-          // ... other relevant fields from Evo response
-          _rawEvoContact: contactData
-        };
-      } else {
-        return {
-          isContact: false,
-          id: { _serialized: contactId },
-          name: `Nome ${contactId}`,
-          pushname: `Nome ${contactId}`,
-          number: contactId.split('@')[0],
-          isUser: true
-        };
-      }
-      */
     } catch (error) {
       this.logger.error(`[${this.id}] Failed to get contact ${cid ?? ""}/${senderPn ?? ""} details.`); //, error
+      this.logger.error(error)
       return { id: { _serialized: "000000000000@c.us" }, name: "000000000000", pushname: "000000000000", number: "000000000000", isUser: true, _isPartial: true }; // Basic fallback
     }
   }
