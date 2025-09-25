@@ -11,6 +11,15 @@ class AdminUtils {
     this.superAdmins = process.env.SUPER_ADMINS ? process.env.SUPER_ADMINS.split(',') : [];
   }
 
+  _normalizeId(id) {
+    // Retorna uma string vazia se o ID for inválido para evitar erros.
+    if (typeof id !== 'string' || !id) {
+      return '';
+    }
+    // Divide a string no '@' e pega a primeira parte.
+    return id.split('@')[0];
+  }
+
   /**
    * Verifica se um usuário é administrador no grupo
    * @param {string} userId - ID do usuário a verificar
@@ -21,52 +30,66 @@ class AdminUtils {
    */
   async isAdmin(userId, group, chat = null, client = null) {
     try {
-      // 1. Verifica se é um super admin
-      if (this.isSuperAdmin(userId)) {
-        this.logger.debug(`Usuário ${userId} é super admin`);
+      const normalizedUserId = this._normalizeId(userId);
+
+      // Se o ID normalizado for vazio, o usuário é inválido.
+      if (!normalizedUserId) {
+        this.logger.debug(`ID de usuário inválido fornecido: ${userId}`);
+        return false;
+      }
+
+      // 1. Verifica se é um super admin (usando o ID normalizado)
+      if (this.isSuperAdmin(normalizedUserId)) {
+        this.logger.debug(`Usuário ${normalizedUserId} é super admin.`);
         return true;
       }
 
-      // 2. Verifica additionalAdmins no objeto de grupo
-      if (group && group.additionalAdmins && Array.isArray(group.additionalAdmins)) {
-        if (group.additionalAdmins.includes(userId)) {
-          this.logger.debug(`Usuário ${userId} é admin adicional no grupo ${group.id}`);
+      // 2. Verifica 'additionalAdmins' no objeto de grupo
+      if (group && Array.isArray(group.additionalAdmins)) {
+        const isAdditionalAdmin = group.additionalAdmins
+          .map(this._normalizeId) // Normaliza cada ID da lista de admins
+          .includes(normalizedUserId);
+
+        if (isAdditionalAdmin) {
+          this.logger.debug(`Usuário ${normalizedUserId} é admin adicional no grupo ${group.id}.`);
           return true;
         }
       }
 
       // 3. Verifica se é admin no WhatsApp
-      // 3.1. Se já temos o objeto de chat, usamos ele
-      if (chat && chat.isGroup) {
-        const participant = chat.participants.find(p => p.id._serialized === userId);
-        if (participant && participant.isAdmin) {
-          this.logger.debug(`Usuário ${userId} é admin no WhatsApp para o grupo ${group.id}`);
-          return true;
-        }
-      } 
-      // 3.2. Se não temos o chat mas temos o cliente, buscamos o chat
-      else if (client && group && group.id) {
+      let chatInstance = chat;
+
+      // Se o chat não foi fornecido, tenta buscá-lo usando o cliente
+      if (!chatInstance && client && group && group.id) {
         try {
-          const fetchedChat = await client.getChatById(group.id);
-          if (fetchedChat && fetchedChat.isGroup) {
-            const participant = fetchedChat.participants.find(p => p.id._serialized === userId);
-            if (participant && participant.isAdmin) {
-              this.logger.debug(`Usuário ${userId} é admin no WhatsApp para o grupo ${group.id}`);
-              return true;
-            }
-          }
+          chatInstance = await client.getChatById(group.id);
         } catch (chatError) {
-          this.logger.error(`Erro ao buscar chat para verificação de admin: ${chatError.message}`);
+          this.logger.error(`Erro ao buscar chat ${group.id} para verificação de admin:`, chatError);
+          // A função continua, mas provavelmente retornará false se esta era a única forma de ser admin.
         }
       }
 
-      // Nenhuma das verificações acima resultou em verdadeiro
+      // Se temos uma instância de chat (fornecida ou buscada) e é um grupo, verificamos os participantes.
+      if (chatInstance && chatInstance.isGroup) {
+        const participant = chatInstance.participants.find(
+          p => this._normalizeId(p.id._serialized) === normalizedUserId
+        );
+
+        if (participant && participant.isAdmin) {
+          this.logger.debug(`Usuário ${normalizedUserId} é admin no WhatsApp para o grupo ${group.id}.`);
+          return true;
+        }
+      }
+
+      // Se nenhuma das verificações acima passou, o usuário não é admin.
       return false;
+
     } catch (error) {
-      this.logger.error(`Erro ao verificar se usuário ${userId} é admin:`, error);
-      return false;
+      this.logger.error(`Erro ao verificar se o usuário ${userId} é admin:`, error);
+      return false; // Retorna false em caso de erro inesperado.
     }
   }
+
 
   /**
    * Verifica se um usuário é super admin
