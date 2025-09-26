@@ -2680,3 +2680,71 @@ json
 }
 ```
 
+
+
+--
+
+Analise os arquivos @src/funcitons/YoutubeDownloader.js e @src/utils/VideoCacheManager.js
+
+A partir deles, implemente o conteúdo de:
+- src/funcitons/SoundCloud.js
+- src/utils/SoundCacheManager.js
+
+O SoundCloud.js deve seguir o mesmo padrão de implementação do YoutubeDownloader, mas utilizando a biblioteca 'soundcloud.ts'
+https://www.npmjs.com/package/soundcloud.ts
+
+Exemplo:	
+    const tracks = await soundcloud.tracks.search({q: "cool track"})
+    await soundcloud.util.downloadTracks(tracks, "./tracks", 1)
+
+Implemente o comando 'sc'
+
+Exemplo de uso:
+
+Input: 
+!sc very cool song
+
+1. Busca no soundcloud por 'very cool song'
+Retorna 2 ReturnMessages
+
+1. Conteúdo do áudio do primeiro resultado da busca ou numero espeficaado no final da string
+2. Mensagem de texto
+
+A mensagem de texto deve seguir o padrão (máximo 5 resultados na busca)
+
+```
+🔉 *SoundCloud* ☁️
+
+Resultado da busca para 'very cool song':
+1. very cool song ⏬
+2. other cool song
+3. not so cool song
+
+📃 *Letra*
+_this is a very cool_
+_song, really_
+_end of the lyrics_
+
+🔗 *Link*: https://soundcloud....
+```
+
+Exemplo 2:
+!sc very cool song 3
+
+Como a string termina com numero, caso exista aquele numero na busca, baixe/exiba a letra da selecionada. Se não existir, baixe a primeira como padrão. Não use o numero na busca pelo nome da música.
+
+```
+🔉 *SoundCloud* ☁️
+
+Resultado da busca para 'very cool song':
+1. very cool song
+2. other cool song
+3. not so cool song ⏬
+
+📃 *Letra*
+_actually not a cool_
+_song, ofc_
+_end of the lyrics_
+
+🔗 *Link*: https://soundcloud....
+```

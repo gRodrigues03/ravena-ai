@@ -1129,6 +1129,7 @@
     }
 
     numeroMaisProvavel(numeros){
+      //this.logger.info(`[numeroMaisProvavel] `, numeros);
       const validSenders = Array.isArray(numeros) ? numeros.filter(Boolean) : [];
       const priorityOrder = ['@s.whatsapp.net', '@c.us', '@lid'];
 
@@ -1973,8 +1974,9 @@
             name: groupData.subject,
             isGroup: true,
             participants: groupData.participants.map(p => {
+              const telefone = this.numeroMaisProvavel([p.phoneNumber, p.id])?.split("@")[0];
               return {
-                id: { _serialized: p.id.split("@")[0]+"@c.us" },
+                id: { _serialized: telefone+"@c.us" },
                 isAdmin: p.admin?.includes("admin") ?? false
               }
             }), // Structure this as needed

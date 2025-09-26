@@ -11,13 +11,22 @@ class AdminUtils {
     this.superAdmins = process.env.SUPER_ADMINS ? process.env.SUPER_ADMINS.split(',') : [];
   }
 
-  _normalizeId(id) {
-    // Retorna uma string vazia se o ID for inválido para evitar erros.
+  _normalizeId(id, logger) {
     if (typeof id !== 'string' || !id) {
       return '';
     }
-    // Divide a string no '@' e pega a primeira parte.
-    return id.split('@')[0];
+
+    // Pega a parte antes do '@', e depois a parte antes do ':'
+    const cleanId = id.split('@')[0].split(':')[0];
+
+    // Valida se o ID limpo contém apenas dígitos.
+    if (cleanId && !/^\d+$/.test(cleanId)) {
+      if (logger && typeof logger.error === 'function') {
+          logger.error(`[isAdmin] ID inválido detectado: "${id}" resultou em "${cleanId}", que contém caracteres não numéricos.`);
+      }
+    }
+    
+    return cleanId;
   }
 
   /**
@@ -31,6 +40,8 @@ class AdminUtils {
   async isAdmin(userId, group, chat = null, client = null) {
     try {
       const normalizedUserId = this._normalizeId(userId);
+
+      //this.logger.debug(`[isAdmin] `, {userId, group, chat});
 
       // Se o ID normalizado for vazio, o usuário é inválido.
       if (!normalizedUserId) {
@@ -69,13 +80,22 @@ class AdminUtils {
         }
       }
 
-      // Se temos uma instância de chat (fornecida ou buscada) e é um grupo, verificamos os participantes.
+      let participantes = [];
+
+      // Toda hora muda essa estrutura.. Considerar várias coisas
       if (chatInstance && chatInstance.isGroup) {
-        const participant = chatInstance.participants.find(
-          p => this._normalizeId(p.id._serialized) === normalizedUserId
+        participantes = participantes.concat(chatInstance.participants);
+        if(chatInstance._rawEvoGroup){
+          participantes = participantes.concat(chatInstance._rawEvoGroup.participants);
+        }
+
+        const participant = participantes.find(p => 
+          [p.id?._serialized, p.id, p.phoneNumber].some(
+            numero => this._normalizeId(numero) === normalizedUserId
+          )
         );
 
-        if (participant && participant.isAdmin) {
+        if (participant && (participant.isAdmin || participant.admin === 'admin')) {
           this.logger.debug(`Usuário ${normalizedUserId} é admin no WhatsApp para o grupo ${group.id}.`);
           return true;
         }
