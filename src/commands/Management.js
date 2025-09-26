@@ -5683,19 +5683,6 @@ async setWelcomeMessage(bot, message, args, group) {
     }
   }
 
-
-  /**
-   * Verifica se o usuário é um super admin
-   * @param {string} userId - ID do usuário
-   * @returns {Promise<boolean>} - Se o usuário é super admin
-   */
-  async isSuperAdmin(userId) {
-    // Implemente sua própria lógica aqui
-    // Por exemplo, verificar contra uma lista de super admins no banco de dados
-    const superAdmins = process.env.SUPER_ADMINS ? process.env.SUPER_ADMINS.split(',') : [];
-    return superAdmins.includes(userId);
-  }
-
   /**
    * Alterna a funcionalidade de mencionar todos os membros nas notificações de stream
    * @param {WhatsAppBot} bot - Instância do bot

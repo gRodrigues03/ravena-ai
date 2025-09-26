@@ -3,13 +3,16 @@ const path = require('path');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const Logger = require('../utils/Logger');
-const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
 const Database = require('../utils/Database');
+const AdminUtils = require('../utils/AdminUtils');
 const sdModule = require('./StableDiffusionCommands');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('fishing-game');
+
 const database = Database.getInstance();
+const adminUtils = AdminUtils.getInstance();
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // Constantes do jogo
@@ -376,6 +379,90 @@ function regenerateBaits(userData) {
   }
   
   return userData;
+}
+
+/**
+ * Comando restrito que permite adicionar iscas
+ * @param {Object} userData - Dados do usuário
+ * @returns {Object} - Dados do usuário atualizados
+ */
+async function addBaits(userId, baitsNum) {
+  const fishingData = await getFishingData();
+  userId = `${userId}`.replace(/\D/g, '');
+  userId = userId.split("@")[0] + "@c.us"; // Normaliza
+
+
+  const userData = fishingData.fishingData[userId];
+
+  if(!userData){
+    return { userId };
+  }
+  // Inicializa iscas se não existirem
+  if (userData.baits === undefined) {
+    userData.baits = MAX_BAITS + baitsNum;
+    userData.lastBaitRegen = Date.now();
+  }
+
+  userData.baits += baitsNum;
+  
+  // Salva os dados atualizados
+  await saveFishingData(fishingData);
+
+  return { userId, userData };
+}
+
+async function addBaitsCmd(bot, message, args, group) {
+  try {
+    const chatId = message.group || message.author;
+    if(!adminUtils.isSuperAdmin(message.author)){
+      return;
+    }
+
+    const destUser = args[0];
+    const baitsNum = parseInt(args[1]);
+    const dados = await addBaits(destUser, baitsNum);
+
+    if(!dados.userData){
+      logger.error(`🐡 Erro no addBaitsCmd, '${destUser}/${dados.userId}' não encontrado.`);
+      return new ReturnMessage({
+        chatId,
+        content: `🐡 Erro no addBaitsCmd, '${destUser}/${dados.userId}' não encontrado.`,
+        reactions: {
+          after: "🐡"
+        },
+        options: {
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
+        }
+      });
+    } else {
+      return new ReturnMessage({
+        chatId,
+        content: `🎣 Iscas de '${destUser}/${dados.userId}' (${baitsNum}) = ${dados.userData.baits}`,
+        reactions: {
+          after: "🎣"
+        },
+        options: {
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
+        }
+      });
+    }
+  } catch (e){
+
+    logger.error("Erro no addBaitsCmd", e);
+    return new ReturnMessage({
+      chatId,
+      content: `🐡 Erro no addBaitsCmd: ${e.message}`,
+      reactions: {
+        after: "🐡"
+      },
+      options: {
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
+      }
+    });
+  }
 }
 
 /**
@@ -2173,11 +2260,25 @@ const commands = [
       error: "❌"  
     },  
     method: fishingInfoCommand  
+  }),
+  new Command({  
+    name: 'psc-addBaits',  
+    description: 'Informações do jogo',  
+    category: "jogos",  
+    adminOnly: true,
+    hidden: true,
+    cooldown: 0,  
+    reactions: {  
+      after: "➕",  
+      error: "❌"  
+    },  
+    method: addBaitsCmd  
   })
 ];
 
 module.exports = { 
   commands,
   forceSaveFishingData: forceSave,
-  getFishingStats
+  getFishingStats, 
+  addBaits
 }
