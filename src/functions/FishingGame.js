@@ -436,6 +436,7 @@ async function addBaitsCmd(bot, message, args, group) {
         }
       });
     } else {
+      logger.info(`[addBaitsCmd] 🎣 Iscas de '${destUser}/${dados.userId}' (${baitsNum}) = ${dados.userData.baits}`);
       return new ReturnMessage({
         chatId,
         content: `🎣 Iscas de '${destUser}/${dados.userId}' (${baitsNum}) = ${dados.userData.baits}`,
