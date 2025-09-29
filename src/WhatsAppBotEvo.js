@@ -186,7 +186,7 @@
         }
       }
 
-      updateVersions();
+      this.updateVersions();
       setInterval(updateVersions, 3600000);
     }
 
