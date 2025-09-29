@@ -65,6 +65,8 @@ async function main() {
           userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0",
           ignorePV: rBot.ignorePV ?? false,
           ignoreInvites: rBot.ignoreInvites ?? false,
+          managementUser: rBot.managementUser ?? process.env.BOTAPI_USER,
+          managementPW: rBot.managementPW ?? process.env.BOTAPI_PASSWORD,
 
           // IDs dos grupos para notificações da comunidade
           grupoEstabilidade: rBot.grupoEstabilidade ?? process.env.GRUPO_ESTABILIDADE,
@@ -130,6 +132,9 @@ async function main() {
           userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0",
           ignorePV: rBot.ignorePV ?? false,
           ignoreInvites: rBot.ignoreInvites ?? false,
+          managementUser: rBot.managementUser ?? process.env.BOTAPI_USER,
+          managementPW: rBot.managementPW ?? process.env.BOTAPI_PASSWORD,
+          
           // IDs dos grupos para notificações da comunidade
           grupoEstabilidade: rBot.grupoEstabilidade ?? process.env.GRUPO_ESTABILIDADE,
           grupoLogs: rBot.grupoLogs ?? process.env.GRUPO_LOGS,
