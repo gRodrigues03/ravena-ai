@@ -28,7 +28,7 @@ async function main() {
     const eventHandler = new EventHandler();
 
     // Monitor de estabilidade também é compartilhado
-    const stabilityMonitor = new StabilityMonitor({instances: botInstances})
+    //const stabilityMonitor = new StabilityMonitor({instances: botInstances})
     
     // Configurações do puppeteer
     const chromePath = process.env.CHROME_PATH || '';
@@ -58,7 +58,7 @@ async function main() {
           vip: rBot.vip ?? false,
           phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
           eventHandler: eventHandler,
-          stabilityMonitor: stabilityMonitor,
+          //stabilityMonitor: stabilityMonitor,
           prefix: rBot.customPrefix || process.env.DEFAULT_PREFIX || '!',
           otherBots: rBots.map(rB => rB.numero),
           userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0",
@@ -101,7 +101,7 @@ async function main() {
           phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
           vip: rBot.vip ?? false,
           eventHandler: eventHandler,
-          stabilityMonitor: stabilityMonitor,
+          //stabilityMonitor: stabilityMonitor,
           prefix: rBot.customPrefix || process.env.DEFAULT_PREFIX || '!',
           otherBots: rBots.map(rB => rB.numero),
           // Configurações de puppeteer

@@ -38,12 +38,16 @@ class WhatsAppBot {
     this.database = Database.getInstance(); // Instância de banco de dados compartilhada
     this.isConnected = false;
     this.version = version ?? "wwebjs";
+    this.wwebversion = "0";
     this.safeMode = options.safeMode !== undefined ? options.safeMode : (process.env.SAFE_MODE === 'true');
     this.puppeteerOptions = options.puppeteerOptions || {};
     this.otherBots = options.otherBots || [];
     this.notificarDonate = options.notificarDonate;
     
-    // Novas propriedades para notificações de grupos da comunidade
+    // Acesso pelo painel por terceiros
+    this.managementUser = options.managementUser ?? process.env.BOTAPI_USER ?? "admin";
+    this.managementPW = options.managementPW ?? process.env.BOTAPI_PASSWORD ?? "batata123";
+
     this.ignorePV = options.ignorePV || false;
     this.whitelist = options.whitelistPV || [];
     this.ignoreInvites = options.ignoreInvites || false;
@@ -900,6 +904,17 @@ class WhatsAppBot {
     } catch (error) {
       this.logger.error(`Erro durante a reinicialização do bot ${this.id}:`, error);
       throw error;
+    }
+  }
+
+  async logout() {
+    this.logger.info(`Logging out instance ${this.id}...`);
+    if (this.client) {
+      await this.client.logout();
+      this.logger.info(`Instance ${this.id} logged out.`);
+      this.isConnected = false;
+    } else {
+      this.logger.warn(`Logout called for instance ${this.id}, but client is not initialized.`);
     }
   }
 

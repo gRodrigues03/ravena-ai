@@ -66,6 +66,11 @@
       this.webhookPort = options.webhookPort || process.env.WEBHOOK_PORT_EVO || 3000;
       this.notificarDonate = options.notificarDonate;
       this.version = "Evolution";
+      this.wwebversion = "0";
+
+      // Acesso pelo painel por terceiros
+      this.managementUser = options.managementUser ?? process.env.BOTAPI_USER ?? "admin";
+      this.managementPW = options.managementPW ?? process.env.BOTAPI_PASSWORD ?? "batata123";
 
       this.redisURL = options.redisURL;
       this.redisDB = options.redisDB || 0;
@@ -97,7 +102,7 @@
       this.apiClient = new EvolutionApiClient(
         this.evolutionApiUrl,
         this.evolutionApiKey,
-        this.instanceName, // apiClient doesn't need instanceName per method if we pass it in constructor
+        this.instanceName,
         this.logger
       );
 
@@ -107,7 +112,7 @@
       this.otherBots = options.otherBots || [];
       
       this.ignorePV = options.ignorePV || false;
-      this.whitelist = options.whitelistPV || []; // This should be populated by loadDonationsToWhitelist
+      this.whitelist = options.whitelistPV || [];
       this.ignoreInvites = options.ignoreInvites || false;
       this.grupoLogs = options.grupoLogs || process.env.GRUPO_LOGS;
       this.grupoInvites = options.grupoInvites || process.env.GRUPO_INVITES;
@@ -122,21 +127,20 @@
       this.startupTime = Date.now();
       
       this.loadReport = new LoadReport(this);
-      this.inviteSystem = new InviteSystem(this); // Will require Evo API for joining groups
-      this.reactionHandler = new ReactionsHandler(); // Will need Evo API for sending/receiving reactions
+      this.inviteSystem = new InviteSystem(this);
+      this.reactionHandler = new ReactionsHandler();
       
-      // StreamSystem and stabilityMonitor might need re-evaluation for Evolution API
       this.streamSystem = null; 
       this.streamMonitor = null;
       this.stabilityMonitor = options.stabilityMonitor ?? false;
 
       this.llmService = new LLMService({});
-      this.adminUtils = AdminUtils.getInstance(); // Will need adaptation for permission checks via API
+      this.adminUtils = AdminUtils.getInstance();
 
       this.webhookApp = null; // Express app instance
       this.webhookServer = null; // HTTP server instance
 
-      this.blockedContacts = []; // To be populated via API if possible / needed
+      this.blockedContacts = [];
 
       if (!this.streamSystem) {
         this.streamSystem = new StreamSystem(this);
@@ -181,6 +185,100 @@
           }
         }
       }
+
+      updateVersions();
+      setInterval(updateVersions, 3600000);
+    }
+
+    async logout() {
+      this.logger.info(`[logout] Logging out instance ${this.instanceName}`);
+      return await this.apiClient.delete('/instance/logout');
+    }
+
+    async deleteInstance() {
+      this.logger.info(`[deleteInstance] Deleting instance ${this.instanceName}`);
+      return await this.apiClient.delete('/instance/delete');
+    }
+
+    async createInstance() {
+      this.logger.info(`[createInstance] Creating instance ${this.instanceName}`);
+      const payload = {
+        "instanceName": this.instanceName,
+        "qrcode": false,
+        "number": this.phoneNumber,
+        "integration": "WHATSAPP-BAILEYS",
+        "rejectCall": true,
+        "groupsIgnore": false,
+        "alwaysOnline": false,
+        "readMessages": false,
+        "readStatus": false,
+        "syncFullHistory": false,
+        "webhook": {
+          "url": `${process.env.EVO_WEBHOOK_HOST}:${this.webhookPort}/webhook/evo/${this.instanceName}`,
+          "byEvents": false,
+          "base64": true,
+          "events": ["MESSAGES_UPSERT", "GROUP_PARTICIPANTS_UPDATE", "GROUPS_UPSERT", "CONNECTION_UPDATE", "CONTACTS_UPDATE", "SEND_MESSAGE"]
+        },
+        "rabbitmq": {
+          "enabled": false,
+          "events": []
+        },
+        "sqs": {
+          "enabled": false,
+          "events": []
+        }
+      };
+
+      this.logger.info(`[createInstance] Creating instance ${this.instanceName}`, payload);
+      return await this.apiClient.post('/instance/create', payload);
+    }
+
+    async recreateInstance() {
+      const results = [];
+      this.logger.info(`[recreateInstance] Starting recreation for ${this.instanceName}`);
+      try {
+        const deleteResult = await this.deleteInstance();
+        results.push({ action: 'delete', status: 'success', result: deleteResult });
+        this.logger.info(`[recreateInstance] Instance deleted. Waiting 5 seconds before creation...`);
+      } catch (error) {
+        this.logger.error(`[recreateInstance] Failed to delete instance:`, error);
+        results.push({ action: 'delete', status: 'error', error: error.message });
+      }
+
+      await sleep(5000);
+
+      for (let i = 0; i < 3; i++) { // 1 initial try + 2 retries
+        try {
+          this.logger.info(`[recreateInstance] Attempting to create instance (try ${i + 1}/3)...`);
+          const createResult = await this.createInstance();
+          results.push({ action: 'create', status: 'success', result: createResult });
+          this.logger.info(`[recreateInstance] Instance creation successful.`);
+          return results;
+        } catch (error) {
+          this.logger.error(`[recreateInstance] Attempt ${i + 1} failed:`, error);
+          results.push({ action: 'create', status: 'error', attempt: i + 1, error: error.message });
+          if (i < 2) {
+            this.logger.info(`[recreateInstance] Waiting 5 seconds before retry...`);
+            await sleep(5000);
+          }
+        }
+      }
+      
+      this.logger.error(`[recreateInstance] Failed to create instance after 3 attempts.`);
+      return results;
+    }
+
+    async updateVersions(){
+      try{
+        const response = await this.apiClient.getInfo();
+        this.version = response.version;
+        this.wwebversion = response.whatsappWebVersion; 
+
+        this.logger.debug(`[updateVersions] EvoAPI ${this.version}, wweb ${this.wwebversion}`);
+      } catch(e){
+        this.logger.error(`[updateVersions] Erro buscando infos da Evo`, e);
+      }
+
     }
 
     async convertToSquareWebPImage(base64ImageContent) {

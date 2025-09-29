@@ -155,6 +155,19 @@ class BotAPI {
     
     // Middleware de autenticação básica
     const authenticateBasic = (req, res, next) => {
+      const { botId } = req.params;
+      let user = this.apiUser;
+      let pass = this.apiPassword;
+
+      if (botId) {
+        const bot = this.bots.find(b => b.id === botId);
+        if (bot && bot.managementUser && bot.managementPW) {
+          user = bot.managementUser;
+          pass = bot.managementPW;
+          this.logger.debug(`[authenticateBasic] Using credentials for bot '${botId}'`);
+        }
+      }
+
       // Verifica se os cabeçalhos de autenticação existem
       const authHeader = req.headers.authorization;
       if (!authHeader) {
@@ -172,7 +185,7 @@ class BotAPI {
         const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8');
         const [username, password] = credentials.split(':');
         
-        if (username === this.apiUser && password === this.apiPassword) {
+        if (username === user && password === pass) {
           return next();
         }
       } catch (error) {
@@ -245,6 +258,38 @@ class BotAPI {
           status: 'error',
           message: 'Erro interno do servidor'
         });
+      }
+    });
+    
+    this.app.get('/logout/:botId', authenticateBasic, async (req, res) => {
+      const { botId } = req.params;
+      const bot = this.bots.find(b => b.id === botId);
+      if (!bot) {
+        return res.status(404).json({ status: 'error', message: `Bot com ID '${botId}' não encontrado` });
+      }
+      try {
+        this.logger.info(`[API] Executing logout for bot '${botId}'`);
+        const result = await bot.logout();
+        res.json({ status: 'ok', message: 'Logout successful', details: result });
+      } catch (e) {
+        this.logger.error(`[API] Error during logout for bot '${botId}':`, e);
+        res.status(500).json({ status: 'error', message: e.message, details: e.stack });
+      }
+    });
+
+    this.app.get('/recreate/:botId', authenticateBasic, async (req, res) => {
+      const { botId } = req.params;
+      const bot = this.bots.find(b => b.id === botId);
+      if (!bot) {
+        return res.status(404).json({ status: 'error', message: `Bot com ID '${botId}' não encontrado` });
+      }
+      try {
+        this.logger.info(`[API] Executing recreate for bot '${botId}'`);
+        const result = await bot.recreateInstance();
+        res.json({ status: 'ok', message: 'Recreation process finished.', details: result });
+      } catch (e) {
+        this.logger.error(`[API] Error during recreate for bot '${botId}':`, e);
+        res.status(500).json({ status: 'error', message: e.message, details: e.stack });
       }
     });
     
@@ -674,149 +719,85 @@ class BotAPI {
       const instanceStatus = await bot._checkInstanceStatusAndConnect(true); // no retry
       const version = instanceStatus.instanceDetails.version ?? "?";
       const tipo = instanceStatus.instanceDetails.tipo ?? "?";
-      console.log(instanceStatus);
-      if(instanceStatus.extra?.ok){
-        const htmlResponse = `
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${botId} - ${formattedDate}</title>
-            <style>
-              body {
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                text-align: center;
-                background-color: #f7fafc;
-                padding-top: 2rem;
-                color: #2d3748;
-              }
-              .container {
-                max-width: 400px;
-                margin: 0 auto;
-                padding: 1.5rem;
-                background-color: white;
-                border-radius: 0.75rem;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-              }
-              h1 {
-                font-size: 1.5rem;
-                font-weight: 600;
-                margin-bottom: 0.5rem;
-              }
-              h2 {
-                font-size: 1.25rem;
-                font-weight: 500;
-                margin-bottom: 0.5rem;
-              }
-              img {
-                max-width: 100%;
-                height: auto;
-                margin: 1.5rem 0;
-                border-radius: 0.5rem;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-              }
-              pre {
-                background-color: #e2e8f0;
-                padding: 1rem;
-                border-radius: 0.5rem;
-                white-space: pre-wrap;
-                word-wrap: break-word;
-                font-family: monospace;
-                color: #2d3748;
-                text-align: left;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>${botId} - ${bot.phoneNumber}</h1>
-              <h2>${formattedDate} - ${tipo} ${version}</h2>
-              
-              
-              <h2 style='color: green'>Conectado</h2>
-            </div>
-          </body>
-          </html>
+      
+      const buttons = `
+        <div style="margin: 1rem 0; display: flex; justify-content: center; gap: 10px;">
+          <button onclick="window.location.reload()">Atualizar</button>
+          <button onclick="fetchAndShow('/logout/${botId}', 'reload')">Logout</button>
+          <button onclick="fetchAndShow('/recreate/${botId}')">Recriar</button>
+        </div>
+      `;
+
+      const statusPre = `<h2>Raw Instance Status</h2><pre id="status-box">${JSON.stringify(instanceStatus, null, "\t")}</pre>`;
+
+      let pageContent = '';
+
+      if (instanceStatus.extra?.ok) {
+        pageContent = `
+          <h2 style='color: green'>Conectado</h2>
+          ${buttons}
+          ${statusPre}
         `;
-        res.send(htmlResponse);
       } else {
-        const pairingCodeContent = instanceStatus.extra?.connectData?.pairingCode ?? "xxx xxx"; 
+        const pairingCodeContent = instanceStatus.extra?.connectData?.pairingCode ?? "xxx xxx";
         const qrCodeBase64 = qrcode(instanceStatus.extra?.connectData?.code ?? "");
-       
-
-        const htmlResponse = `
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${botId} - ${formattedDate}</title>
-            <style>
-              body {
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                text-align: center;
-                background-color: #f7fafc;
-                padding-top: 2rem;
-                color: #2d3748;
-              }
-              .container {
-                max-width: 400px;
-                margin: 0 auto;
-                padding: 1.5rem;
-                background-color: white;
-                border-radius: 0.75rem;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-              }
-              h1 {
-                font-size: 1.5rem;
-                font-weight: 600;
-                margin-bottom: 0.5rem;
-              }
-              h2 {
-                font-size: 1.25rem;
-                font-weight: 500;
-                margin-bottom: 0.5rem;
-              }
-              img {
-                max-width: 100%;
-                height: auto;
-                margin: 1.5rem 0;
-                border-radius: 0.5rem;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-              }
-              pre {
-                background-color: #e2e8f0;
-                padding: 1rem;
-                border-radius: 0.5rem;
-                white-space: pre-wrap;
-                word-wrap: break-word;
-                font-family: monospace;
-                color: #2d3748;
-                text-align: left;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>${botId} - ${bot.phoneNumber}</h1>
-              <h2>${formattedDate} - ${tipo} ${version}</h2>
-              
-              <h2>QR Code</h2>
-              <img src="${qrCodeBase64}" alt="QR Code for ${botId}">
-
-              <h2>Pairing Code</h2>
-              <pre style="text-align: center;">${pairingCodeContent.split("] ").join("]")}</pre>
-
-              <h2>Raw Instance Status</h2>
-              <pre>${JSON.stringify(instanceStatus, null, "\t")}</pre>
-            </div>
-          </body>
-          </html>
+        pageContent = `
+          <h2>QR Code</h2>
+          <img src="${qrCodeBase64}" alt="QR Code for ${botId}">
+          <h2>Pairing Code</h2>
+          <pre style="text-align: center;">${pairingCodeContent.split("] ").join("]")}</pre>
+          ${buttons}
+          ${statusPre}
         `;
-        res.send(htmlResponse);
       }
 
+      const htmlResponse = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${botId} - ${formattedDate}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; background-color: #f7fafc; padding-top: 2rem; color: #2d3748; }
+            .container { max-width: 400px; margin: 0 auto; padding: 1.5rem; background-color: white; border-radius: 0.75rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+            h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
+            h2 { font-size: 1.25rem; font-weight: 500; margin-bottom: 0.5rem; }
+            img { max-width: 100%; height: auto; margin: 1.5rem 0; border-radius: 0.5rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08); }
+            pre { background-color: #e2e8f0; padding: 1rem; border-radius: 0.5rem; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; color: #2d3748; text-align: left; }
+            button { padding: 0.5rem 1rem; border: none; border-radius: 0.375rem; background-color: #4299e1; color: white; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+            button:hover { background-color: #3182ce; }
+            .container div { margin: 1rem 0; display: flex; justify-content: center; gap: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>${botId} - ${bot.phoneNumber}</h1>
+            <h2>${formattedDate} - ${tipo} ${version}</h2>
+            ${pageContent}
+          </div>
+          <script>
+            const statusBox = document.getElementById('status-box');
+            async function fetchAndShow(url, action) {
+              if (!statusBox) return;
+              statusBox.textContent = 'Executando... Por favor, aguarde.';
+              try {
+                const response = await fetch(url); // Browser should send auth header
+                const result = await response.json();
+                statusBox.textContent = JSON.stringify(result, null, 2);
+                if (action === 'reload' && response.ok) {
+                  statusBox.textContent += '\n\nAção concluída. Recarregando em 2 segundos...';
+                  setTimeout(() => window.location.reload(), 2000);
+                }
+              } catch (error) {
+                statusBox.textContent = 'Erro: ' + error.message + '\n' + error.stack;
+              }
+            }
+          </script>
+        </body>
+        </html>
+      `;
+      res.send(htmlResponse);
     });
 
     // Ciclo da vida da ravena
