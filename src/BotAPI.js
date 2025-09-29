@@ -101,7 +101,7 @@ class BotAPI {
         res.json({
           status: 'ok',
           timestamp: Date.now(),
-          bots: this.bots.map(bot => {
+          bots: this.bots.filter(bot => !bot.privado).map(bot => {
             // Busca relatório mais recente para este bot
             const report = botReports[bot.id] || null;
             const messagesPerHour = report && report.messages ? 
@@ -740,7 +740,11 @@ class BotAPI {
         `;
       } else {
         const pairingCodeContent = instanceStatus.extra?.connectData?.pairingCode ?? "xxx xxx";
-        const qrCodeBase64 = qrcode(instanceStatus.extra?.connectData?.code ?? "");
+        const codigoGerar = instanceStatus.extra?.connectData?.code ?? "";
+
+        // Só gera se for um QRCode válido
+        const qrCodeBase64 = (codigoGerar.length > 300 || codigoGerar.includes("undefined")) ? "" : qrcode(codigoGerar);
+
         pageContent = `
           <h2>QR Code</h2>
           <img src="${qrCodeBase64}" alt="QR Code for ${botId}">
@@ -780,17 +784,18 @@ class BotAPI {
             const statusBox = document.getElementById('status-box');
             async function fetchAndShow(url, action) {
               if (!statusBox) return;
+              if (!confirm('Tem certeza que deseja '+action+'?')) return;
               statusBox.textContent = 'Executando... Por favor, aguarde.';
               try {
                 const response = await fetch(url); // Browser should send auth header
                 const result = await response.json();
                 statusBox.textContent = JSON.stringify(result, null, 2);
                 if (action === 'reload' && response.ok) {
-                  statusBox.textContent += '\n\nAção concluída. Recarregando em 2 segundos...';
+                  statusBox.textContent += \`\n\nAção concluída. Recarregando em 2 segundos...\`;
                   setTimeout(() => window.location.reload(), 2000);
                 }
               } catch (error) {
-                statusBox.textContent = 'Erro: ' + error.message + '\n' + error.stack;
+                statusBox.textContent = \`Erro: \${error?.message}\n\${error?.stack}\`;
               }
             }
           </script>

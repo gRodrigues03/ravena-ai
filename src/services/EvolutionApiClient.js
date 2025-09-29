@@ -24,8 +24,8 @@ class EvolutionApiClient {
     this.logger.info(`EvolutionApiClient initialized for instance: ${instanceName}, baseUrl: ${baseUrl}`);
   }
 
-  async get(endpoint, params = {}) {
-    const url = `${endpoint}/${this.instanceName}`;
+  async get(endpoint, params = {}, noInstance = false) {
+    const url = noInstance ? endpoint : `${endpoint}/${this.instanceName}`;
     try {
       const response = await this.client.get(url, { params });
       return response.data;
@@ -38,10 +38,10 @@ class EvolutionApiClient {
     }
   }
 
-  async post(endpoint, data = {}, params = {}) {
+  async post(endpoint, data = {}, params = {}, noInstance = false) {
     const url = endpoint.includes('{instanceName}')
         ? endpoint.replace('{instanceName}', this.instanceName) // For endpoints like /instance/webhook/set/{instanceName}
-        : `${endpoint}/${this.instanceName}`;
+        : (noInstance ? endpoint : `${endpoint}/${this.instanceName}`);
     
     try {
       const response = await this.client.post(url, data, { params });
@@ -70,18 +70,6 @@ class EvolutionApiClient {
       this.logger.error(`\t- ${url}`, {data, params});
       this.logger.error(`\t- ${error.response?.status} - ${error.response?.data?.message || 'An error occurred.'}`);
       this.logger.error('\t- Details:', error.response.data);
-      throw error.response?.data || error;
-    }
-  }
-
-  async getInfo(){
-    try {
-      const response = await this.client.get("");
-      return response.data;
-    } catch (error) {
-      this.logger.error(`Evo API getInfo:`, error.response?.status, error.response?.data || error.message);
-      this.logger.error(`\t- ${error.response?.status} - ${error.response?.data?.message || 'An error occurred.'}`);
-      this.logger.error('\t- Details:', error.response?.data);
       throw error.response?.data || error;
     }
   }

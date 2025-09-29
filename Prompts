@@ -2748,3 +2748,89 @@ _end of the lyrics_
 
 🔗 *Link*: https://soundcloud....
 ```
+
+---
+
+1. Edite o arquivo @src/WhatsAppBotEvo.js (src/src/WhatsAppBotEvo.js), especificamente:
+
+# Implementar 4 novos métodos: Logout, deleteInstance, createInstance, recreateInstance
+
+## Logout
+Chama a this.apiClient.delete '/instance/logout/{botId}'
+
+# deleteInstance
+Chama a this.apiClient.delete '/instance/delete/{botId}'
+
+# createInstance
+Chama a this.apiClient.post '/instance/create/'
+Parâmetros:
+{
+  "instanceName": this.instanceName,
+  "qrcode": false,
+  "number": this.phoneNumber,
+  "integration": "WHATSAPP-BAILEYS",
+  "rejectCall": true,
+  "groupsIgnore": false,
+  "alwaysOnline": false,
+  "readMessages": false,
+  "readStatus": false,
+  "syncFullHistory": false,
+  "webhook": {
+    "url": process.env.EVO_WEBHOOK_HOST+":"+this.webhookPort+"/webhook/evo/"+this.instanceName,
+    "byEvents": false,
+    "base64": true,
+    "events": ["MESSAGES_UPSERT","GROUP_PARTICIPANTS_UPDATE","GROUPS_UPSERT","CONNECTION_UPDATE","CONTACTS_UPDATE","SEND_MESSAGE"]
+  },
+  "rabbitmq": {
+    "enabled": false,
+    "events": []
+  },
+  "sqs": {
+    "enabled": false,
+    "events": []
+  }
+}
+
+# recreateInstance
+Invoca os metodos deleteInstance e createInstance em sequencia
+Aguardar finalização da deleteInstance + 5 segundos
+Tentar createInstance novamente caso falhe, até 2 tentativas com 5s de espaçamento
+
+2.Edite o arquivo @src/WhatsAppBot.js (src/src/WhatsAppBot.js), especificamente:
+
+Implementar métodos: logout
+Deve usar o client.logout() do wwebjs
+
+3. Edite o arquivo @src/BotAPI.js (src/BotAPI.js), especificamente:
+
+# Autenticação por parametros de cada :botId
+- authenticateBasic
+- this.app.get('/qrimg/:botId', ...
+- this.app.get('/qrcode/:botId', ...
+
+Cada bot do array this.bots possui as propriedades 'managementUser' e 'managementPW'
+O authenticateBasic deve usar essas propridades para autenticaro :botId informado
+Caso não estejam setadas, usar os padrões 'this.apiUser' e 'this.apiPassword'
+
+
+# Modificações
+Inserir 3 botões entre "pairing code" e "Raw Instance Status" (ou após 'Conectado' no caso de instancia conectada)
+Otimizar a página para não ficar com tanto código repetido e melhorar leitura
+
+O resutaldo dos botões (que chamam endpoints) deve aparecer na caixa 'raw instance status' (inclusive na página 'Conectado')
+
+## Atualizar
+Atualiza a página
+
+## Logout
+Deve acionar um novo endpoint /logout/:botId, o qual irá chamar o bot.logout()
+Usar a mesma autenticação anterior.
+Deve recarregar a página
+
+## Recriar
+Deve acionar um novo endpoint /recreate/:botId
+Este endpoint deve chamar o bot.deleteInstance() e logo em seguida o bot.createInstance()
+
+
+
+Usar a mesma autenticação anterior.

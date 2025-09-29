@@ -45,6 +45,7 @@ class WhatsAppBot {
     this.notificarDonate = options.notificarDonate;
     
     // Acesso pelo painel por terceiros
+    this.privado = options.privado ?? false;
     this.managementUser = options.managementUser ?? process.env.BOTAPI_USER ?? "admin";
     this.managementPW = options.managementPW ?? process.env.BOTAPI_PASSWORD ?? "batata123";
 

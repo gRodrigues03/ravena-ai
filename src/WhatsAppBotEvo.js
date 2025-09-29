@@ -69,6 +69,7 @@
       this.wwebversion = "0";
 
       // Acesso pelo painel por terceiros
+      this.privado = options.privado ?? false;
       this.managementUser = options.managementUser ?? process.env.BOTAPI_USER ?? "admin";
       this.managementPW = options.managementPW ?? process.env.BOTAPI_PASSWORD ?? "batata123";
 
@@ -187,7 +188,7 @@
       }
 
       this.updateVersions();
-      setInterval(updateVersions, 3600000);
+      setInterval(this.updateVersions, 3600000);
     }
 
     async logout() {
@@ -230,7 +231,7 @@
       };
 
       this.logger.info(`[createInstance] Creating instance ${this.instanceName}`, payload);
-      return await this.apiClient.post('/instance/create', payload);
+      return await this.apiClient.post('/instance/create', payload, {}, true);
     }
 
     async recreateInstance() {
@@ -270,7 +271,7 @@
 
     async updateVersions(){
       try{
-        const response = await this.apiClient.getInfo();
+        const response = await this.apiClient.get("",{},true); // Request pra / sem nome da instancia retorna infos da Evo
         this.version = response.version;
         this.wwebversion = response.whatsappWebVersion; 
 
