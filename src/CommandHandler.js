@@ -660,7 +660,7 @@ class CommandHandler {
         return;
       }
 
-      const chat = await message.origin.getChat();
+      const chat = message.groupChat ?? await message.origin.getChat(); // groupChat é o objeto do grupo quando vem do pv
       const isUserAdmin = await this.adminUtils.isAdmin(message.author, group, chat, bot.client);
       
       if (!isUserAdmin) {

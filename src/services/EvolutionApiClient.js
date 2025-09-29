@@ -31,7 +31,7 @@ class EvolutionApiClient {
       return response.data;
     } catch (error) {
       this.logger.error(`Evo API GET Error from ${url}:`, error.response?.status, error.response?.data || error.message);
-      this.logger.error(`\t- ${url}`, params);
+      this.logger.error(`\t- ${url}`, {params});
       this.logger.error(`\t- ${error.response?.status} - ${error.response?.data?.message || 'An error occurred.'}`);
       this.logger.error('\t- Details:', error.response.data);
       throw error.response?.data || error;
@@ -48,7 +48,7 @@ class EvolutionApiClient {
       return response.data;
     } catch (error) {
       this.logger.error(`Evo API POST Error from ${url}:`, error.response?.status, error.response?.data || error.message);
-      this.logger.error(`\t- ${url}`, data);
+      this.logger.error(`\t- ${url}`, {data, params});
       this.logger.error(`\t- ${error.response?.status} - ${error.response?.data?.message || 'An error occurred.'}`);
       this.logger.error('\t- Details:', error.response.data);
       throw error.response?.data || error;
@@ -67,6 +67,21 @@ class EvolutionApiClient {
       return response.data;
     } catch (error) {
       this.logger.error(`Evo API DELETE Error from ${url}:`, error.response?.status, error.response?.data || error.message);
+      this.logger.error(`\t- ${url}`, {data, params});
+      this.logger.error(`\t- ${error.response?.status} - ${error.response?.data?.message || 'An error occurred.'}`);
+      this.logger.error('\t- Details:', error.response.data);
+      throw error.response?.data || error;
+    }
+  }
+
+  async getInfo(){
+    try {
+      const response = await this.client.get("");
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Evo API getInfo:`, error.response?.status, error.response?.data || error.message);
+      this.logger.error(`\t- ${error.response?.status} - ${error.response?.data?.message || 'An error occurred.'}`);
+      this.logger.error('\t- Details:', error.response?.data);
       throw error.response?.data || error;
     }
   }

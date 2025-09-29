@@ -1662,7 +1662,7 @@
 
             endpoint = '/message/sendSticker';
             evoPayload.sticker = formattedContent;
-            this.logger.debug(`[sendMessage] ${endpoint}: ${JSON.stringify(evoPayload)}`);
+            this.logger.debug(`[sendMessage] ${endpoint}: ${JSON.stringify(evoPayload).substring(0,150)}}`);
           }
 
           if (options.sendAudioAsVoice || mediaType === 'audio'){
