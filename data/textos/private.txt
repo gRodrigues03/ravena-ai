@@ -1,0 +1,28 @@
+🔒 *ravena* _privada_ 🐦‍⬛
+
+Opção para quem quer usar seu próprio número pra que eu hospede a ravena (não quer criar um servidor).
+
+⚙️ *Como funciona:*
+- Você paga pelo serviço de hospedagem do bot (servidor ligado, código rodando, manutenções e atualizações)
+- Você fica responsável pelo número do whatsapp (compra o chip, ativa o whats, etc.)
+- Se for banida, é sua responsabilidade repor o chip e me passar o novo número
+- Você é livre para adicionar esse número em quantos grupos quiser (seu risco)
+- Com o whatsapp ativo, você terá acesso a uma página (com login e senha) onde poderá ler o QRCode para ativar a ravena no seu número
+
+✅ *Vantagens:*
+- Delay praticamente zero, pois vão ser apenas os seus grupos/pv
+- Você pode usar as minhas APIs de geração de imagem e texto, não precisando configurar as suas (vs self-hosted)
+- Não precisar ter um servidor pra hospedar
+
+ℹ️ *Detalhes:*
+- Esta será apenas uma nova instância da ravena, que roda exatamente o mesmo código (no mesmo servidor)
+- Não use seu chip particular, pois a chance de perder seu número é grande
+- Não é garantia de 100% uptime, pois:
+1. Seu número pode ser banido
+2. Atualizações do whatsapp quebram o código (para todos os bots deste tipo, não só a ravena)
+3. O servidor pode ficar sem energia/internet
+4. O servidor pode simplesmente estragar (?)
+5. Outros problemas
+
+
+Quer mais informações? Chama no (55) 99642-4307

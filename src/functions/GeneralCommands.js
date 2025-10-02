@@ -61,20 +61,20 @@ async function avisosCommand(bot, message, args, group){
   });
 }
 
-async function goldCommand(bot, message, args, group) {
+async function ravPrivadaCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
 
   try {
-    const goldPath = path.join(database.databasePath, 'textos', 'gold.txt');
-    const goldContent = await fs.readFile(goldPath, 'utf8');
+    const privPath = path.join(database.databasePath, 'textos', 'private.txt');
+    const privContent = await fs.readFile(privPath, 'utf8');
 
     return new ReturnMessage({
       chatId: chatId,
-      content: goldContent.trim()
+      content: privContent.trim()
     });
 
   } catch (error) {
-    logger.warn('Erro ao ler gold.txt:', error);
+    logger.warn('Erro ao ler private.txt:', error);
     return new ReturnMessage({
       chatId: chatId,
       content: `🔗 *Github:* https://github.com/moothz/ravena-ai`
@@ -82,6 +82,7 @@ async function goldCommand(bot, message, args, group) {
   }
 
 }
+
 
 async function codigoCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
@@ -379,14 +380,14 @@ const commands = [
     method: codigoCommand
   }),
   new Command({
-    name: 'gold',
-    description: 'Info Ravena gold',
+    name: 'private',
+    description: 'Info Ravena Privada',
     category: "geral",
     hidden: true,
     reactions: {
-      before: "🪙"
+      before: "🔐"
     },
-    method: goldCommand
+    method: ravPrivadaCommand
   }),
   
   new Command({

@@ -464,7 +464,7 @@ class CommandHandler {
 
     // Verifica se é um comando de gerenciamento
     if (command.startsWith('g-')) {
-      this.logger.debug(`[${gidDebug}][${message.author}/${message.authorName}] Comando de gerenciamento: '${command}' '${args.join(" ")}'`);
+      this.logger.debug(`[${gidDebug}][${message.author}/${message.name}] Comando de gerenciamento: '${command}' '${args.join(" ")}'`);
 
       // Verifica se é gerenciamento de grupo via PV
       if (!message.group) {
@@ -661,7 +661,8 @@ class CommandHandler {
       }
 
       const chat = message.groupChat ?? await message.origin.getChat(); // groupChat é o objeto do grupo quando vem do pv
-      const isUserAdmin = await this.adminUtils.isAdmin(message.author, group, chat, bot.client);
+      // Não passa o chat se for pv
+      const isUserAdmin = await this.adminUtils.isAdmin(message.author, group, (chat.isGroup ? chat : null), bot.client);
       
       if (!isUserAdmin) {
         this.logger.warn(`Usuário ${message.author} tentou usar comando de gerenciamento sem ser admin: ${command}`);

@@ -33,7 +33,7 @@ class EvolutionApiClient {
       this.logger.error(`Evo API GET Error from ${url}:`, error.response?.status, error.response?.data || error.message);
       this.logger.error(`\t- ${url}`, {params});
       this.logger.error(`\t- ${error.response?.status} - ${error.response?.data?.message || 'An error occurred.'}`);
-      this.logger.error('\t- Details:', error.response.data);
+      this.logger.error('\t- Details:', error.response?.data);
       throw error.response?.data || error;
     }
   }
@@ -50,7 +50,7 @@ class EvolutionApiClient {
       this.logger.error(`Evo API POST Error from ${url}:`, error.response?.status, error.response?.data || error.message);
       this.logger.error(`\t- ${url}`, {data, params});
       this.logger.error(`\t- ${error.response?.status} - ${error.response?.data?.message || 'An error occurred.'}`);
-      this.logger.error('\t- Details:', error.response.data);
+      this.logger.error('\t- Details:', error.response?.data);
       throw error.response?.data || error;
     }
   }
@@ -69,7 +69,7 @@ class EvolutionApiClient {
       this.logger.error(`Evo API DELETE Error from ${url}:`, error.response?.status, error.response?.data || error.message);
       this.logger.error(`\t- ${url}`, {data, params});
       this.logger.error(`\t- ${error.response?.status} - ${error.response?.data?.message || 'An error occurred.'}`);
-      this.logger.error('\t- Details:', error.response.data);
+      this.logger.error('\t- Details:', error.response?.data);
       throw error.response?.data || error;
     }
   }

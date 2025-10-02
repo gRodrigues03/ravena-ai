@@ -41,7 +41,7 @@ class AdminUtils {
     try {
       const normalizedUserId = this._normalizeId(userId);
 
-      //this.logger.debug(`[isAdmin] `, {userId, group, chat});
+      this.logger.debug(`[isAdmin] `, {userId, group, chat});
 
       // Se o ID normalizado for vazio, o usuário é inválido.
       if (!normalizedUserId) {
@@ -70,10 +70,11 @@ class AdminUtils {
       // 3. Verifica se é admin no WhatsApp
       let chatInstance = chat;
 
-      // Se o chat não foi fornecido, tenta buscá-lo usando o cliente
-      if (!chatInstance && client && group && group.id) {
+      // Se o chat não foi fornecido ou é um pv, tenta buscá-lo usando o cliente
+      if ((!chatInstance && client && group && group.id) || (!chat?.isGroup)){
         try {
           chatInstance = await client.getChatById(group.id);
+          this.logger.debug(`[isAdmin] Sem chat ou PV, buscando: `, {chatInstance});
         } catch (chatError) {
           this.logger.error(`Erro ao buscar chat ${group.id} para verificação de admin:`, chatError);
           // A função continua, mas provavelmente retornará false se esta era a única forma de ser admin.

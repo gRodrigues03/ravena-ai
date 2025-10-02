@@ -743,11 +743,17 @@ class BotAPI {
         const codigoGerar = instanceStatus.extra?.connectData?.code ?? "";
 
         // Só gera se for um QRCode válido
-        const qrCodeBase64 = (codigoGerar.length > 300 || codigoGerar.includes("undefined")) ? "" : qrcode(codigoGerar);
+        let qrCodeBase64 = "";
+        let descQrCode = "Nenhum QRCode disponível";
+
+        if(codigoGerar.length > 200 && !codigoGerar.includes("undefined")){
+          qrCodeBase64 = qrcode(codigoGerar);
+          descQrCode = codigoGerar;
+        } 
 
         pageContent = `
           <h2>QR Code</h2>
-          <img src="${qrCodeBase64}" alt="QR Code for ${botId}">
+          <img src="${qrCodeBase64}" alt="${descQrCode}">
           <h2>Pairing Code</h2>
           <pre style="text-align: center;">${pairingCodeContent.split("] ").join("]")}</pre>
           ${buttons}
