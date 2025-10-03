@@ -26,7 +26,7 @@
   const Database = require('./utils/Database');
   const LoadReport = require('./LoadReport');
   const Logger = require('./utils/Logger');
-  const { toOpus } = require('./utils/Conversions');
+  const { toOpus, toMp3 } = require('./utils/Conversions');
 
   // Utils
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -1673,6 +1673,12 @@
             if(options.sendAudioAsVoice){
               // Converter para ogg/opus antes
               evoPayload.audio = await toOpus(formattedContent, {returnAsURL: true});
+            } else {
+              if(evoPayload?.media?.startsWith("http")){
+                evoPayload.audio = evoPayload.media; 
+              } else {
+                evoPayload.audio = await toMp3(formattedContent, {returnAsURL: true});
+              }
             }
           } 
 

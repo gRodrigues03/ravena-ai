@@ -108,9 +108,9 @@ async function messageMediaToOpus(messageMedia) {
   try {
     const opusBase64 = await toOpus(messageMedia.data, { b64: true });
     const newMedia =  new MessageMedia(
-	    'audio/ogg; codecs=opus',
-	    opusBase64,
-	    path.basename(`${filenameWithoutExt}.ogg`)
+      'audio/ogg; codecs=opus',
+      opusBase64,
+      path.basename(`${filenameWithoutExt}.ogg`)
     );
 
     logger.info(`[messageMediaToOpus] Conversão concluída. Arquivo: ${newMedia.filename}`);
@@ -176,7 +176,7 @@ async function toMp3(inputFile, opts = { b64: false, url: false, returnAsURL: fa
     });
 
     if (opts.url || opts.returnAsURL) {
-      return `${process.env.BOT_DOMAIN}/audios/${outputFileName}`;
+      return `${process.env.BOT_DOMAIN_LOCAL ?? process.env.BOT_DOMAIN}/audios/${outputFileName}`;
     } else if (opts.b64) {
       const outputBuffer = await fs.readFile(outputPath);
       return outputBuffer.toString('base64');
@@ -218,9 +218,9 @@ async function messageMediaToMp3(messageMedia) {
   try {
     const mp3Base64 = await toMp3(messageMedia.data, { b64: true });
     const newMedia =  new MessageMedia(
-	    'audio/mpeg',
-	    mp3Base64,
-	    path.basename(`${filenameWithoutExt}.mp3`)
+      'audio/mpeg',
+      mp3Base64,
+      path.basename(`${filenameWithoutExt}.mp3`)
     );
 
     logger.info(`[messageMediaToMp3] Conversão concluída. Arquivo: ${newMedia.filename}`);
