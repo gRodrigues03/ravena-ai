@@ -513,18 +513,18 @@ class LLMService {
 		let response;
 		
 		switch (options.provider) {
-			case 'ollama':
-				response = await this.ollamaCompletion(options);
-				if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
-					this.logger.error('Resposta inválida da API ollama:', response);
-					return "Erro: Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
-				}
-				return response.choices[0].message.content;
-
 			case 'lmstudio':
 				response = await this.lmstudioCompletion(options);
 				if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
 					this.logger.error('Resposta inválida da API LM Studio:', response);
+					return "Erro: Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
+				}
+				return response.choices[0].message.content;
+
+			case 'ollama':
+				response = await this.ollamaCompletion(options);
+				if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
+					this.logger.error('Resposta inválida da API ollama:', response);
 					return "Erro: Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
 				}
 				return response.choices[0].message.content;
