@@ -7,6 +7,7 @@ const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 const fs = require('fs').promises;
 const qrcode = require("qr-base64");
+const { exec, spawn } = require('child_process');
 
 /**
  * Servidor API para o bot WhatsApp
@@ -724,7 +725,7 @@ class BotAPI {
         <div style="margin: 1rem 0; display: flex; justify-content: center; gap: 10px;">
           <button onclick="window.location.reload()">Atualizar</button>
           <button onclick="fetchAndShow('/logout/${botId}', 'reload')">Logout</button>
-          <button onclick="fetchAndShow('/recreate/${botId}')">Recriar</button>
+          <button onclick="fetchAndShow('/recreate/${botId}', 'recriar')">Recriar</button>
         </div>
       `;
 
@@ -755,7 +756,7 @@ class BotAPI {
           <h2>QR Code</h2>
           <img src="${qrCodeBase64}" alt="${descQrCode}">
           <h2>Pairing Code</h2>
-          <pre style="text-align: center;">${pairingCodeContent.split("] ").join("]")}</pre>
+          <pre style="text-align: center;font-size: 35pt;">${pairingCodeContent.split("] ").join("]")}</pre>
           ${buttons}
           ${statusPre}
         `;
@@ -935,6 +936,101 @@ class BotAPI {
             this.logger.error('Error serving media:', error);  
             return res.status(500).send('Server error');  
         }  
+    });
+
+    // Dashboard: Get bots configuration
+    this.app.get('/api/bots', authenticateBasic, async (req, res) => {
+      try {
+        const botsJsonPath = path.join(__dirname, '../bots.json');
+        const data = await fs.readFile(botsJsonPath, 'utf8');
+        res.json(JSON.parse(data));
+      } catch (error) {
+        if (error.code === 'ENOENT') {
+          this.logger.warn('bots.json not found, returning empty array.');
+          return res.json([]);
+        }
+        this.logger.error('Error reading bots.json:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to read bots configuration.' });
+      }
+    });
+
+    // Dashboard: Save bots configuration
+    this.app.post('/api/bots', authenticateBasic, async (req, res) => {
+      const botsData = req.body;
+      if (!Array.isArray(botsData)) {
+        return res.status(400).json({ status: 'error', message: 'Invalid data format. Expected an array.' });
+      }
+
+      // Validation
+      for (const bot of botsData) {
+        if (typeof bot.enabled !== 'boolean' || !bot.nome || !bot.numero) {
+          return res.status(400).json({ status: 'error', message: `Invalid entry: 'enabled' must be a boolean, 'nome' and 'numero' are required. Problematic entry: ${JSON.stringify(bot)}` });
+        }
+      }
+
+      try {
+        const botsJsonPath = path.join(__dirname, '../bots.json');
+        await fs.writeFile(botsJsonPath, JSON.stringify(botsData, null, 2), 'utf8');
+        res.json({ status: 'ok', message: 'Configuration saved successfully.' });
+      } catch (error) {
+        this.logger.error('Error writing to bots.json:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to save bots configuration.' });
+      }
+    });
+
+    // Dashboard: Restart bot process
+    this.app.post('/api/restart-bot', authenticateBasic, (req, res) => {
+      this.logger.info('Received request to restart bot via API.');
+      exec('pm2 restart ravena-ai', (error, stdout, stderr) => {
+        if (error) {
+          this.logger.error(`Error restarting bot: ${error.message}`);
+          return res.status(500).json({ status: 'error', message: `Failed to restart bot: ${error.message}` });
+        }
+        if (stderr) {
+          this.logger.warn(`Restart command stderr: ${stderr}`);
+        }
+        this.logger.info(`Restart command stdout: ${stdout}`);
+        res.json({ status: 'ok', message: 'Bot restart command issued.', output: stdout });
+      });
+    });
+
+    // Dashboard: Restart Evolution API
+    this.app.post('/api/restart-evo', authenticateBasic, (req, res) => {
+      this.logger.info('Received request to restart Evolution API via API.');
+      exec('/home/moothz/daily-evo-restart.sh', (error, stdout, stderr) => {
+        if (error) {
+          this.logger.error(`Error restarting Evolution API: ${error.message}`);
+          return res.status(500).json({ status: 'error', message: `Failed to restart Evolution API: ${error.message}` });
+        }
+        if (stderr) {
+          this.logger.warn(`Evolution API restart command stderr: ${stderr}`);
+        }
+        this.logger.info(`Evolution API restart command stdout: ${stdout}`);
+        res.json({ status: 'ok', message: 'Evolution API restart command issued.', output: stdout });
+      });
+    });
+
+    // Dashboard: Stream logs
+    this.app.get('/api/logs', authenticateBasic, (req, res) => {
+      this.logger.info('Starting log stream to dashboard.');
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      const logStream = spawn('pm2', ['logs', 'ravena-ai', '--raw']);
+
+      logStream.stdout.on('data', (data) => {
+        res.write(`data: ${data.toString()}\n\n`);
+      });
+
+      logStream.stderr.on('data', (data) => {
+        res.write(`data: [ERROR] ${data.toString()}\n\n`);
+      });
+
+      req.on('close', () => {
+        this.logger.info('Closing log stream to dashboard.');
+        logStream.kill();
+      });
     });
   }
   

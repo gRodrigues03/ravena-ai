@@ -1,12 +1,17 @@
 [
    {
     "enabled": true,
-    "nome": "ravenabot",
-    "numero": "559912345678",
+    "nome": "ravena-exemplo",
+    "managementUser": "ravuser",
+    "managementPW": "ravpw",
+
+    "privado": false,
+    "useEvo": true,
+    "webhookPort": 3601,
+    "useWebsocket": false,
+    "numero": "559911223344",
     "ignorePV": false,
-    "ignoreInvites": false,
-    "customPrefix": "!",
-    "webhookPort": 3450,
-    "useWebsocket": true
+    "ignoreInvites": true,
+    "customPrefix": "!"
    }
 ]

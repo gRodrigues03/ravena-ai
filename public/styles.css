@@ -23,7 +23,7 @@ body {
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 90%;
     margin: 0 auto;
     padding: 20px;
 }
@@ -42,7 +42,7 @@ header {
     background-size: cover;
     /*background-image: url("ravenabanner.png");*/
     /*background-color: #20056a;*/
-    
+
     color: var(--bright-blue);
     margin: 20px 0;
     text-align: center;
@@ -616,4 +616,175 @@ footer {
 
 .aviso-vips > i{
     border-bottom: 1px solid #ffd700;
+}
+
+/* Navigation */
+nav {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 20px;
+}
+
+nav a {
+    color: var(--light-gray);
+    text-decoration: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+nav a:hover {
+    background-color: var(--medium-purple);
+    color: white;
+}
+
+nav a.active {
+    background-color: var(--bright-blue);
+    color: white;
+    font-weight: bold;
+}
+
+
+/* Estilos para a página de dashboard */
+.button-container {
+    margin-bottom: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.button-container button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    background-color: var(--medium-purple);
+    color: white;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.button-container button:hover {
+    background-color: var(--bright-blue);
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+#botsTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: var(--medium-dark-purple);
+}
+
+#botsTable th, #botsTable td {
+    border: 1px solid var(--medium-gray);
+    padding: 12px;
+    text-align: left;
+}
+
+#botsTable th {
+    background-color: var(--dark-purple);
+    color: var(--bright-blue);
+    font-weight: bold;
+}
+
+#botsTable tr:nth-child(even) {
+    background-color: #2c2a5a;
+}
+
+#botsTable input[type="text"],
+#botsTable input[type="number"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--medium-gray);
+    border-radius: 4px;
+    box-sizing: border-box;
+    background-color: var(--dark-bg);
+    color: var(--light-gray);
+}
+
+#botsTable input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--bright-blue);
+}
+
+#botsTable .delete-btn {
+    background-color: #c0392b;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#botsTable .delete-btn:hover {
+    background-color: #e74c3c;
+}
+
+/* Estilos para o overlay de logs */
+.log-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    margin-bottom: 15px;
+}
+
+.log-header h2 {
+    margin: 0;
+    color: var(--bright-blue);
+}
+
+#closeLogBtn {
+    background: none;
+    border: 2px solid white;
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    line-height: 36px;
+    text-align: center;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+#closeLogBtn:hover {
+    background-color: white;
+    color: black;
+}
+
+.log-content {
+    flex-grow: 1;
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 14px;
+    padding: 15px;
+    border-radius: 5px;
+    overflow-y: scroll;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }

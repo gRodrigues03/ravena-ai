@@ -223,7 +223,7 @@ function renderBots(data) {
     const msgsCounterDiv = document.getElementById('msgsCounter');
     if (msgsCounterDiv) {
         msgsCounterDiv.innerHTML = `
-            <span>Processando no moomento</span>
+            <span>Processando no momento</span>
             <span class="count">${totalMsgsHr} msgs/h</span>
         `;
     }
