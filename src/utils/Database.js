@@ -1057,7 +1057,7 @@ class Database {
         this.cache.donations = donations;
         this.dirtyFlags.donations = true;
 
-        return donationTotal;
+        return donationTotal === 0 ? true : donationTotal;
     } catch (error) {
         this.logger.error('Erro ao adicionar doação:', error);
         return false;

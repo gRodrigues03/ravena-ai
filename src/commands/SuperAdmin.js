@@ -236,7 +236,7 @@ class SuperAdmin {
       if (args.length < 2) {
         return new ReturnMessage({
           chatId: chatId,
-          content: 'Por favor, forneça um número e nome do doador. Exemplo: !sa-addDonateNumero 5512345678901 João Silva'
+          content: 'Por favor, forneça um número e nome do doador. Exemplo: !sa-addDonate 5512345678901 João Silva'
         });
       }
       
