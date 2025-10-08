@@ -65,8 +65,7 @@ async function summarizeConversation(bot, message, args, group) {
     const customPersonalidade = (group.customAIPrompt && group.customAIPrompt.length > 0) ? `\n\n((Sua personalidade: '${group.customAIPrompt}'))\n\n` : "";
 
     // Cria prompt para LLM
-    const prompt = `Abaixo está uma conversa recente de um grupo de WhatsApp. Por favor, resuma os principais pontos discutidos de forma concisa:
-${customPersonalidade}
+    const prompt = `Abaixo está uma conversa recente de um grupo de WhatsApp. ${customPersonalidade}. Por favor, resuma os principais pontos discutidos de forma concisa:
 ${formattedMessages}
 
 Resumo:`;
@@ -83,6 +82,9 @@ Resumo:`;
       });
     }
     
+    // Já que deu certo, limpa o historico
+    clearRecentMessages(message.group);
+
     // Envia o resumo
     return new ReturnMessage({
       chatId: message.group,
@@ -150,8 +152,8 @@ async function interactWithConversation(bot, message, args, group) {
 
     const customPersonalidade = (group.customAIPrompt && group.customAIPrompt.length > 0) ? `\n\n((Sua personalidade: '${group.customAIPrompt}'))\n\n` : "";
     // Cria prompt para LLM
-    const prompt = `Responda apenas em português do brasil. A seguir anexei uma conversa recente de um grupo de WhatsApp. Crie uma única mensagem curta para interagir com o grupo de forma natural, como se você entendesse o assunto e quisesse participar da conversa com algo relevante. Tente usar o mesmo tom e estilo informal que as pessoas estão usando. A mensagem deve ser curta e natural:
-${customPersonalidade}
+    const prompt = `Responda apenas em português do brasil. A seguir anexei uma conversa recente de um grupo de WhatsApp. Crie uma única mensagem curta para interagir com o grupo de forma natural, como se você entendesse o assunto e quisesse participar da conversa com algo relevante. Tente usar o mesmo tom e estilo informal que as pessoas estão usando. A mensagem deve ser curta e natural. ${customPersonalidade}
+
 ${formattedMessages}`;
     
     logger.info(`[${group.id}][interactWithConversation] Enviando prompt: ${prompt.substring(0, 500)}`);
@@ -180,6 +182,9 @@ ${formattedMessages}`;
     } else {
       logger.info(`[${group.id}]Mensagem de interação enviada com sucesso para ${message.group}`);
 
+      // Já que deu certo, limpa o historico
+      clearRecentMessages(message.group);
+      
       return new ReturnMessage({
         chatId: message.group,
         content: interaction,
@@ -291,6 +296,29 @@ async function getRecentMessages(groupId) {
   } catch (error) {
     logger.error('Erro ao obter mensagens recentes:', error);
     return [];
+  }
+}
+
+/**
+ * Limpar as mensagens recentes para um grupo
+ * @param {string} groupId - O ID do grupo
+ * @returns {Promise<Bool>} - Se deu certo ou não
+ */
+async function clearRecentMessages(groupId) {
+  try {
+    const conversationFile = path.join(dataDir, `latest-messages-${groupId}.json`);
+    
+    // Carrega mensagens existentes
+    try {
+      await fs.writeFile(conversationFile, "[]", 'utf8');
+      return true;
+    } catch (error) {
+      logger.debug(`Nenhum arquivo de conversa existente para ${groupId}`);
+      return true;
+    }
+  } catch (error) {
+    logger.error('Erro ao limpar mensagens recentes:', error);
+    returnfalse;
   }
 }
 
