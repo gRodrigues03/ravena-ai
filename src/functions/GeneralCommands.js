@@ -323,7 +323,7 @@ async function statusCommand(bot, message, args, group) {
     const response = await axios.get(url);
     const bots = response.data.bots;
 
-    let statusMessage = '🐦‍⬛ *Status das Ravenas* ️\n> https://ravena.moothz.win\n';
+    let statusMessage = '🐦‍⬛ *Status das Ravenas* ️\n> https://ravena.moothz.win\n\n';
 
     for (const botData of bots) {
       if (botData.privado) continue;
