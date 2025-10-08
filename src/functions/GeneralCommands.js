@@ -323,7 +323,7 @@ async function statusCommand(bot, message, args, group) {
     const response = await axios.get(url);
     const bots = response.data.bots;
 
-    let statusMessage = '🐦‍⬛ *Status das Ravenas* ️\n\n';
+    let statusMessage = '🐦‍⬛ *Status das Ravenas* ️\n> https://ravena.moothz.win\n';
 
     for (const botData of bots) {
       if (botData.privado) continue;
@@ -341,7 +341,7 @@ async function statusCommand(bot, message, args, group) {
         statusEmoji = '🔴';
       }
 
-      const vipEmoji = botData.vip ? '⭐' : '';
+      const vipEmoji = botData.vip ? '💎' : '';
 
       statusMessage += `${statusEmoji} *${botData.id}* ${vipEmoji}\n`;
       statusMessage += `- 📞 Telefone: _+${botData.phoneNumber.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '$1 ($2) $3-$4')}_\n`;
@@ -368,6 +368,12 @@ async function statusCommand(bot, message, args, group) {
 
       statusMessage += '\n';
     }
+
+    const now = new Date();
+    const dateString = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${(now.getFullYear()).toString().slice(2)}`;
+    const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+    statusMessage += `> ${dateString} ${timeString}\n`;
 
     return new ReturnMessage({
       chatId: chatId,
