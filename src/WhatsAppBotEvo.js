@@ -234,6 +234,24 @@
       return await this.apiClient.post('/instance/create', payload, {}, true);
     }
 
+    _normalizeId(id, logger) {
+      if (typeof id !== 'string' || !id) {
+        return '';
+      }
+
+      // Pega a parte antes do '@', e depois a parte antes do ':'
+      const cleanId = id.split('@')[0].split(':')[0];
+
+      // Valida se o ID limpo contém apenas dígitos.
+      if (cleanId && !/^\d+$/.test(cleanId)) {
+        if (logger && typeof logger.error === 'function') {
+            logger.error(`[isAdmin] ID inválido detectado: "${id}" resultou em "${cleanId}", que contém caracteres não numéricos.`);
+        }
+      }
+      
+      return cleanId;
+    }
+
     async recreateInstance() {
       const results = [];
       this.logger.info(`[recreateInstance] Starting recreation for ${this.instanceName}`);
@@ -1412,7 +1430,7 @@
               fromMe: evoMessageData.key.fromMe,
               group: isGroup ? chatId : null,
               from: isGroup ? chatId : author+"@c.us",
-              author: author,
+              author: this._normalizeId(author),
               name: authorName,
               authorName: authorName,
               pushname: authorName,
@@ -1470,7 +1488,7 @@
             formattedMessage.origin = {
               mentionedIds: formattedMessage.mentions,
               id: { _serialized: `${evoMessageData.key.remoteJid}_${evoMessageData.key.fromMe}_${evoMessageData.key.id}`},
-              author: formattedMessage.author,
+              author: this._normalizeId(formattedMessage.author),
               from: formattedMessage.from,
               // If this.sendReaction is async, this will correctly return a Promise
               react: (emoji) => this.sendReaction(evoMessageData.key.remoteJid, evoMessageData.key.id, emoji), 

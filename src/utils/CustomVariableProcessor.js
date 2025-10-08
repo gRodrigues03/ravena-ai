@@ -261,17 +261,8 @@ class CustomVariableProcessor {
     // Substitui {pessoa} pelo nome do remetente
     if (context.message && context.message.author) {
       // Tenta obter o nome real ou o apelido do remetente
-      let authorName = "Usuário";
-      if (context.message.authorName) {
-        authorName = context.message.authorName;
-      } else if (context.message.origin && context.message.origin.getContact) {
-        try {
-          const contact = await context.message.origin.getContact();
-          authorName = contact.pushname || contact.name || "Usuário";
-        } catch (error) {
-          this.logger.error('Erro ao obter contato para variável {pessoa}:', error);
-        }
-      }
+      const fromMe = context.message.evoMessageData?.key?.fromMe ?? context.message.key?.fromMe ??context.message.fromMe ??context.message.origin?.fromMe ?? false;
+      const authorName = fromMe ? "ravena" : context.message.evoMessageData?.pushName ?? context.message.origin?.pushName ?? context.message.name ?? context.message.authorName ?? context.message.pushname ?? "Pessoa";
       text = text.replace(/{pessoa}/g, authorName);
       
       // Nova variável {nomeAutor} - mesmo comportamento que {pessoa}

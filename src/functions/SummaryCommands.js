@@ -43,36 +43,13 @@ async function summarizeConversation(bot, message, args, group) {
     
     logger.info(`[${group.id}] Resumindo conversa para o grupo ${message.group}`);
     
-    // Tenta buscar mensagens do histórico de chat
-    const chat = await message.origin.getChat();
     let recentMessages;
-    
     try {
-      // Tenta obter mensagens diretamente do WhatsApp
-      const fetchedMessages = await chat.fetchMessages({ limit: 30 }); // NÃO IMPLEMENTADO NA EVO
-      
-      if (fetchedMessages && fetchedMessages.length > 0) {
-        recentMessages = await Promise.all(fetchedMessages.map(async (msg) => {
-          const authorName = message.name ?? message.authorName ?? message.pushname ?? "Desconhecido";
-          const textContent = msg.body || msg.caption || "";
-          
-          return {
-            author: authorName,
-            text: textContent,
-            timestamp: msg.timestamp * 1000 // Converte para milissegundos
-          };
-        }));
-        
-        // Filtra mensagens vazias
-        recentMessages = recentMessages.filter(msg => msg.text.trim() !== "");
-      } else {
-        // Recorre a mensagens armazenadas
-        recentMessages = await getRecentMessages(message.group);
-      }
-    } catch (fetchError) {
-      logger.error('Erro ao buscar mensagens do chat:', fetchError);
       // Recorre a mensagens armazenadas
       recentMessages = await getRecentMessages(message.group);
+    } catch (fetchError) {
+      logger.error('Erro ao buscar mensagens do chat:', fetchError);
+      recentMessages = [];
     }
     
     if (!recentMessages || recentMessages.length === 0) {
@@ -143,37 +120,15 @@ async function interactWithConversation(bot, message, args, group) {
     
     logger.info(`[${group.id}][interactWithConversation] Gerando interação para o grupo ${message.group}`);
     
-    // Tenta buscar mensagens do histórico de chat
-    const chat = await message.origin.getChat();
     let recentMessages;
-    
+  
     try {
-      // Tenta obter mensagens diretamente do WhatsApp
-      const fetchedMessages = await chat.fetchMessages({ limit: 30 }); // Não implementado na evo
-      
-      if (fetchedMessages && fetchedMessages.length > 0) {
-        recentMessages = await Promise.all(fetchedMessages.map(async (msg) => {
-          const authorName = message.name ?? message.authorName ?? message.pushname ?? "Desconhecido";
-          const textContent = msg.body || msg.caption || "";
-          
-          return {
-            author: authorName,
-            text: textContent,
-            timestamp: msg.timestamp * 1000 // Converte para milissegundos
-          };
-        }));
-        
-        // Filtra mensagens vazias
-        recentMessages = recentMessages.filter(msg => msg.text.trim() !== "");
-      } else {
-        // Recorre a mensagens armazenadas
-        recentMessages = await getRecentMessages(message.group);
-      }
-
-    } catch (fetchError) {
-      logger.error('[${group.id}][interactWithConversation] Erro ao buscar mensagens do chat:', fetchError);
       // Recorre a mensagens armazenadas
       recentMessages = await getRecentMessages(message.group);
+    } catch (fetchError) {
+      logger.error(`[${group.id}][interactWithConversation] Erro ao buscar mensagens do chat:`, fetchError);
+      // Recorre a mensagens armazenadas
+      recentMessages = [];
     }
 
     logger.info(`[${group.id}][interactWithConversation] Mensagens recentes: ${recentMessages.length}`);
@@ -291,8 +246,11 @@ async function storeMessage(message, group) {
     }
 
     if (textContent) {
-      const authorName = message.name ?? message.authorName ?? message.pushname ?? "Desconhecido";
-      
+      // Zap/libs mudam tanto que pode vir de qualquer lugar, é foda, haja fallbacks
+      const fromMe = message.evoMessageData?.key?.fromMe ?? message.key?.fromMe ??message.fromMe ??message.origin?.fromMe ?? false;
+      const authorName = fromMe ? "Você (bot)" : message.evoMessageData?.pushName ?? message.origin?.pushName ?? message.name ?? message.authorName ?? message.pushname ?? "Desconhecido";
+
+      //logger.info(`[storeMessage] ${authorName}: ${textContent}`);
       messages.push({
         author: authorName,
         text: textContent,

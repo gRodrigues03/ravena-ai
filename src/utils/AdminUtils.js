@@ -118,7 +118,9 @@ class AdminUtils {
    * @returns {boolean} - True se o usuário for super admin
    */
   isSuperAdmin(userId) {
-    return this.superAdmins.includes(userId);
+    const normalizedUserId = this._normalizeId(userId);
+    //this.logger.info(`[isSuperAdmin] ${normalizedUserId}`, this.superAdmins);
+    return (normalizedUserId.length > 10) && (this.superAdmins.some(sA => sA.startsWith(normalizedUserId)));
   }
 
   /**
