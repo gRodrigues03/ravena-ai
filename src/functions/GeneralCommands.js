@@ -4,6 +4,7 @@ const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
 const Database = require('../utils/Database');
 const fs = require('fs').promises;
+const axios = require('axios');
 
 const logger = new Logger('general-commands');
 
@@ -314,6 +315,73 @@ function getUserNickname(group, userId) {
 }
 
 
+async function statusCommand(bot, message, args, group) {
+  const chatId = message.group || message.author;
+  const url = `http://localhost:${process.env.API_PORT || 5000}/health`;
+
+  try {
+    const response = await axios.get(url);
+    const bots = response.data.bots;
+
+    let statusMessage = '🐦‍⬛ *Status das Ravenas* ️\n\n';
+
+    for (const botData of bots) {
+      if (botData.privado) continue;
+
+      const now = new Date();
+      const lastMessageTime = new Date(botData.lastMessageReceived);
+      const diffMinutes = (now - lastMessageTime) / (1000 * 60);
+
+      let statusEmoji = '⚫️';
+      if (diffMinutes <= 15) {
+        statusEmoji = '🟢';
+      } else if (diffMinutes <= 30) {
+        statusEmoji = '🟡';
+      } else if (diffMinutes <= 60) {
+        statusEmoji = '🔴';
+      }
+
+      const vipEmoji = botData.vip ? '⭐' : '';
+
+      statusMessage += `${statusEmoji} *${botData.id}* ${vipEmoji}\n`;
+      statusMessage += `- 📞 Telefone: _+${botData.phoneNumber.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '$1 ($2) $3-$4')}_\n`;
+
+      if (diffMinutes <= 1) {
+        statusMessage += '- ⏲️ Última mensagem: Agora mesmo\n';
+      } else {
+        statusMessage += `- ⏲️ Última mensagem: ${Math.floor(diffMinutes)} minutos atrás\n`;
+      }
+      
+      statusMessage += `- 📈 Msgs/hora: ${botData.msgsHr}\n`;
+      statusMessage += `- ⏳ Delay Médio: ${botData.responseTime.avg.toFixed(2)}s\n`;
+
+      let extraInfo = [];
+      if (botData.semPV) {
+        extraInfo.push('PV desabilitado');
+      }
+      if (botData.semConvites) {
+        extraInfo.push('não recebe convites');
+      }
+      if (extraInfo.length > 0) {
+        statusMessage += `- _${extraInfo.join(', ')}_\n`;
+      }
+
+      statusMessage += '\n';
+    }
+
+    return new ReturnMessage({
+      chatId: chatId,
+      content: statusMessage.trim(),
+    });
+  } catch (error) {
+    logger.error('Erro ao buscar status dos bots:', error);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: '❌ Erro ao buscar o status das Ravenas. Tente novamente mais tarde.',
+    });
+  }
+}
+
 // Criar array de comandos usando a classe Command
 const commands = [
   new Command({
@@ -326,6 +394,12 @@ const commands = [
       after: "🍭"
     },
     method: pingCommand
+  }),
+  new Command({
+    name: 'status',
+    description: 'Verifica o status dos bots',
+    category: "geral",
+    method: statusCommand
   }),
   new Command({
     name: 'apelido',
