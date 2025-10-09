@@ -341,15 +341,15 @@ async function statusCommand(bot, message, args, group) {
         statusEmoji = '🔴';
       }
 
-      const vipEmoji = botData.vip ? '💎' : '';
+      const tipoEmoji = botData.vip ? '💎' : botData.comunitario ? '🐓' : '';
 
-      statusMessage += `${statusEmoji} *${botData.id}* ${vipEmoji}\n`;
-      statusMessage += `- 📞 Telefone: _+${botData.phoneNumber.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '$1 ($2) $3-$4')}_\n`;
+      statusMessage += `${statusEmoji} *${botData.id}* ${tipoEmoji}\n`;
+      statusMessage += `- 📞 Número: _+${botData.phoneNumber.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '$1 ($2) $3-$4')}_\n`;
 
       if (diffMinutes <= 1) {
-        statusMessage += '- ⏲️ Última mensagem: Agora mesmo\n';
+        statusMessage += '- ⏲️ Última msg: Agora mesmo\n';
       } else {
-        statusMessage += `- ⏲️ Última mensagem: ${Math.floor(diffMinutes)} minutos atrás\n`;
+        statusMessage += `- ⏲️ Última msg: ${Math.floor(diffMinutes)} minutos atrás\n`;
       }
       
       statusMessage += `- 📈 Msgs/hora: ${botData.msgsHr}\n`;
