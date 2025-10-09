@@ -604,7 +604,7 @@ class EventHandler {
         }
 
         botInfoMessage += `\n\nO nome do seu grupo foi definido como *${group.name}*, mas pode você pode alterar usando:- \`${group.prefix}g-setName [novoNome]\`.\n\nPara fazer a configuração do grupo sem poluir aqui, me envie no PV:\n- ${group.prefix}g-manage ${group.name}`;
-        
+
         // Se encontramos o autor do convite, adiciona-o como admin adicional
         if (foundInviter) {
 
@@ -622,6 +622,10 @@ class EventHandler {
       
           // Remove o join pendente
           await this.database.removePendingJoin(foundInviter.code);
+        }
+
+        if(bot.comunitario){
+          botInfoMessage += `\n\n⭕ Este é um número da ☭ *ravena comunitária* ☭, onde a pessoa que fornece o chip pode ter acesso às suas mensagens. Se você não concorda com isto, fique lire para removê-la do grupo.⭕\n_Saiba mais acessando o site oficial! Ou no !grupao_`;
         }
         
         this.logger.debug(`[groupJoin] botInfoMessage: ${botInfoMessage}`);
