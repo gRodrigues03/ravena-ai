@@ -6,6 +6,7 @@
     "managementPW": "ravpw",
 
     "privado": false,
+    "comunitario": false,
     "useEvo": true,
     "webhookPort": 3601,
     "useWebsocket": false,

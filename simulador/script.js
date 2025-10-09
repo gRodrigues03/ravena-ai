@@ -1,463 +1,696 @@
-// Elementos DOM
-const chatContainer = document.getElementById('chat-container');
-const typingInput = document.getElementById('typing-input');
-const sendButton = document.getElementById('send-button');
-const micButton = document.getElementById('mic-button');
-const startButton = document.getElementById('start-conversation');
-const resetButton = document.getElementById('reset-conversation');
-const conversationCode = document.getElementById('conversation-code');
-const whatsappContainer = document.getElementById('whatsapp-container');
-const speedSlider = document.getElementById('speed-slider');
-const speedValue = document.getElementById('speed-value');
+// Variáveis globais
+let lastHealthData = null;
+let isAdminMode = false;
+let selectedBots = [];
+let activePeriod = 'today';
 
-// Conversão do valor do slider para multiplicador de velocidade
-function getSpeedMultiplier(sliderValue) {
-    if (sliderValue === 0) return 1; // Velocidade normal
-    if (sliderValue > 0) return 1 + (sliderValue * 0.5); // Mais rápido: 1.5x, 2x, 2.5x, etc.
-    return 1 / (1 + Math.abs(sliderValue) * 0.5); // Mais lento: 0.67x, 0.5x, 0.4x, etc.
+// Função para formatar a hora
+function formatTime(timestamp) {
+    if (!timestamp) return 'Nunca';
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('pt-BR');
 }
 
-// Atualizar o fator de velocidade quando o slider for alterado
-speedSlider.addEventListener('input', () => {
-    const value = parseInt(speedSlider.value);
-    speedFactor = getSpeedMultiplier(value);
+// Função para calcular tempo desde a última mensagem
+function getTimeSinceLastMessage(timestamp) {
+    if (!timestamp) return Infinity;
     
-    // Atualizar texto de velocidade
-    let displayText;
-    if (value === 0) {
-        displayText = "1x";
-    } else if (value > 0) {
-        displayText = speedFactor.toFixed(1) + "x";
-    } else {
-        displayText = speedFactor.toFixed(1) + "x";
+    const now = Date.now();
+    const diff = now - timestamp;
+    return Math.floor(diff / 1000 / 60); // Minutos
+}
+
+// Função para determinar status baseado no tempo
+function getStatusEmoji(minutes, connected) {
+    if (!connected) return '⚫'; // Desconectado
+    
+    if (minutes < 2) return '🟢';
+    if (minutes < 5) return '🟡';
+    if (minutes < 15) return '🟠';
+    return '🔴';
+}
+
+// Função para obter descrição do status
+function getStatusDescription(minutes, connected) {
+    if (!connected) return 'Desconectado';
+    
+    if (minutes < 2) return 'Ativo';
+    if (minutes < 5) return 'Alerta';
+    if (minutes < 15) return 'Atenção';
+    return 'Inativo';
+}
+
+// Função para classificar o nível de atividade de mensagens
+function getMessageActivityClass(msgsHr) {
+    if (msgsHr === 0) return 'msgs-badge-low';
+    if (msgsHr > 50) return 'msgs-badge-high';
+    return '';
+}
+
+// Função para classificar o tempo de resposta
+function getResponseTimeClass(seconds) {
+    if (seconds < 5) return 'response-normal';
+    if (seconds < 30) return 'response-warning';
+    return 'response-danger';
+}
+
+// Função para obter emoji baseado no tempo de resposta
+function getResponseTimeEmoji(seconds) {
+    if (seconds < 5) return '⚡';
+    if (seconds < 30) return '🕐';
+    return '🐢';
+}
+
+// Função para formatar o tempo desde a última mensagem
+function formatTimeSince(minutes) {
+    if (minutes === Infinity) return 'Nunca';
+    
+    if (minutes < 1) return 'Agora mesmo';
+    if (minutes === 1) return '1 minuto atrás';
+    if (minutes < 60) return `${minutes} minutos atrás`;
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours === 1) return '1 hora atrás';
+    if (hours < 24) return `${hours} horas atrás`;
+    
+    const days = Math.floor(hours / 24);
+    if (days === 1) return '1 dia atrás';
+    return `${days} dias atrás`;
+}
+
+// Função para formatar número de telefone para URL do WhatsApp
+function formatWhatsAppUrl(phoneNumber) {
+    // Remove todos os caracteres não numéricos
+    const cleanNumber = phoneNumber ? phoneNumber.replace(/\D/g, '') : '';
+    return `https://wa.me/${cleanNumber}`;
+}
+
+// Função para extrair número de telefone do bot ID
+function extractPhoneFromBotId(botId, bots) {
+    // Primeiro, verifica se podemos obter o número a partir dos metadados do bot
+    for (const bot of bots) {
+        if (bot.id === botId && bot.phoneNumber) {
+            return bot.phoneNumber;
+        }
     }
     
-    speedValue.textContent = displayText;
-});
+    // Se não tiver nos metadados, tenta extrair do ID usando expressão regular
+    const phoneMatch = botId.match(/(\d{10,15})/);
+    if (phoneMatch) {
+        return phoneMatch[1];
+    }
+    
+    // Se não conseguir extrair do ID, verifica se temos um mapeamento explícito
+    const botPhoneMap = {
+        'ravena-testes': '555596424307', // Exemplo
+    };
+    
+    return botPhoneMap[botId] || '';
+}
 
-// Variáveis para controlar a conversa
-let conversation = [];
-let currentMessageIndex = 0;
-let allMessages = {};
-let isTyping = false;
-let speedFactor = 1.0; // Fator de velocidade padrão
+// Função para verificar se estamos em modo admin
+function checkAdminMode() {
+    const urlParams = new URLSearchParams(window.location.search);
+    isAdminMode = urlParams.has('admin');
+}
 
-// Exemplo de conversa
-// let sampleConversation = [
-//     {"id": 1, "origem": "remetente", "tipo": "audio", "duracao": "0:12", "delay": 0},
-//     {"id": 2, "origem": "remetente", "mensagem": "!stt", "replyId": 1, "delay": 500},
-//     {"id": 3, "origem": "destinatario", "mensagem": "<i>Oi, teste de speech-to-text</i>", "delay": 1000}
-//     // {"id": 8, "origem": "destinatario", "tipo": "imagem", "legenda": "Veja essa imagem do produto", "delay": 1000},
-//     // {"id": 9, "origem": "remetente", "tipo": "video", "legenda": "Aqui está um tutorial de como resolver", "delay": 1000}
-// ];
-let sampleConversation = [
-    {"id": 1, "origem": "remetente", "mensagem": "Resposta do comando exemplo", "delay": 500},
-    {"id": 2, "origem": "remetente", "mensagem": "!g-cmdAdd comando", "replyId": 1, "delay": 500},
-    {"id": 3, "origem": "destinatario", "mensagem": "Comando personalizado 'comando' adicionado com sucesso.", "delay": 1000},
-    {"id": 4, "origem": "remetente", "mensagem": "!comando", "delay": 500},
-    {"id": 5, "origem": "destinatario", "mensagem": "Resposta do comando exemplo", "delay": 1000}
-    // {"id": 8, "origem": "destinatario", "tipo": "imagem", "legenda": "Veja essa imagem do produto", "delay": 1000},
-    // {"id": 9, "origem": "remetente", "tipo": "video", "legenda": "Aqui está um tutorial de como resolver", "delay": 1000}
-];
-
-
-// Carregar exemplo
-conversationCode.value = JSON.stringify(sampleConversation, null, 2);
-
-// Iniciar conversa a partir do código
-startButton.addEventListener('click', () => {
+// Função para buscar dados de saúde dos bots
+async function fetchHealthData() {
     try {
-        conversation = JSON.parse(conversationCode.value);
-        resetChat();
-        startConversation();
+        const response = await fetch('/health');
+        
+        if (!response.ok) {
+            throw new Error(`Erro ao obter dados: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        lastHealthData = data;
+        renderBots(data);
+        
+        // Atualiza timestamp da última atualização
+        const lastUpdatedElement = document.getElementById('lastUpdated');
+        lastUpdatedElement.textContent = `Última atualização: ${new Date().toLocaleString('pt-BR')}`;
+        
+        return data;
     } catch (error) {
-        alert('Erro no formato do código da conversa: ' + error.message);
-    }
-});
-
-// Resetar conversa
-resetButton.addEventListener('click', resetChat);
-
-// Mostrar botão de envio quando estiver digitando
-typingInput.addEventListener('input', () => {
-    if (typingInput.value.trim() !== '') {
-        micButton.style.display = 'none';
-        sendButton.style.display = 'flex';
-    } else {
-        micButton.style.display = 'flex';
-        sendButton.style.display = 'none';
-    }
-});
-
-// Função para limpar o chat
-function resetChat() {
-    chatContainer.innerHTML = '';
-    currentMessageIndex = 0;
-    allMessages = {};
-}
-
-// Iniciar a simulação da conversa
-function startConversation() {
-    if (conversation.length === 0) return;
-    
-    processNextMessage();
-}
-
-// Rolagem suave do chat
-function smoothScrollToBottom() {
-    const scrollHeight = chatContainer.scrollHeight;
-    const currentScrollPosition = chatContainer.scrollTop;
-    const targetScrollPosition = scrollHeight - chatContainer.clientHeight;
-    
-    if (targetScrollPosition <= currentScrollPosition) return;
-    
-    const distance = targetScrollPosition - currentScrollPosition;
-    let startTime = null;
-    const duration = 300;
-    
-    function animation(currentTime) {
-        if (startTime === null) startTime = currentTime;
-        const timeElapsed = currentTime - startTime;
-        const run = Math.min(ease(timeElapsed / duration), 1);
-        chatContainer.scrollTop = currentScrollPosition + distance * run;
+        console.error('Erro ao buscar dados de saúde:', error);
         
-        if (timeElapsed < duration) {
-            requestAnimationFrame(animation);
-        }
+        // Exibe mensagem de erro
+        const botContainer = document.getElementById('botContainer');
+        botContainer.innerHTML = `
+            <div style="text-align: center; padding: 30px;">
+                <p style="color: #ff5555; font-size: 1.2rem;">❌ Erro ao carregar dados</p>
+                <p>${error.message}</p>
+                <button id="retryButton" class="refresh-button" style="margin-top: 20px;">
+                    🔄 Tentar Novamente
+                </button>
+            </div>
+        `;
+        
+        document.getElementById('retryButton').addEventListener('click', fetchHealthData);
     }
-    
-    function ease(t) {
-        return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-    }
-    
-    requestAnimationFrame(animation);
 }
 
-// Processar a próxima mensagem na conversa
-function processNextMessage() {
-    if (currentMessageIndex >= conversation.length) return;
+function formatPhoneNumber(number) {
+  if (!number || typeof number !== 'string' || !/^\d+$/.test(number)) {
+    return 'Número inválido';
+  }
+
+  if (number.length >= 12 && number.startsWith('55')) {
+    const countryCode = number.substring(0, 2);
+    const areaCode = number.substring(2, 4);
+    const prefix = number.substring(4, 9);
+    const suffix = number.substring(9);
     
-    const message = conversation[currentMessageIndex];
-    // Aplicar o fator de velocidade ao delay da mensagem
-    const delay = (message.delay || 500) / speedFactor;
-    
-    // Armazenar mensagem no objeto para referência futura (para respostas)
-    allMessages[message.id] = message;
-    
-    // Adicionar um delay antes de processar a mensagem
-    setTimeout(() => {
-        // Se existe replyId, animar a mensagem referenciada independentemente da origem
-        if (message.replyId && allMessages[message.replyId]) {
-            simulateSwipeReply(message);
-        } else if (message.origem === 'remetente') {
-            simulateRealTyping(message);
-        } else {
-            addMessage(message);
-            currentMessageIndex++;
-            processNextMessage();
-            smoothScrollToBottom();
-        }
-    }, delay);
+    return `+${countryCode} (${areaCode}) 9${prefix}-${suffix}`;
+  } 
+  
+  return number;
 }
 
-// Simular o deslize para responder
-function simulateSwipeReply(message) {
-    // Encontrar a mensagem original que será respondida
-    const originalMsgElements = document.querySelectorAll('.message');
-    let originalMsgElement = null;
-    
-    // Procurar o elemento correspondente ao replyId
-    for (let i = 0; i < originalMsgElements.length; i++) {
-        const msgId = originalMsgElements[i].getAttribute('data-message-id');
-        if (msgId === message.replyId.toString()) {
-            originalMsgElement = originalMsgElements[i];
-            break;
+// Função para buscar e renderizar top doações
+async function fetchTopDonates() {
+    try {
+        const response = await fetch('/top-donates');
+        if (!response.ok) {
+            throw new Error('Erro ao buscar doações');
         }
-    }
-    
-    // Se não encontrou o elemento, continuar com o fluxo normal
-    if (!originalMsgElement) {
-        if (message.origem === 'remetente') {
-            simulateRealTyping(message);
+        let donations = await response.json();
+        const donatesTextElement = document.getElementById('topDonatesText');
+
+        if (donations.length > 0) {
+            // Ordena por valor e pega os top 15
+            donations = donations
+                .sort((a, b) => b.valor - a.valor)
+                .slice(0, 15);
+
+            const text = donations
+                .map(d => `${d.nome}: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(d.valor)}`)
+                .join('  •  ');
+            
+            // Repete o texto para garantir o preenchimento do banner
+            donatesTextElement.textContent = `🏆 TOP DONATES:  •  ${text}  •  `.repeat(5);
         } else {
-            addMessage(message);
-            currentMessageIndex++;
-            processNextMessage();
+            donatesTextElement.textContent = '🏆 TOP DONATES: Nenhuma doação registrada ainda.';
         }
+    } catch (error) {
+        console.error('Erro ao carregar top doações:', error);
+        const donatesTextElement = document.getElementById('topDonatesText');
+        donatesTextElement.textContent = '🏆 TOP DONATES: Erro ao carregar.';
+    }
+}
+
+// Função para renderizar os bots
+function renderBots(data) {
+    const botContainer = document.getElementById('botContainer');
+    botContainer.innerHTML = '';
+    
+    if (!data.bots || data.bots.length === 0) {
+        botContainer.innerHTML = '<p style="text-align: center; padding: 20px;">Nenhum bot encontrado</p>';
         return;
     }
     
-    // Determinar a direção do swipe com base na origem da mensagem
-    const isOriginalSender = originalMsgElement.classList.contains('sender');
-    const swipeAmount = isOriginalSender ? 40 : 40;
-    const swipeProperty = isOriginalSender ? "marginRight" : "marginLeft"; // Direção oposta dependendo da origem
-    const swipeAnimationProperty = isOriginalSender ? "margin-right" : "margin-left"; // Direção oposta dependendo da origem
+    // Atualiza os filtros de bots para os gráficos
+    updateBotFilters(data.bots);
     
-    // Adicionar um delay antes de iniciar a animação (ajustado pela velocidade)
-    setTimeout(() => {
-        // Armazenar posição original
-        const originalMargin = window.getComputedStyle(originalMsgElement)[swipeProperty];
+    // Calcula o total de mensagens/hora de todos os bots
+    let totalMsgsHr = 0;
+    data.bots.forEach(bot => {
+        totalMsgsHr += Math.round(bot.msgsHr || 0);
+    });
+    
+    // Cria o contador de mensagens total
+    const msgsCounterDiv = document.getElementById('msgsCounter');
+    if (msgsCounterDiv) {
+        msgsCounterDiv.innerHTML = `
+            <span>Processando no momento</span>
+            <span class="count">${totalMsgsHr} msgs/h</span>
+        `;
+    }
+    
+    // Ordena os bots: Normais, comunitarios, VIP
+    console.log(data.bots);
+    data.bots.sort((a, b) => (b.comunitario === a.comunitario) ? 0 : b.comunitario ? -1 : 1);
+    data.bots.sort((a, b) => (b.vip === a.vip) ? 0 : b.vip ? -1 : 1);
+    console.log(data.bots);
+
+    let normalBotsRendered = false;
+    let vipBotsStarted = false;
+    let comBotsRendered = true;
+    let comBotsStarted = false;
+
+    // Renderiza os cards de bot
+
+    const tituloVIP = document.createElement('h2');
+    tituloVIP.className = 'titulo-tipo-bots';
+    tituloVIP.innerHTML = '🐦‍⬛ ravenas';
+
+    botContainer.appendChild(tituloVIP);
+
+    data.bots.forEach(bot => {
+        console.log({n: bot.id, vip: bot.vip, com: bot.comunitario});
+        if (!bot.vip || !bot.comunitario) {
+            normalBotsRendered = true;
+        }
+
+        if (normalBotsRendered && bot.comunitario && !comBotsStarted) {
+            const normalInfoText = document.createElement('p');
+            normalInfoText.className = 'normal-info-text';
+            normalInfoText.innerHTML = 'As ravenas <b>normais</b>, que você sempre usou! Os chips são comprados e mantidos por mim através das doações.<br><b>Apenas eu, o criador,</b> tenho acesso ao fluxo de dados deste bots.';
+            botContainer.appendChild(normalInfoText);
+
+            const separator = document.createElement('hr');
+            separator.className = 'bot-separator';
+            botContainer.appendChild(separator);
+
+            comBotsStarted = true;
+
+            const tituloComunitaria = document.createElement('h2');
+            tituloComunitaria.className = 'titulo-tipo-bots';
+            tituloComunitaria.innerHTML = '🐓 ravenas comunitárias ☭';
+
+            botContainer.appendChild(tituloComunitaria);
+        }
+
+        if (normalBotsRendered && comBotsRendered && bot.vip && !vipBotsStarted) {
+
+            const comInfoText = document.createElement('p');
+            comInfoText.className = 'com-info-text';
+            comInfoText.innerHTML = 'Estas ravenas são iniciativas de membros que doam seus chips e celulares para rodar a ravena.<br><b>O dono deste chip terá acesso às mensagens e fluxo de dados deste bot.</b>';
+            botContainer.appendChild(comInfoText);
+
+            const separator = document.createElement('hr');
+            separator.className = 'bot-separator';
+            botContainer.appendChild(separator);
+
+            vipBotsStarted = true;
+
+            const tituloNormal = document.createElement('h2');
+            tituloNormal.className = 'titulo-tipo-bots';
+            tituloNormal.innerHTML = '💎 ravenas vip';
+
+            botContainer.appendChild(tituloNormal);
+        }
+
+        const minutesSinceLastMessage = getTimeSinceLastMessage(bot.lastMessageReceived);
+        const statusEmoji = getStatusEmoji(minutesSinceLastMessage, bot.connected);
+        const statusDesc = getStatusDescription(minutesSinceLastMessage, bot.connected);
+        const phoneNumber = formatPhoneNumber(extractPhoneFromBotId(bot.id, data.bots)).replace("+55","").trim();
+        const whatsappUrl = formatWhatsAppUrl(phoneNumber);
+        const msgsHr = Math.round(bot.msgsHr || 0);
+        const msgActivityClass = getMessageActivityClass(msgsHr);
         
-        // Adicionar transição (ajustada pela velocidade)
-        const animationDuration = 300 / speedFactor;
-        originalMsgElement.style.transition = `${swipeAnimationProperty} ${animationDuration}ms ease-in-out`;
+        const avgResponseTime = bot.responseTime ? bot.responseTime.avg || 0 : 0;
+        const maxResponseTime = bot.responseTime ? bot.responseTime.max || 0 : 0;
+        const responseTimeClass = getResponseTimeClass(avgResponseTime);
+        const responseTimeEmoji = getResponseTimeEmoji(avgResponseTime);
         
-        // Animar deslizando para a direção determinada
-        originalMsgElement.style[swipeProperty] = `${swipeAmount}px`;
+        const botCard = document.createElement('div');
+        botCard.className = 'bot-card';
+        if (bot.vip) {
+            botCard.classList.add('vip');
+        }
+        if (bot.comunitario) {
+            botCard.classList.add('comunitario');
+        }
+
         
-        // Voltar para a posição original
-        setTimeout(() => {
-            originalMsgElement.style[swipeProperty] = originalMargin;
-            
-            // Depois da animação, prosseguir com a resposta
-            setTimeout(() => {
-                // Enviar a mensagem de resposta adequadamente
-                if (message.origem === 'remetente') {
-                    simulateRealTyping(message);
-                } else {
-                    addMessage(message);
-                    currentMessageIndex++;
-                    processNextMessage();
-                    smoothScrollToBottom();
+        let buttonsHtml = '';
+        if (isAdminMode) {
+            buttonsHtml = `
+                <div class="detail-item" style="margin-top: 15px; justify-content: center; gap: 10px;">
+                    <button class="restart-button" data-bot-id="${bot.id}">
+                        🔄 Reiniciar
+                    </button>
+                    <button class="qr-button" data-bot-id="${bot.id}">
+                        🔳 QRCode
+                    </button>
+                </div>
+            `;
+        }
+        
+        // 
+        let detalhes = "";
+
+        if(bot.semPV || bot.semConvites){
+            const txtDetalhes = [bot.semPV && "PV Desabilitado", bot.semConvites && "Não recebe convites"].filter(Boolean).join(", ");
+
+            detalhes = `<div class="detail-item">
+                    <span class="detail-label" style="width: 100%; text-align: center; color: #a2a20d">${txtDetalhes}</span>
+                </div>`;
+        }
+
+        botCard.innerHTML = `
+            <div class="bot-header">
+                <div class="bot-title">
+                    <a href="${whatsappUrl}" target="_blank" title="Abrir chat no WhatsApp">
+                        <img src="whatsapp.png" alt="WhatsApp" class="whatsapp-icon">
+                    </a>
+                    <div class="bot-name">${bot.id}</div>
+                </div>
+                <div class="status-indicator" title="${statusDesc}">${statusEmoji}</div>
+            </div>
+            <div class="bot-details">
+                <div class="detail-item">
+                    <span class="detail-label">Telefone:</span>
+                    <span class="detail-value">${phoneNumber || 'Não disponível'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Última mensagem:</span>
+                    <span class="detail-value tooltip-container">
+                        ${formatTimeSince(minutesSinceLastMessage)}
+                        <span class="tooltip-text">Recebida em: ${formatTime(bot.lastMessageReceived)}</span>
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Msgs/hora:</span>
+                    <span class="detail-value-highlight">
+                        ${msgsHr}
+                        <span class="msgs-badge ${msgActivityClass}">
+                            ${msgsHr === 0 ? '💤' : msgsHr > 100 ? '🔥' : msgsHr > 50 ? '📊' : '📝'}
+                        </span>
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Delay médio:</span>
+                    <span class="detail-value-highlight tooltip-container">
+                        ${avgResponseTime.toFixed(1)}s
+                        <span class="response-badge ${responseTimeClass}">
+                            ${responseTimeEmoji}
+                        </span>
+                        <span class="tooltip-text">Delay máximo: ${maxResponseTime}s</span>
+                    </span>
+                </div>
+                ${detalhes}
+                ${buttonsHtml}
+            </div>
+        `;
+        
+        botContainer.appendChild(botCard);
+        
+        if (isAdminMode) {
+            const restartButton = botCard.querySelector('.restart-button');
+            restartButton.addEventListener('click', () => openRestartModal(bot.id));
+            const qrButton = botCard.querySelector('.qr-button');
+            qrButton.addEventListener('click', () => openQRModal(bot.id));
+        }
+    });
+
+    const vipInfoText = document.createElement('p');
+    vipInfoText.className = 'vip-info-text';
+    vipInfoText.innerHTML = 'Estas são ravenas que hospedo em agradecimento aos primeiros donates que ajudaram a solidificar a ravena, não estão mais disponíveis - estão aqui apenas para que os membros acompanhem o status.<br>⚠️ Os bots <i>vips e gold</i> não recebem convites e nem respondem mensagens no pv!<br><br>';
+    botContainer.appendChild(vipInfoText);
+}
+
+function openQRModal(botId){
+    window.open(`/qrcode/${botId}`,"_new");
+}
+
+function openRestartModal(botId) {
+    const modal = document.getElementById('restartModal');
+    const modalBotId = document.getElementById('modalBotId');
+    
+    modalBotId.textContent = botId;
+    modal.style.display = 'flex';
+}
+
+function closeRestartModal() {
+    const modal = document.getElementById('restartModal');
+    modal.style.display = 'none';
+    
+    document.getElementById('reason').value = '';
+    document.getElementById('apiUser').value = '';
+    document.getElementById('apiPassword').value = '';
+}
+
+async function restartBot() {
+    const botId = document.getElementById('modalBotId').textContent;
+    const reason = document.getElementById('reason').value || 'Reinicialização pelo painel web';
+    const apiUser = document.getElementById('apiUser').value;
+    const apiPassword = document.getElementById('apiPassword').value;
+    
+    if (!apiUser || !apiPassword) {
+        alert('Por favor, informe as credenciais de API');
+        return;
+    }
+    
+    try {
+        const authHeader = 'Basic ' + btoa(`${apiUser}:${apiPassword}`);
+        
+        const response = await fetch(`/restart/${botId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': authHeader
+            },
+            body: JSON.stringify({ reason })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Erro ${response.status}`);
+        }
+        
+        const result = await response.json();
+        alert(`Bot ${botId} está sendo reiniciado. ${result.message}`);
+        
+        closeRestartModal();
+        setTimeout(fetchHealthData, 5000);
+    } catch (error) {
+        console.error('Erro ao reiniciar bot:', error);
+        alert(`Erro ao reiniciar bot: ${error.message}`);
+    }
+}
+
+// Funções para a seção de análise de dados
+function updateBotFilters(bots) {
+    const botFiltersContainer = document.getElementById('botFilters');
+    botFiltersContainer.innerHTML = '';
+    
+    if (!bots || bots.length === 0) {
+        botFiltersContainer.innerHTML = '<p>Nenhum bot disponível para filtrar</p>';
+        return;
+    }
+    
+    if (selectedBots.length === 0) {
+        selectedBots = bots.map(bot => bot.id);
+    }
+    
+    bots.forEach(bot => {
+        const isChecked = selectedBots.includes(bot.id);
+        
+        const filterItem = document.createElement('div');
+        filterItem.className = 'bot-filter';
+        filterItem.innerHTML = `
+            <input type="checkbox" id="filter-${bot.id}" data-bot-id="${bot.id}" ${isChecked ? 'checked' : ''}>
+            <label for="filter-${bot.id}">${bot.id}</label>
+        `;
+        
+        botFiltersContainer.appendChild(filterItem);
+        
+        const checkbox = filterItem.querySelector('input[type="checkbox"]');
+        checkbox.addEventListener('change', () => {
+            if (checkbox.checked) {
+                if (!selectedBots.includes(bot.id)) {
+                    selectedBots.push(bot.id);
                 }
-            }, 150 / speedFactor);
-        }, animationDuration);
-    }, 500 / speedFactor); // Delay antes da animação (ajustado pela velocidade)
-}
-
-// Simular digitação real na caixa de texto para mensagens do remetente
-function simulateRealTyping(message) {
-    if (message.tipo === 'audio') {
-        simulateAudioRecording(message);
-        return;
-    } else if (message.tipo === '   ' || message.tipo === 'video') {
-        simulateCameraUsage(message);
-        return;
-    }
-    
-    // Exibir indicador de digitação brevemente (200ms ajustado pela velocidade)
-    const typingIndicator = document.createElement('div');
-    typingIndicator.className = 'typing-indicator';
-    typingIndicator.style.display = 'flex';
-    typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-    chatContainer.appendChild(typingIndicator);
-    smoothScrollToBottom();
-    
-    // Remover indicador após tempo ajustado pela velocidade
-    setTimeout(() => {
-        typingIndicator.remove();
-        
-        // Agora simular a digitação na caixa de texto
-        if (message.mensagem) {
-            const textLength = message.mensagem.length;
-            // Ajustar velocidade de digitação com base no fator de velocidade
-            const typingSpeed = Math.min(500, textLength * 10) / speedFactor;
-            let currentIndex = 0;
-            
-            // Mostrar o botão de envio
-            micButton.style.display = 'none';
-            sendButton.style.display = 'flex';
-            
-            // Função para digitar caractere por caractere
-            function typeCharacter() {
-                if (currentIndex < textLength) {
-                    typingInput.value = message.mensagem.substring(0, currentIndex + 1);
-                    currentIndex++;
-                    setTimeout(typeCharacter, typingSpeed / textLength);
-                } else {
-                    // Digitação completa, simular envio (com delay ajustado)
-                    setTimeout(() => {
-                        typingInput.value = '';
-                        micButton.style.display = 'flex';
-                        sendButton.style.display = 'none';
-                        
-                        addMessage(message);
-                        currentMessageIndex++;
-                        processNextMessage();
-                        smoothScrollToBottom();
-                    }, 300 / speedFactor); // Delay antes de enviar (ajustado)
+            } else {
+                const index = selectedBots.indexOf(bot.id);
+                if (index !== -1) {
+                    selectedBots.splice(index, 1);
                 }
             }
-            
-            typeCharacter();
-        } else {
-            // Se não houver mensagem de texto (ex: apenas mídia)
-            addMessage(message);
-            currentMessageIndex++;
-            processNextMessage();
-            smoothScrollToBottom();
-        }
-    }, 200 / speedFactor);
+            fetchAnalyticsData();
+        });
+    });
 }
 
-// Simular gravação de áudio
-function simulateAudioRecording(message) {
-    // Primeiro exibir indicador de digitação brevemente (tempo ajustado pela velocidade)
-    const typingIndicator = document.createElement('div');
-    typingIndicator.className = 'typing-indicator';
-    typingIndicator.style.display = 'flex';
-    typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-    chatContainer.appendChild(typingIndicator);
-    smoothScrollToBottom();
-    
-    setTimeout(() => {
-        typingIndicator.remove();
-        
-        // Agora simular a gravação
-        micButton.style.backgroundColor = 'red';
-        
-        // Tempo de gravação simulado (ajustado pela velocidade)
-        setTimeout(() => {
-            micButton.style.backgroundColor = '#22056b';
-            addMessage(message);
-            currentMessageIndex++;
-            processNextMessage();
-            smoothScrollToBottom();
-        }, 2000 / speedFactor);
-    }, 200 / speedFactor);
-}
-
-// Simular uso da câmera
-function simulateCameraUsage(message) {
-    // Primeiro exibir indicador de digitação brevemente (tempo ajustado pela velocidade)
-    const typingIndicator = document.createElement('div');
-    typingIndicator.className = 'typing-indicator';
-    typingIndicator.style.display = 'flex';
-    typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-    chatContainer.appendChild(typingIndicator);
-    smoothScrollToBottom();
-    
-    setTimeout(() => {
-        typingIndicator.remove();
-        
-        // Destaque no botão de anexo
-        const attachButton = document.querySelector('.attach-button');
-        attachButton.style.color = '#22056b';
-        
-        setTimeout(() => {
-            attachButton.style.color = '#888';
-            addMessage(message);
-            currentMessageIndex++;
-            processNextMessage();
-            smoothScrollToBottom();
-        }, 1500 / speedFactor);
-    }, 200 / speedFactor);
-}
-
-// Adicionar mensagem ao chat
-function addMessage(message) {
-    const msgElement = document.createElement('div');
-    msgElement.className = `message ${message.origem === 'remetente' ? 'sender' : 'receiver'}`;
-    msgElement.setAttribute('data-message-id', message.id);
-    
-    // Verificar se há uma resposta
-    if (message.replyId && allMessages[message.replyId]) {
-        const replyToMsg = allMessages[message.replyId];
-        const replyContainer = document.createElement('div');
-        replyContainer.className = 'reply-container';
-        
-        let replyContent = '';
-        if (replyToMsg.tipo === 'audio') {
-            replyContent = 'Áudio';
-        } else if (replyToMsg.tipo === 'imagem') {
-            replyContent = replyToMsg.legenda || 'Imagem';
-        } else if (replyToMsg.tipo === 'video') {
-            replyContent = replyToMsg.legenda || 'Vídeo';
-        } else {
-            replyContent = replyToMsg.mensagem;
-        }
-        
-        replyContainer.innerHTML = `<div class="reply-text">${replyContent}</div>`;
-        msgElement.appendChild(replyContainer);
+function processAnalyticsData(data) {
+    if (!data || !data.daily || !data.weekly || !data.monthly || !data.yearly) {
+        console.error('Dados incompletos ou inválidos');
+        return {
+            daily: { hours: [], series: [] },
+            weekly: { days: [], series: [] },
+            monthly: { days: [], series: [] },
+            yearly: { dates: [], series: [] }
+        };
     }
     
-    // Conteúdo baseado no tipo de mensagem
-    if (message.tipo === 'audio') {
-        // Criar componente de áudio
-        const audioComponent = document.createElement('div');
-        audioComponent.className = 'message-audio';
-        audioComponent.innerHTML = `
-            <div class="audio-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-                    <path fill="currentColor" d="M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h3c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z"></path>
-                </svg>
-            </div>
-            <div class="audio-waveform">
-                <div class="audio-progress"></div>
-            </div>
-            <div class="audio-duration">${message.duracao || '0:00'}</div>
-        `;
-        msgElement.appendChild(audioComponent);
-    } else if (message.tipo === 'imagem') {
-        // Criar componente de imagem
-        const mediaComponent = document.createElement('div');
-        mediaComponent.className = 'message-media';
-        mediaComponent.innerHTML = `<img src="/api/placeholder/200/150" alt="Imagem">`;
-        msgElement.appendChild(mediaComponent);
-        
-        if (message.legenda) {
-            const captionDiv = document.createElement('div');
-            captionDiv.className = 'message-text';
-            captionDiv.innerHTML = message.legenda;
-            msgElement.appendChild(captionDiv);
+    const processedDaily = {
+        hours: data.daily.hours || Array.from({ length: 24 }, (_, i) => i),
+        series: data.daily.series || []
+    };
+    
+    const processedWeekly = {
+        days: data.weekly.days || ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'],
+        series: data.weekly.series || []
+    };
+    
+    const processedMonthly = {
+        days: data.monthly.days || Array.from({ length: 31 }, (_, i) => i + 1),
+        series: data.monthly.series || []
+    };
+    
+    let yearlyDates = data.yearly.dates;
+    if ((!yearlyDates || yearlyDates.length === 0) && data.yearly.series && data.yearly.series.length > 0) {
+        const firstSeries = data.yearly.series[0];
+        if (firstSeries && firstSeries.data) {
+            const dataLength = firstSeries.data.length;
+            yearlyDates = Array.from({ length: dataLength }, (_, i) => `Dia ${i+1}`);
         }
-    } else if (message.tipo === 'video') {
-        // Criar componente de vídeo
-        const mediaComponent = document.createElement('div');
-        mediaComponent.className = 'message-media';
-        mediaComponent.innerHTML = `
-            <div style="position: relative; background-color: #000; width: 200px; height: 150px; display: flex; justify-content: center; align-items: center;">
-                <div style="color: white; font-size: 40px;">▶</div>
-            </div>
-        `;
-        msgElement.appendChild(mediaComponent);
-        
-        if (message.legenda) {
-            const captionDiv = document.createElement('div');
-            captionDiv.className = 'message-text';
-            captionDiv.innerHTML = message.legenda;
-            msgElement.appendChild(captionDiv);
-        }
-    } else {
-        // Mensagem de texto padrão
-        const textDiv = document.createElement('div');
-        textDiv.className = 'message-text';
-        textDiv.innerHTML = message.mensagem;
-        msgElement.appendChild(textDiv);
     }
     
-    // Adicionar hora e status
-    const timeDiv = document.createElement('div');
-    timeDiv.className = 'message-time';
+    const processedYearly = {
+        dates: yearlyDates || [],
+        series: data.yearly.series || []
+    };
     
-    // Hora atual formatada
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    timeDiv.textContent = `${hours}:${minutes}`;
-    
-    // Adicionar ícones de status para mensagens enviadas
-    if (message.origem === 'remetente') {
-        timeDiv.innerHTML += `
-            <span class="message-status">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 15" width="16" height="15">
-                    <path fill="currentColor" d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.879a.32.32 0 0 1-.484.033l-.358-.325a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l1.32 1.266c.143.14.361.125.484-.033l6.272-8.048a.366.366 0 0 0-.064-.512zm-4.1 0l-.478-.372a.365.365 0 0 0-.51.063L4.566 9.879a.32.32 0 0 1-.484.033L1.891 7.769a.366.366 0 0 0-.515.006l-.423.433a.364.364 0 0 0 .006.514l3.258 3.185c.143.14.361.125.484-.033l6.272-8.048a.365.365 0 0 0-.063-.51z"></path>
-                </svg>
-            </span>
-        `;
-    }
-    
-    msgElement.appendChild(timeDiv);
-    
-    // Adicionar ao chat e rolar para o final suavemente
-    chatContainer.appendChild(msgElement);
-    smoothScrollToBottom();
+    return {
+        daily: processedDaily,
+        weekly: processedWeekly,
+        monthly: processedMonthly,
+        yearly: processedYearly
+    };
 }
 
-// Remover todas as funções relacionadas à gravação de vídeo
-async function getDisplayMedia() {}
-function startRecording() {}
-function stopRecording() {}
+async function fetchAnalyticsData() {
+    try {
+        document.querySelectorAll('.chart-container').forEach(container => {
+            container.innerHTML = `
+                <h3 class="chart-title">${container.querySelector('.chart-title')?.textContent || 'Carregando...'}</h3>
+                <div class="loading-container">
+                    <div class="loader"></div>
+                    <p>Carregando dados...</p>
+                </div>
+            `;
+        });
+        
+        const params = new URLSearchParams();
+        params.append('period', activePeriod);
+        selectedBots.forEach(botId => {
+            params.append('bots[]', botId);
+        });
+        
+        let data;
+        
+        try {
+            const response = await fetch(`/analytics?${params.toString()}`);
+            if (!response.ok) {
+                throw new Error(`Erro ao obter dados de análise: ${response.status}`);
+            }
+            data = await response.json();
+        } catch (error) {
+            console.error('Erro na chamada principal, tentando fallback:', error);
+            const fallbackResponse = await fetch('/analytics_period=today.json');
+            if (!fallbackResponse.ok) throw new Error('Arquivo de fallback não encontrado');
+            data = await fallbackResponse.json();
+            console.log('Usando dados de fallback para visualização');
+        }
+        
+        if (!data) throw new Error('Nenhum dado recebido');
+        
+        const processedData = processAnalyticsData(data);
+        renderCharts(processedData);
+        
+    } catch (error) {
+        console.error('Erro ao buscar dados de análise:', error);
+        document.querySelectorAll('.chart-container').forEach(container => {
+            container.innerHTML = `
+                <h3 class="chart-title">${container.querySelector('.chart-title')?.textContent || 'Erro'}</h3>
+                <div style="text-align: center; padding: 30px;">
+                    <p style="color: #ff5555; font-size: 1.2rem;">❌ Erro ao carregar dados</p>
+                    <p>${error.message}</p>
+                </div>
+            `;
+        });
+    }
+}
 
-// Carregar com a conversa de exemplo
-conversationCode.value = JSON.stringify(sampleConversation, null, 2);
+function renderCharts(data) {
+    const commonOptions = {
+        chart: { backgroundColor: 'transparent', style: { fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif' } },
+        title: { text: null },
+        credits: { enabled: false },
+        exporting: { enabled: true, buttons: { contextButton: { menuItems: ['downloadPNG', 'downloadJPEG', 'downloadPDF', 'downloadCSV'] } } },
+        legend: { itemStyle: { color: '#b7b7c5' }, itemHoverStyle: { color: '#04a9f0' } },
+        xAxis: { labels: { style: { color: '#b7b7c5' } }, lineColor: '#47486c', tickColor: '#47486c' },
+        yAxis: { title: { text: 'Mensagens', style: { color: '#b7b7c5' } }, labels: { style: { color: '#b7b7c5' } }, gridLineColor: 'rgba(71, 72, 108, 0.3)' },
+        plotOptions: { series: { marker: { enabled: false } } },
+        colors: ['#04a9f0', '#3e0ea7', '#47486c', '#b7b7c5', '#6a0dad', '#1e90ff']
+    };
+    
+    renderDailyChart(data.daily, commonOptions);
+    renderWeeklyChart(data.weekly, commonOptions);
+    renderMonthlyChart(data.monthly, commonOptions);
+    renderYearlyChart(data.yearly, commonOptions);
+}
+
+function renderDailyChart(data, commonOptions) {
+    const container = document.getElementById('dailyMessageChart');
+    if (!data || !data.hours || !data.series || data.series.length === 0) {
+        container.innerHTML = `<h3 class="chart-title">Média de Mensagens do Dia</h3><p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>`;
+        return;
+    }
+    Highcharts.chart(container, { ...commonOptions, chart: { ...commonOptions.chart, type: 'spline' }, xAxis: { ...commonOptions.xAxis, categories: data.hours, title: { text: 'Hora do Dia', style: { color: '#b7b7c5' } } }, tooltip: { formatter: function() { return `<b>${this.x}:00</b><br/>${this.series.name}: <b>${this.y}</b> msgs`; }, backgroundColor: 'rgba(35, 6, 109, 0.9)', style: { color: '#fff' }, borderWidth: 0 }, series: data.series });
+}
+
+function renderWeeklyChart(data, commonOptions) {
+    const container = document.getElementById('weeklyMessageChart');
+    if (!data || !data.days || !data.series || data.series.length === 0) {
+        container.innerHTML = `<h3 class="chart-title">Média de Mensagens da Semana</h3><p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>`;
+        return;
+    }
+    Highcharts.chart(container, { ...commonOptions, chart: { ...commonOptions.chart, type: 'column' }, xAxis: { ...commonOptions.xAxis, categories: data.days, title: { text: 'Dia da Semana', style: { color: '#b7b7c5' } } }, tooltip: { formatter: function() { return `<b>${this.x}</b><br/>${this.series.name}: <b>${this.y}</b> msgs`; }, backgroundColor: 'rgba(35, 6, 109, 0.9)', style: { color: '#fff' }, borderWidth: 0 }, series: data.series });
+}
+
+function renderMonthlyChart(data, commonOptions) {
+    const container = document.getElementById('monthlyMessageChart');
+    if (!data || !data.days || !data.series || data.series.length === 0) {
+        container.innerHTML = `<h3 class="chart-title">Média de Mensagens do Mês</h3><p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>`;
+        return;
+    }
+    Highcharts.chart(container, { ...commonOptions, chart: { ...commonOptions.chart, type: 'spline' }, xAxis: { ...commonOptions.xAxis, categories: data.days, title: { text: 'Dia do Mês', style: { color: '#b7b7c5' } } }, tooltip: { formatter: function() { return `<b>Dia ${this.x}</b><br/>${this.series.name}: <b>${this.y}</b> msgs`; }, backgroundColor: 'rgba(35, 6, 109, 0.9)', style: { color: '#fff' }, borderWidth: 0 }, series: data.series });
+}
+
+function renderYearlyChart(data, commonOptions) {
+    const container = document.getElementById('yearlyMessageChart');
+    if (!data || (!data.dates || data.dates.length === 0) || !data.series || data.series.length === 0) {
+        container.innerHTML = `<h3 class="chart-title">Total de Mensagens por Dia do Ano</h3><p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>`;
+        return;
+    }
+    Highcharts.chart(container, { ...commonOptions, chart: { ...commonOptions.chart, type: 'areaspline', zoomType: 'x' }, xAxis: { ...commonOptions.xAxis, categories: data.dates, labels: { ...commonOptions.xAxis.labels, rotation: -45, step: Math.ceil(data.dates.length / 30) }, title: { text: 'Data', style: { color: '#b7b7c5' } } }, tooltip: { formatter: function() { return `<b>${this.x}</b><br/>${this.series.name}: <b>${this.y}</b> msgs`; }, backgroundColor: 'rgba(35, 6, 109, 0.9)', style: { color: '#fff' }, borderWidth: 0 }, series: data.series });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    checkAdminMode();
+    fetchTopDonates();
+    fetchHealthData();
+    
+    const timeFilters = document.querySelectorAll('.time-filter');
+    timeFilters.forEach(filter => {
+        filter.addEventListener('click', () => {
+            timeFilters.forEach(f => f.classList.remove('active'));
+            filter.classList.add('active');
+            activePeriod = filter.dataset.period;
+            fetchAnalyticsData();
+        });
+    });
+    
+    setTimeout(fetchAnalyticsData, 1500);
+    
+    const refreshButton = document.getElementById('refreshButton');
+    if (refreshButton) {
+        refreshButton.addEventListener('click', fetchHealthData);
+    }
+    
+    const cancelButton = document.getElementById('cancelRestart');
+    const confirmButton = document.getElementById('confirmRestart');
+    if (cancelButton && confirmButton) {
+        cancelButton.addEventListener('click', closeRestartModal);
+        confirmButton.addEventListener('click', restartBot);
+    }
+    
+    setInterval(fetchHealthData, 30000);
+    setInterval(fetchTopDonates, 5 * 60 * 1000); // Atualiza doações a cada 5 minutos
+});
+

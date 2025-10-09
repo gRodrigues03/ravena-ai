@@ -149,7 +149,10 @@ h1 {
     border-bottom-color: var(--gold-color);
     box-shadow: 0 6px 12px rgba(255, 215, 0, 0.2);
 }
-
+.bot-card.comunitario{
+    border-bottom-color: #BF0B0B;
+    box-shadow: 0 6px 12px rgba(128, 13, 30, 0.2);
+}
 .bot-header {
     display: flex;
     justify-content: space-between;
@@ -254,16 +257,31 @@ h1 {
     gap: 5px;
 }
 
-/* Estilos para o texto de informação VIP e separador */
 .vip-info-text {
     font-style: italic;
     font-size: 0.9rem;
     text-align: center;
     color: var(--light-gray);
-    margin: 20px 0 10px 0;
+    grid-column: 1 / -1; /* Ocupa toda a largura do grid */
+}
+.com-info-text{
+    font-style: italic;
+    font-size: 0.9rem;
+    text-align: center;
+    color: var(--light-gray);
+    grid-column: 1 / -1; /* Ocupa toda a largura do grid */
+}
+.normal-info-text{
+    font-style: italic;
+    font-size: 0.9rem;
+    text-align: center;
+    color: var(--light-gray);
     grid-column: 1 / -1; /* Ocupa toda a largura do grid */
 }
 
+.titulo-tipo-bots{
+    grid-column: 1 / -1;
+}
 .bot-separator {
     border: 0;
     height: 1px;

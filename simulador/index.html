@@ -3,57 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Conversas WhatsApp</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>RavenaBot - Painel de Status</title>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
 </head>
 <body>
-    <div class="whatsapp-container" id="whatsapp-container">
-        <div class="whatsapp-bg"></div>
-        <div class="header">
-            <div class="header-avatar">R</div>
-            <div class="header-info">
-                <div class="header-name">ravenabot</div>
-                <div class="header-status" style="font-size: 12px;">online</div>
-            </div>
-        </div>
-        <div class="chat-container" id="chat-container">
-            <!-- As mensagens serão inseridas aqui -->
-        </div>
-        <div class="input-container">
-            <div class="input-box">
-                <div class="emoji-button">😊</div>
-                <div class="attach-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-                        <path fill="#888" d="M12,2C6.5,2,2,6.5,2,12s4.5,10,10,10s10-4.5,10-10S17.5,2,12,2z M16.9,15.5l-1.4,1.4L12,13.4l-3.5,3.5 l-1.4-1.4l3.5-3.5L7.1,8.5l1.4-1.4l3.5,3.5l3.5-3.5l1.4,1.4L13.4,12L16.9,15.5z"></path>
-                    </svg>
-                </div>
-                <input type="text" class="typing-input" id="typing-input" placeholder="Digite uma mensagem">
-            </div>
-            <div class="mic-button" id="mic-button">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-                    <path fill="currentColor" d="M12,15c1.66,0,3-1.34,3-3V6c0-1.66-1.34-3-3-3S9,4.34,9,6v6C9,13.66,10.34,15,12,15z"></path>
-                    <path fill="currentColor" d="M17,12v-2c0-0.55-0.45-1-1-1s-1,0.45-1,1v2c0,2.21-1.79,4-4,4s-4-1.79-4-4v-2c0-0.55-0.45-1-1-1S5,9.45,5,10v2 c0,3.31,2.69,6,6,6v2h-3c-0.55,0-1,0.45-1,1s0.45,1,1,1h8c0.55,0,1-0.45,1-1s-0.45-1-1-1h-3v-2C14.31,18,17,15.31,17,12z"></path>
-                </svg>
-            </div>
-            <div class="send-button" id="send-button" style="display: none;">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-                    <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
-                </svg>
-            </div>
-        </div>
-    </div>
-    <div class="controls">
-        <h3>Controles do Simulador</h3>
-        <button id="start-conversation">Iniciar Conversa</button>
-        <button id="reset-conversation">Resetar</button>
-        <div class="speed-control">
-            <label for="speed-slider">Velocidade da Simulação:</label>
-            <input type="range" id="speed-slider" min="-5" max="5" value="0" step="1">
-            <span id="speed-value">1x</span>
-        </div>
-        <textarea id="conversation-code" placeholder="Cole aqui o código da conversa"></textarea>
-    </div>
+    <div class="container">
+        <header>
+            <h1  class="banner">ravenabot - status</h1>
+            <!-- Links de Ícones Sociais -->
+            <div class="social-links">
+                <a href="https://github.com/moothz/ravena-ai" target="_blank" title="Código da ravena no GitHub">
+                    <img src="github.png" class="social-icon">
+                </a>
 
-    <script src="script.js"></script>
+                <a href="https://tipa.ai/moothz" target="_blank" title="Faça sua doação!">
+                    <img src="tipaai.jpg" class="social-icon">
+                </a>
+
+                <a href="https://chat.whatsapp.com/IRMI3QI3f7E3Po9CkMmYXK" target="_blank" title="Grupo Avisos - Fique por dentro das novidades!">
+                    <img src="grupo-avisos-small.jpg" class="social-icon">
+                </a>
+                <a href="https://chat.whatsapp.com/GMtTi1V6XIBChCBgkQC9g0" target="_blank" title="Grupão da ravena - Interaja com outros usuários ou tire dúvidas">
+                    <img src="grupo-geral-small.jpg" class="social-icon">
+                </a>
+            </div>
+            <span class="legenda-links">^ Acesse os links ^</span>
+        </header>
+
+        <!-- Banner de Top Donates -->
+        <div class="scrolling-banner-container">
+            <div class="scrolling-banner">
+                <p id="topDonatesText" class="scrolling-text">Carregando top donates...</p>
+            </div>
+        </div>
+        
+        <div class="status-section">
+            <div class="status-legend">
+                <div class="legend-item">
+                    <span>🟢</span>
+                    <span>Ativo (< 2 min)</span>
+                </div>
+                <div class="legend-item">
+                    <span>🟡</span>
+                    <span>Alerta (< 5 min)</span>
+                </div>
+                <div class="legend-item">
+                    <span>🟠</span>
+                    <span>Atenção (< 15 min)</span>
+                </div>
+                <div class="legend-item">
+                    <span>🔴</span>
+                    <span>Inativo (> 15 min)</span>
+                </div>
+                <div class="legend-item">
+                    <span>⚫</span>
+                    <span>Desconectado</span>
+                </div>
+            </div>
+            
+            <div id="botContainer" class="card-container">
+                <div class="loading-container">
+                    <div class="loader"></div>
+                    <p>Carregando status dos bots...</p>
+                </div>
+            </div>
+
+            <div class="aviso-vips">
+                Para saber como adicionar uma ravena no seu grupo, envie <b>!convite</b> para uma delas.<br><br>
+                <i>Ps.: Se alguma ravena não está nesta lista, ela possivelmente está banida. Fique por dentro acessando o grupo de avisos nos links acima.</i>
+            </div>
+            
+            <div id="msgsCounter" class="total-msgs-counter"></div>
+            
+            <p class="last-updated" id="lastUpdated">Última atualização: --</p>
+        </div>
+        
+        <!-- Nova Seção de Análise de Dados -->
+        <div class="analytics-section">
+            <div class="analytics-header">
+                <h2 class="analytics-title">Análise de Dados</h2>
+                <div class="time-filters">
+                    <button class="time-filter active" data-period="today">Hoje</button>
+                    <button class="time-filter" data-period="week">Esta Semana</button>
+                    <button class="time-filter" data-period="month">Este Mês</button>
+                    <button class="time-filter" data-period="year">Ano</button>
+                </div>
+            </div>
+            
+            <div class="bot-filters" id="botFilters">
+                <div class="loading-container">
+                    <div class="loader"></div>
+                    <p>Carregando filtros de bots...</p>
+                </div>
+            </div>
+            
+            <div class="charts-grid">
+                <div class="chart-container" id="dailyMessageChart">
+                    <h3 class="chart-title">Média de Mensagens do Dia</h3>
+                </div>
+                <div class="chart-container" id="weeklyMessageChart">
+                    <h3 class="chart-title">Média de Mensagens da Semana</h3>
+                </div>
+                <div class="chart-container" id="monthlyMessageChart">
+                    <h3 class="chart-title">Média de Mensagens do Mês</h3>
+                </div>
+                <div class="chart-container full-width-chart" id="yearlyMessageChart">
+                    <h3 class="chart-title">Total de Mensagens por Dia do Ano</h3>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Ravena Bot &copy; 2025 - Painel de Monitoramento</p>
+        </footer>
+    </div>
+    
+    <!-- Modal de Reinicialização -->
+    <div id="restartModal" class="restart-modal">
+        <div class="modal-content">
+            <h2 class="modal-title">Reiniciar Bot <span id="modalBotId"></span></h2>
+            <div class="modal-form">
+                <div>
+                    <label for="reason">Motivo da reinicialização:</label>
+                    <textarea id="reason" placeholder="Informe o motivo da reinicialização"></textarea>
+                </div>
+                <div>
+                    <label for="apiUser">Usuário API:</label>
+                    <input type="text" id="apiUser" placeholder="Usuário">
+                </div>
+                <div>
+                    <label for="apiPassword">Senha API:</label>
+                    <input type="password" id="apiPassword" placeholder="Senha">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="cancel-button" id="cancelRestart">Cancelar</button>
+                <button class="confirm-button" id="confirmRestart">Reiniciar Bot</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts externos -->
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/export-data.js"></script>
+    <script src="https://code.highcharts.com/modules/accessibility.js"></script>
+    <script type="text/javascript" src="scripts.js"></script>
+
 </body>
 </html>

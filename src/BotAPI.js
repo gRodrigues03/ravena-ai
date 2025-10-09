@@ -126,7 +126,9 @@ class BotAPI {
               },
               semPV: bot.ignorePV || false,
               semConvites: bot.ignoreInvites || false,
-              vip: bot.vip || false // Adiciona a propriedade VIP
+              banido: bot.banido || false,
+              comunitario: bot.comunitario || false,
+              vip: bot.vip || false
             };
           })
         });
@@ -148,6 +150,8 @@ class BotAPI {
             },
             semPV: bot.ignorePV || false,
             semConvites: bot.ignoreInvites || false,
+            banido: bot.banido || false,
+            comunitario: bot.comunitario || false,
             vip: bot.vip || false
           }))
         });

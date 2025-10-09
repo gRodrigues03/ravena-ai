@@ -228,31 +228,68 @@ function renderBots(data) {
         `;
     }
     
-    // Ordena os bots: VIP primeiro
+    // Ordena os bots: Normais, comunitarios, VIP
+    console.log(data.bots);
+    data.bots.sort((a, b) => (b.comunitario === a.comunitario) ? 0 : b.comunitario ? -1 : 1);
     data.bots.sort((a, b) => (b.vip === a.vip) ? 0 : b.vip ? -1 : 1);
+    console.log(data.bots);
 
-    let vipBotsRendered = false;
-    let nonVipBotsStarted = false;
+    let normalBotsRendered = false;
+    let vipBotsStarted = false;
+    let comBotsRendered = true;
+    let comBotsStarted = false;
 
     // Renderiza os cards de bot
+
+    const tituloVIP = document.createElement('h2');
+    tituloVIP.className = 'titulo-tipo-bots';
+    tituloVIP.innerHTML = '🐦‍⬛ ravenas';
+
+    botContainer.appendChild(tituloVIP);
+
     data.bots.forEach(bot => {
-        // Verifica se há bots VIP para renderizar o texto e separador
-        if (bot.vip) {
-            vipBotsRendered = true;
+        console.log({n: bot.id, vip: bot.vip, com: bot.comunitario});
+        if (!bot.vip || !bot.comunitario) {
+            normalBotsRendered = true;
         }
 
-        // Insere o separador e o texto se a transição de VIP para não-VIP ocorrer
-        if (vipBotsRendered && !bot.vip && !nonVipBotsStarted) {
-            const infoText = document.createElement('p');
-            infoText.className = 'vip-info-text';
-            infoText.textContent = 'Os bots vip e gold não recebem convites e não interagem no pv';
-            botContainer.appendChild(infoText);
+        if (normalBotsRendered && bot.comunitario && !comBotsStarted) {
+            const normalInfoText = document.createElement('p');
+            normalInfoText.className = 'normal-info-text';
+            normalInfoText.innerHTML = 'As ravenas <b>normais</b>, que você sempre usou! Os chips são comprados e mantidos por mim através das doações.<br><b>Apenas eu, o criador,</b> tenho acesso ao fluxo de dados deste bots.';
+            botContainer.appendChild(normalInfoText);
 
             const separator = document.createElement('hr');
             separator.className = 'bot-separator';
             botContainer.appendChild(separator);
 
-            nonVipBotsStarted = true;
+            comBotsStarted = true;
+
+            const tituloComunitaria = document.createElement('h2');
+            tituloComunitaria.className = 'titulo-tipo-bots';
+            tituloComunitaria.innerHTML = '🐓 ravenas comunitárias ☭';
+
+            botContainer.appendChild(tituloComunitaria);
+        }
+
+        if (normalBotsRendered && comBotsRendered && bot.vip && !vipBotsStarted) {
+
+            const comInfoText = document.createElement('p');
+            comInfoText.className = 'com-info-text';
+            comInfoText.innerHTML = 'Estas ravenas são iniciativas de membros que doam seus chips e celulares para rodar a ravena.<br><b>O dono deste chip terá acesso às mensagens e fluxo de dados deste bot.</b>';
+            botContainer.appendChild(comInfoText);
+
+            const separator = document.createElement('hr');
+            separator.className = 'bot-separator';
+            botContainer.appendChild(separator);
+
+            vipBotsStarted = true;
+
+            const tituloNormal = document.createElement('h2');
+            tituloNormal.className = 'titulo-tipo-bots';
+            tituloNormal.innerHTML = '💎 ravenas vip';
+
+            botContainer.appendChild(tituloNormal);
         }
 
         const minutesSinceLastMessage = getTimeSinceLastMessage(bot.lastMessageReceived);
@@ -273,6 +310,10 @@ function renderBots(data) {
         if (bot.vip) {
             botCard.classList.add('vip');
         }
+        if (bot.comunitario) {
+            botCard.classList.add('comunitario');
+        }
+
         
         let buttonsHtml = '';
         if (isAdminMode) {
@@ -354,6 +395,11 @@ function renderBots(data) {
             qrButton.addEventListener('click', () => openQRModal(bot.id));
         }
     });
+
+    const vipInfoText = document.createElement('p');
+    vipInfoText.className = 'vip-info-text';
+    vipInfoText.innerHTML = 'Estas são ravenas que hospedo em agradecimento aos primeiros donates que ajudaram a solidificar a ravena, não estão mais disponíveis - estão aqui apenas para que os membros acompanhem o status.<br>⚠️ Os bots <i>vips</i> não recebem convites e nem respondem mensagens no pv!<br><br>';
+    botContainer.appendChild(vipInfoText);
 }
 
 function openQRModal(botId){
