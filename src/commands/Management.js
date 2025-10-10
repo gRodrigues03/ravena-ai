@@ -2,6 +2,7 @@
 const path = require('path');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
+const AdminUtils = require('../utils/AdminUtils');
 const NSFWPredict = require('../utils/NSFWPredict');
 const ReturnMessage = require('../models/ReturnMessage');
 
@@ -14,6 +15,7 @@ class Management {
     this.database = Database.getInstance();
     this.nsfwPredict = NSFWPredict.getInstance();
     this.dataPath = this.database.databasePath;
+    this.adminUtils = AdminUtils.getInstance();
     
     // Mapeamento de comando para método
     this.commandMap = {
@@ -1459,28 +1461,16 @@ async setWelcomeMessage(bot, message, args, group) {
   /**
    * Verifica se o bot é admin no grupo
    * @param {WhatsAppBot} bot - Instância do bot
-   * @param {string} groupId - ID do grupo
+   * @param {Objet} group - grupo
    * @returns {Promise<boolean>} - Se o bot é admin
    */
-  async isBotAdmin(bot, groupId) {
+  async isBotAdmin(bot, group) {
     try {
-      // Obtém chat do grupo
-      const chat = await bot.client.getChatById(groupId);
+      const chat = await bot.client.getChatById(group.id);
       
-      if (!chat.isGroup) {
-        return false;
-      }
-      
-      // Obtém o ID do bot
-      const botId = bot.client.info.wid._serialized;
-      
-      // Verifica se o bot é admin
-      const participants = chat.participants || [];
-      const botParticipant = participants.find(p => p.id._serialized === botId);
-      
-      return botParticipant && botParticipant.isAdmin;
+      return await this.adminUtils.isAdmin(bot.phoneNumber, group, chat, bot.client);
     } catch (error) {
-      this.logger.error(`Erro ao verificar se o bot é admin em ${groupId}:`, error);
+      this.logger.error(`Erro ao verificar se o bot é admin em ${group.id}:`, error);
       return false;
     }
   }
@@ -1502,7 +1492,7 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     // Verifica se o bot é admin para filtros efetivos
-    const isAdmin = await this.isBotAdmin(bot, group.id);
+    const isAdmin = await this.isBotAdmin(bot, group);
     if (!isAdmin) {
       await bot.sendMessage(group.id, '⚠️ Atenção: O bot não é administrador do grupo. Ele não poderá apagar mensagens filtradas. Para usar filtros efetivamente, adicione o bot como administrador.');
     }
@@ -1582,7 +1572,7 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     // Verifica se o bot é admin para filtros efetivos
-    const isAdmin = await this.isBotAdmin(bot, group.id);
+    const isAdmin = await this.isBotAdmin(bot, group);
     if (!isAdmin) {
       await bot.sendMessage(group.id, '⚠️ Atenção: O bot não é administrador do grupo. Ele não poderá apagar mensagens filtradas. Para usar filtros efetivamente, adicione o bot como administrador.');
     }
@@ -1626,7 +1616,7 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     // Verifica se o bot é admin para filtros efetivos
-    const isAdmin = await this.isBotAdmin(bot, group.id);
+    const isAdmin = await this.isBotAdmin(bot, group);
     if (!isAdmin) {
       await bot.sendMessage(group.id, '⚠️ Atenção: O bot não é administrador do grupo. Ele não poderá apagar mensagens filtradas. Para usar filtros efetivamente, adicione o bot como administrador.');
     }
@@ -1719,7 +1709,7 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     // Verifica se o bot é admin para filtros efetivos
-    const isAdmin = await this.isBotAdmin(bot, group.id);
+    const isAdmin = await this.isBotAdmin(bot, group);
     if (!isAdmin) {
       await bot.sendMessage(group.id, '⚠️ Atenção: O bot não é administrador do grupo. Ele não poderá apagar mensagens filtradas. Para usar filtros efetivamente, adicione o bot como administrador.');
     }
@@ -2458,7 +2448,7 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     // Check if bot is admin in the group
-    const isAdmin = await this.isBotAdmin(bot, group.id);
+    const isAdmin = await this.isBotAdmin(bot, group);
     
     if (!isAdmin) {
       return new ReturnMessage({
@@ -3201,7 +3191,7 @@ async setWelcomeMessage(bot, message, args, group) {
       });
     }
     
-    const isAdmin = await this.isBotAdmin(bot, group.id);
+    const isAdmin = await this.isBotAdmin(bot, group);
     
     if (!isAdmin) {
       return new ReturnMessage({
@@ -4712,7 +4702,7 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     // Verifica se o bot é administrador do grupo
-    const isAdmin = await this.isBotAdmin(bot, group.id);
+    const isAdmin = await this.isBotAdmin(bot, group);
     if (!isAdmin) {
       return new ReturnMessage({
         chatId: group.id,
@@ -4925,7 +4915,7 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     // Verifica se o bot é administrador para alterar título
-    const isAdmin = await this.isBotAdmin(bot, group.id);
+    const isAdmin = await this.isBotAdmin(bot, group);
     if (!isAdmin) {
       return new ReturnMessage({
         chatId: group.id,
@@ -5526,7 +5516,7 @@ async setWelcomeMessage(bot, message, args, group) {
       }
       
       // Verifica se o bot é administrador do grupo (necessário para esta operação)
-      const isAdmin = await this.isBotAdmin(bot, group.id);
+      const isAdmin = await this.isBotAdmin(bot, group);
       
       if (!isAdmin) {
         return new ReturnMessage({

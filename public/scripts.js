@@ -229,177 +229,164 @@ function renderBots(data) {
     }
     
     // Ordena os bots: Normais, comunitarios, VIP
-    console.log(data.bots);
-    data.bots.sort((a, b) => (b.comunitario === a.comunitario) ? 0 : b.comunitario ? -1 : 1);
-    data.bots.sort((a, b) => (b.vip === a.vip) ? 0 : b.vip ? -1 : 1);
-    console.log(data.bots);
+    const botsNormais = data.bots.filter(b => !b.comunitario && !b.vip);
+    const botsComunitarios = data.bots.filter(b => b.comunitario);
+    const botsVips = data.bots.filter(b =>  b.vip);
 
-    let normalBotsRendered = false;
-    let vipBotsStarted = false;
-    let comBotsRendered = true;
-    let comBotsStarted = false;
+
+    console.log({botsNormais, botsComunitarios, botsVips});
 
     // Renderiza os cards de bot
+    const tituloNormais = document.createElement('h2');
+    tituloNormais.className = 'titulo-tipo-bots';
+    tituloNormais.innerHTML = '🐦‍⬛ ravenas';
+    botContainer.appendChild(tituloNormais);
 
-    const tituloVIP = document.createElement('h2');
-    tituloVIP.className = 'titulo-tipo-bots';
-    tituloVIP.innerHTML = '🐦‍⬛ ravenas';
+    const normalInfoText = document.createElement('p');
+    normalInfoText.className = 'normal-info-text';
+    normalInfoText.innerHTML = 'As ravenas <b>normais</b>, que você sempre usou! Os chips são comprados e mantidos por mim através das doações.<br><b>Apenas eu, o criador,</b> tenho acesso ao fluxo de dados deste bots.';
+    botContainer.appendChild(normalInfoText);
+    botsNormais.forEach(bot => {
+        renderBotCard(botContainer, data, bot);
+    });
+    const separator = document.createElement('hr');
+    separator.className = 'bot-separator';
+    botContainer.appendChild(separator);
 
-    botContainer.appendChild(tituloVIP);
+    if(botsComunitarios.length > 0){
+        const tituloComunitaria = document.createElement('h2');
+        tituloComunitaria.className = 'titulo-tipo-bots';
+        tituloComunitaria.innerHTML = '🐓 ravenas comunitárias ☭';
+        botContainer.appendChild(tituloComunitaria);
+        const comInfoText = document.createElement('p');
+        comInfoText.className = 'com-info-text';
+        comInfoText.innerHTML = 'Estas ravenas são iniciativas de membros que doam seus chips e celulares para rodar a ravena.<br><b>O dono deste chip terá acesso às mensagens e fluxo de dados deste bot, se você não concorda com isso, pode remover o bot livremente.</b>';
+        botContainer.appendChild(comInfoText);
+        botsComunitarios.forEach(bot => {
+            renderBotCard(botContainer, data, bot);
+        });
+        const separator = document.createElement('hr');
+        separator.className = 'bot-separator';
+        botContainer.appendChild(separator);
+    }
 
-    data.bots.forEach(bot => {
-        console.log({n: bot.id, vip: bot.vip, com: bot.comunitario});
-        if (!bot.vip || !bot.comunitario) {
-            normalBotsRendered = true;
-        }
+    if(botsVips.length > 0){
+        const tituloVip = document.createElement('h2');
+        tituloVip.className = 'titulo-tipo-bots';
+        tituloVip.innerHTML = '💎 ravenas vip';
+        botContainer.appendChild(tituloVip);
+        const vipInfoText = document.createElement('p');
+        vipInfoText.className = 'vip-info-text';
+        vipInfoText.innerHTML = 'Estas são ravenas que hospedo em agradecimento aos primeiros donates que ajudaram a solidificar a ravena, não estão mais disponíveis - estão aqui apenas para que os membros acompanhem o status.<br>⚠️ Os bots <i>vips</i> não recebem convites e nem respondem mensagens no pv!<br><br>';
+        botContainer.appendChild(vipInfoText);
+        botsVips.forEach(bot => {
+            renderBotCard(botContainer, data, bot);
+        });
+        const separator = document.createElement('hr');
+        separator.className = 'bot-separator';
+        botContainer.appendChild(separator);
+    }
+}
 
-        if (normalBotsRendered && bot.comunitario && !comBotsStarted) {
-            const normalInfoText = document.createElement('p');
-            normalInfoText.className = 'normal-info-text';
-            normalInfoText.innerHTML = 'As ravenas <b>normais</b>, que você sempre usou! Os chips são comprados e mantidos por mim através das doações.<br><b>Apenas eu, o criador,</b> tenho acesso ao fluxo de dados deste bots.';
-            botContainer.appendChild(normalInfoText);
-
-            const separator = document.createElement('hr');
-            separator.className = 'bot-separator';
-            botContainer.appendChild(separator);
-
-            comBotsStarted = true;
-
-            const tituloComunitaria = document.createElement('h2');
-            tituloComunitaria.className = 'titulo-tipo-bots';
-            tituloComunitaria.innerHTML = '🐓 ravenas comunitárias ☭';
-
-            botContainer.appendChild(tituloComunitaria);
-        }
-
-        if (normalBotsRendered && comBotsRendered && bot.vip && !vipBotsStarted) {
-
-            const comInfoText = document.createElement('p');
-            comInfoText.className = 'com-info-text';
-            comInfoText.innerHTML = 'Estas ravenas são iniciativas de membros que doam seus chips e celulares para rodar a ravena.<br><b>O dono deste chip terá acesso às mensagens e fluxo de dados deste bot.</b>';
-            botContainer.appendChild(comInfoText);
-
-            const separator = document.createElement('hr');
-            separator.className = 'bot-separator';
-            botContainer.appendChild(separator);
-
-            vipBotsStarted = true;
-
-            const tituloNormal = document.createElement('h2');
-            tituloNormal.className = 'titulo-tipo-bots';
-            tituloNormal.innerHTML = '💎 ravenas vip';
-
-            botContainer.appendChild(tituloNormal);
-        }
-
-        const minutesSinceLastMessage = getTimeSinceLastMessage(bot.lastMessageReceived);
-        const statusEmoji = getStatusEmoji(minutesSinceLastMessage, bot.connected);
-        const statusDesc = getStatusDescription(minutesSinceLastMessage, bot.connected);
-        const phoneNumber = formatPhoneNumber(extractPhoneFromBotId(bot.id, data.bots)).replace("+55","").trim();
-        const whatsappUrl = formatWhatsAppUrl(phoneNumber);
-        const msgsHr = Math.round(bot.msgsHr || 0);
-        const msgActivityClass = getMessageActivityClass(msgsHr);
-        
-        const avgResponseTime = bot.responseTime ? bot.responseTime.avg || 0 : 0;
-        const maxResponseTime = bot.responseTime ? bot.responseTime.max || 0 : 0;
-        const responseTimeClass = getResponseTimeClass(avgResponseTime);
-        const responseTimeEmoji = getResponseTimeEmoji(avgResponseTime);
-        
-        const botCard = document.createElement('div');
-        botCard.className = 'bot-card';
-        if (bot.vip) {
-            botCard.classList.add('vip');
-        }
-        if (bot.comunitario) {
-            botCard.classList.add('comunitario');
-        }
-
-        
-        let buttonsHtml = '';
-        if (isAdminMode) {
-            buttonsHtml = `
-                <div class="detail-item" style="margin-top: 15px; justify-content: center; gap: 10px;">
-                    <button class="restart-button" data-bot-id="${bot.id}">
-                        🔄 Reiniciar
-                    </button>
-                    <button class="qr-button" data-bot-id="${bot.id}">
-                        🔳 QRCode
-                    </button>
-                </div>
-            `;
-        }
-        
-        // 
-        let detalhes = "";
-
-        if(bot.semPV || bot.semConvites){
-            const txtDetalhes = [bot.semPV && "PV Desabilitado", bot.semConvites && "Não recebe convites"].filter(Boolean).join(", ");
-
-            detalhes = `<div class="detail-item">
-                    <span class="detail-label" style="width: 100%; text-align: center; color: #a2a20d">${txtDetalhes}</span>
-                </div>`;
-        }
-
-        botCard.innerHTML = `
-            <div class="bot-header">
-                <div class="bot-title">
-                    <a href="${whatsappUrl}" target="_blank" title="Abrir chat no WhatsApp">
-                        <img src="whatsapp.png" alt="WhatsApp" class="whatsapp-icon">
-                    </a>
-                    <div class="bot-name">${bot.id}</div>
-                </div>
-                <div class="status-indicator" title="${statusDesc}">${statusEmoji}</div>
-            </div>
-            <div class="bot-details">
-                <div class="detail-item">
-                    <span class="detail-label">Telefone:</span>
-                    <span class="detail-value">${phoneNumber || 'Não disponível'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Última mensagem:</span>
-                    <span class="detail-value tooltip-container">
-                        ${formatTimeSince(minutesSinceLastMessage)}
-                        <span class="tooltip-text">Recebida em: ${formatTime(bot.lastMessageReceived)}</span>
-                    </span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Msgs/hora:</span>
-                    <span class="detail-value-highlight">
-                        ${msgsHr}
-                        <span class="msgs-badge ${msgActivityClass}">
-                            ${msgsHr === 0 ? '💤' : msgsHr > 100 ? '🔥' : msgsHr > 50 ? '📊' : '📝'}
-                        </span>
-                    </span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Delay médio:</span>
-                    <span class="detail-value-highlight tooltip-container">
-                        ${avgResponseTime.toFixed(1)}s
-                        <span class="response-badge ${responseTimeClass}">
-                            ${responseTimeEmoji}
-                        </span>
-                        <span class="tooltip-text">Delay máximo: ${maxResponseTime}s</span>
-                    </span>
-                </div>
-                ${detalhes}
-                ${buttonsHtml}
+function renderBotCard(botContainer, data, bot){
+    const minutesSinceLastMessage = getTimeSinceLastMessage(bot.lastMessageReceived);
+    const statusEmoji = getStatusEmoji(minutesSinceLastMessage, bot.connected);
+    const statusDesc = getStatusDescription(minutesSinceLastMessage, bot.connected);
+    const phoneNumber = formatPhoneNumber(extractPhoneFromBotId(bot.id, data.bots)).replace("+55","").trim();
+    const whatsappUrl = formatWhatsAppUrl(phoneNumber);
+    const msgsHr = Math.round(bot.msgsHr || 0);
+    const msgActivityClass = getMessageActivityClass(msgsHr);
+    
+    const avgResponseTime = bot.responseTime ? bot.responseTime.avg || 0 : 0;
+    const maxResponseTime = bot.responseTime ? bot.responseTime.max || 0 : 0;
+    const responseTimeClass = getResponseTimeClass(avgResponseTime);
+    const responseTimeEmoji = getResponseTimeEmoji(avgResponseTime);
+    
+    const botCard = document.createElement('div');
+    botCard.className = 'bot-card';
+    if (bot.vip) {
+        botCard.classList.add('vip');
+    }
+    if (bot.comunitario) {
+        botCard.classList.add('comunitario');
+    }
+    
+    let buttonsHtml = '';
+    if (isAdminMode) {
+        buttonsHtml = `
+            <div class="detail-item" style="margin-top: 15px; justify-content: center; gap: 10px;">
+                <button class="restart-button" data-bot-id="${bot.id}">
+                    🔄 Reiniciar
+                </button>
+                <button class="qr-button" data-bot-id="${bot.id}">
+                    🔳 QRCode
+                </button>
             </div>
         `;
-        
-        botContainer.appendChild(botCard);
-        
-        if (isAdminMode) {
-            const restartButton = botCard.querySelector('.restart-button');
-            restartButton.addEventListener('click', () => openRestartModal(bot.id));
-            const qrButton = botCard.querySelector('.qr-button');
-            qrButton.addEventListener('click', () => openQRModal(bot.id));
-        }
-    });
-
-    const vipInfoText = document.createElement('p');
-    vipInfoText.className = 'vip-info-text';
-    vipInfoText.innerHTML = 'Estas são ravenas que hospedo em agradecimento aos primeiros donates que ajudaram a solidificar a ravena, não estão mais disponíveis - estão aqui apenas para que os membros acompanhem o status.<br>⚠️ Os bots <i>vips</i> não recebem convites e nem respondem mensagens no pv!<br><br>';
-    botContainer.appendChild(vipInfoText);
+    }
+    
+    // 
+    let detalhes = "";
+    if(bot.semPV || bot.semConvites){
+        const txtDetalhes = [bot.semPV && "PV Desabilitado", bot.semConvites && "Não recebe convites"].filter(Boolean).join(", ");
+        detalhes = `<div class="detail-item">
+                <span class="detail-label" style="width: 100%; text-align: center; color: #a2a20d">${txtDetalhes}</span>
+            </div>`;
+    }
+    botCard.innerHTML = `
+        <div class="bot-header">
+            <div class="bot-title">
+                <a href="${whatsappUrl}" target="_blank" title="Abrir chat no WhatsApp">
+                    <img src="whatsapp.png" alt="WhatsApp" class="whatsapp-icon">
+                </a>
+                <div class="bot-name">${bot.id}</div>
+            </div>
+            <div class="status-indicator" title="${statusDesc}">${statusEmoji}</div>
+        </div>
+        <div class="bot-details">
+            <div class="detail-item">
+                <span class="detail-label">Telefone:</span>
+                <span class="detail-value">${phoneNumber || 'Não disponível'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Última mensagem:</span>
+                <span class="detail-value tooltip-container">
+                    ${formatTimeSince(minutesSinceLastMessage)}
+                    <span class="tooltip-text">Recebida em: ${formatTime(bot.lastMessageReceived)}</span>
+                </span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Msgs/hora:</span>
+                <span class="detail-value-highlight">
+                    ${msgsHr}
+                    <span class="msgs-badge ${msgActivityClass}">
+                        ${msgsHr === 0 ? '💤' : msgsHr > 100 ? '🔥' : msgsHr > 50 ? '📊' : '📝'}
+                    </span>
+                </span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Delay médio:</span>
+                <span class="detail-value-highlight tooltip-container">
+                    ${avgResponseTime.toFixed(1)}s
+                    <span class="response-badge ${responseTimeClass}">
+                        ${responseTimeEmoji}
+                    </span>
+                    <span class="tooltip-text">Delay máximo: ${maxResponseTime}s</span>
+                </span>
+            </div>
+            ${detalhes}
+            ${buttonsHtml}
+        </div>
+    `;
+    
+    botContainer.appendChild(botCard);
+    
+    if (isAdminMode) {
+        const restartButton = botCard.querySelector('.restart-button');
+        restartButton.addEventListener('click', () => openRestartModal(bot.id));
+        const qrButton = botCard.querySelector('.qr-button');
+        qrButton.addEventListener('click', () => openQRModal(bot.id));
+    }
 }
 
 function openQRModal(botId){
