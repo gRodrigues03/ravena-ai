@@ -392,7 +392,7 @@ async function statusCommand(bot, message, args, group) {
   try {
     const response = await axios.get(url);
 
-    let statusMessage = '🐦‍⬛ *Status das Ravenas* ️\n> https://ravena.moothz.win\n\n';
+    let statusMessage = '🕸 *Status das Ravenas* 🔄\n> https://ravena.moothz.win\n\n';
 
     const botsNormais = response.data.bots.filter(b => !b.comunitario && !b.vip);
     const botsComunitarios = response.data.bots.filter(b => b.comunitario);
@@ -403,7 +403,7 @@ async function statusCommand(bot, message, args, group) {
       statusMessage += renderBotStatus(botData);      
     }
 
-    statusMessage += `🐓 *ravenas _comunitárias_*\n> gerenciadas por outra pessoa, !comunitaria pra mais info\n\n`;
+    statusMessage += `🐓 *ravenas _comunitárias_* ☭\n> gerenciadas por outra pessoa, !comunitaria pra mais info\n\n`;
     for (const botData of botsComunitarios) {
       statusMessage += renderBotStatus(botData);      
     }

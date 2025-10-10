@@ -1,3 +1,3 @@
 As ravenas comunitárias são iniciativas de membros que doam seus chips e celulares para rodar a ravena, se responsabilizando por comprar novos chips, conectar com o whatsapp e tudo mais.
 
-*Atenção*: O dono deste chip terá acesso às mensagens e fluxo de dados deste bot, se você não concorda com isso, pode remover o bot livremente.
+*Atenção*: O dono deste chip terá acesso às mensagens e fluxo de dados deste bot (assim como qualquer outro bot ilegal do whatsapp), se você não concorda com isso, pode remover o bot livremente.
