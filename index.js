@@ -57,6 +57,7 @@ async function main() {
           id: rBot.nome,
           vip: rBot.vip ?? false,
           comunitario: rBot.comunitario ?? false,
+          numeroResponsavel: rBot.numeroResponsavel ?? false,
           phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
           privado: rBot.privado, // Número de telefone para solicitar código de pareamento
           eventHandler: eventHandler,
@@ -105,6 +106,7 @@ async function main() {
           phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
           vip: rBot.vip ?? false,
           comunitario: rBot.comunitario ?? false,
+          numeroResponsavel: rBot.numeroResponsavel ?? false,
           eventHandler: eventHandler,
           //stabilityMonitor: stabilityMonitor,
           prefix: rBot.customPrefix || process.env.DEFAULT_PREFIX || '!',

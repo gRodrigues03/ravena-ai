@@ -81,7 +81,28 @@ async function ravPrivadaCommand(bot, message, args, group) {
       content: `🔗 *Github:* https://github.com/moothz/ravena-ai`
     });
   }
+}
 
+
+async function ravComunitariaCommand(bot, message, args, group) {
+  const chatId = message.group || message.author;
+
+  try {
+    const comuPath = path.join(database.databasePath, 'textos', 'comunitaria.txt');
+    const comuContent = await fs.readFile(comuPath, 'utf8');
+
+    return new ReturnMessage({
+      chatId: chatId,
+      content: comuContent.trim()
+    });
+
+  } catch (error) {
+    logger.warn('Erro ao ler comunitaria.txt:', error);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: `🔗 *Github:* https://github.com/moothz/ravena-ai`
+    });
+  }
 }
 
 
@@ -314,6 +335,55 @@ function getUserNickname(group, userId) {
   return nickData ? nickData.apelido : null;
 }
 
+function renderBotStatus(botData){
+  let statusMessage = "";
+
+  const now = new Date();
+  const lastMessageTime = new Date(botData.lastMessageReceived);
+  const diffMinutes = (now - lastMessageTime) / (1000 * 60);
+
+  let statusEmoji = '⚫️';
+  if (diffMinutes <= 15) {
+    statusEmoji = '🟢';
+  } else if (diffMinutes <= 30) {
+    statusEmoji = '🟡';
+  } else if (diffMinutes <= 60) {
+    statusEmoji = '🔴';
+  }
+
+  const tipoEmoji = botData.vip ? '💎' : botData.comunitario ? '🐓' : '';
+
+  statusMessage += `${statusEmoji} *${botData.id}* ${tipoEmoji}\n`;
+  statusMessage += `- 📞 Número: _+${botData.phoneNumber.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '$1 ($2) $3-$4')}_\n`;
+
+  if(botData.numeroResponsavel){
+    statusMessage += `- 👑 Responsável: _+${botData.numeroResponsavel.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '$1 ($2) $3-$4')}_\n`;
+  }
+
+  if (diffMinutes <= 1) {
+    statusMessage += '- ⏲️ Última msg: Agora mesmo\n';
+  } else {
+    statusMessage += `- ⏲️ Última msg: ${Math.floor(diffMinutes)} minutos atrás\n`;
+  }
+  
+  statusMessage += `- 📈 Msgs/hora: ${botData.msgsHr}\n`;
+  statusMessage += `- ⏳ Delay Médio: ${botData.responseTime.avg.toFixed(2)}s\n`;
+
+  let extraInfo = [];
+  if (botData.semPV) {
+    extraInfo.push('PV desabilitado');
+  }
+  if (botData.semConvites) {
+    extraInfo.push('não recebe convites');
+  }
+  if (extraInfo.length > 0) {
+    statusMessage += `- _${extraInfo.join(', ')}_\n`;
+  }
+
+  statusMessage += '\n';
+
+  return statusMessage;
+}
 
 async function statusCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
@@ -321,53 +391,28 @@ async function statusCommand(bot, message, args, group) {
 
   try {
     const response = await axios.get(url);
-    const bots = response.data.bots;
 
     let statusMessage = '🐦‍⬛ *Status das Ravenas* ️\n> https://ravena.moothz.win\n\n';
 
-    for (const botData of bots) {
-      if (botData.privado) continue;
+    const botsNormais = response.data.bots.filter(b => !b.comunitario && !b.vip);
+    const botsComunitarios = response.data.bots.filter(b => b.comunitario);
+    const botsVips = response.data.bots.filter(b =>  b.vip);
 
-      const now = new Date();
-      const lastMessageTime = new Date(botData.lastMessageReceived);
-      const diffMinutes = (now - lastMessageTime) / (1000 * 60);
-
-      let statusEmoji = '⚫️';
-      if (diffMinutes <= 15) {
-        statusEmoji = '🟢';
-      } else if (diffMinutes <= 30) {
-        statusEmoji = '🟡';
-      } else if (diffMinutes <= 60) {
-        statusEmoji = '🔴';
-      }
-
-      const tipoEmoji = botData.vip ? '💎' : botData.comunitario ? '🐓' : '';
-
-      statusMessage += `${statusEmoji} *${botData.id}* ${tipoEmoji}\n`;
-      statusMessage += `- 📞 Número: _+${botData.phoneNumber.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '$1 ($2) $3-$4')}_\n`;
-
-      if (diffMinutes <= 1) {
-        statusMessage += '- ⏲️ Última msg: Agora mesmo\n';
-      } else {
-        statusMessage += `- ⏲️ Última msg: ${Math.floor(diffMinutes)} minutos atrás\n`;
-      }
-      
-      statusMessage += `- 📈 Msgs/hora: ${botData.msgsHr}\n`;
-      statusMessage += `- ⏳ Delay Médio: ${botData.responseTime.avg.toFixed(2)}s\n`;
-
-      let extraInfo = [];
-      if (botData.semPV) {
-        extraInfo.push('PV desabilitado');
-      }
-      if (botData.semConvites) {
-        extraInfo.push('não recebe convites');
-      }
-      if (extraInfo.length > 0) {
-        statusMessage += `- _${extraInfo.join(', ')}_\n`;
-      }
-
-      statusMessage += '\n';
+    statusMessage += "🐦‍⬛ ravenas\n> as normais, de sempre!\n\n";
+    for (const botData of botsNormais) {
+      statusMessage += renderBotStatus(botData);      
     }
+
+    statusMessage += `🐓 *ravenas _comunitárias_*\n> gerenciadas por outra pessoa, !comunitaria pra mais info\n\n`;
+    for (const botData of botsComunitarios) {
+      statusMessage += renderBotStatus(botData);      
+    }
+
+    statusMessage += "💎 *ravenas _VIP_*\n> presente pros antigos doadores\n\n";
+    for (const botData of botsVips) {
+      statusMessage += renderBotStatus(botData);      
+    }
+
 
     const now = new Date();
     const dateString = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${(now.getFullYear()).toString().slice(2)}`;
@@ -468,6 +513,16 @@ const commands = [
       before: "🔐"
     },
     method: ravPrivadaCommand
+  }),
+  new Command({
+    name: 'comunitaria',
+    description: 'Info Ravena Comunitaria',
+    category: "geral",
+    hidden: true,
+    reactions: {
+      before: "🐓"
+    },
+    method: ravComunitariaCommand
   }),
   
   new Command({

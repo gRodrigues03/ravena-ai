@@ -333,6 +333,17 @@ function renderBotCard(botContainer, data, bot){
                 <span class="detail-label" style="width: 100%; text-align: center; color: #a2a20d">${txtDetalhes}</span>
             </div>`;
     }
+
+    let divResponsavel = "";
+
+    if(bot.numeroResponsavel){
+        const phoneNumberResponsavel = formatPhoneNumber(extractPhoneFromBotId(bot.numeroResponsavel)).replace("+55","").trim();
+        divResponsavel = `             <div class="detail-item">
+                <span class="detail-label">Responsável:</span>
+                <span class="detail-value">${phoneNumberResponsavel}</span>
+            </div>`;
+    }
+    
     botCard.innerHTML = `
         <div class="bot-header">
             <div class="bot-title">
@@ -348,6 +359,7 @@ function renderBotCard(botContainer, data, bot){
                 <span class="detail-label">Telefone:</span>
                 <span class="detail-value">${phoneNumber || 'Não disponível'}</span>
             </div>
+            ${divResponsavel}
             <div class="detail-item">
                 <span class="detail-label">Última mensagem:</span>
                 <span class="detail-value tooltip-container">

@@ -128,6 +128,7 @@ class BotAPI {
               semConvites: bot.ignoreInvites || false,
               banido: bot.banido || false,
               comunitario: bot.comunitario || false,
+              numeroResponsavel: bot.numeroResponsavel || false,
               vip: bot.vip || false
             };
           })
@@ -152,6 +153,7 @@ class BotAPI {
             semConvites: bot.ignoreInvites || false,
             banido: bot.banido || false,
             comunitario: bot.comunitario || false,
+            numeroResponsavel: bot.numeroResponsavel || false,
             vip: bot.vip || false
           }))
         });
