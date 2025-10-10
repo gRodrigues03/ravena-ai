@@ -328,7 +328,7 @@ class CustomVariableProcessor {
               try {
                 // Obtém informações do contato mencionado
                 mentionContact = await context.bot.client.getContactById(mentionId);
-                mentionName = `@${mentionContact.number || mentionContact.id.user}`;
+                mentionName = `@${mentionContact?.number?.split('@')[0] || mentionContact?.id?.user.split('@')[0]}`;
               } catch (err) {
                 this.logger.error('Erro ao obter contato mencionado:', err);
                 mentionName = `@${mentionId.split('@')[0]}`;
@@ -349,7 +349,7 @@ class CustomVariableProcessor {
               const mentionContact = await quotedMsg.getContact();
               if (mentionContact) {
                 mentionId = mentionContact.id._serialized;
-                mentionName = `@${mentionContact.number || mentionContact.id.user}`;
+                mentionName = `@${mentionContact?.number?.split('@')[0] || mentionContact?.id?.user?.split('@')[0]}`;
                 
                 // Marca esta menção como usada
                 usedMentions.push(mentionId);
@@ -363,7 +363,7 @@ class CustomVariableProcessor {
           // 3. Se não há mensagem citada ou já foi usada, seleciona um membro aleatório - a não ser que tenha um fallback especificado
           if(fallbackNumber){
               const mentionContact = await context.bot.client.getContactById(fallbackNumber);
-              mentionName = `@${mentionContact.number || mentionContact.id.user}`;
+              mentionName = `@${mentionContact?.number?.split('@')[0] || mentionContact?.id?.user?.split('@')[0]}`;
 
               return { mentionId: fallbackNumber, mentionName, mentionContact };
           } else {
@@ -387,7 +387,7 @@ class CustomVariableProcessor {
                     
                     // Obtém o objeto de contato
                     const mentionContact = await context.bot.client.getContactById(mentionId);
-                    mentionName = `@${mentionContact.number || mentionContact.id.user}`;
+                    mentionName = `@${mentionContact?.number?.split('@')[0] || mentionContact?.id?.user?.split('@')[0]}`;
                     
                     // Marca esta menção como usada
                     usedMentions.push(mentionId);
@@ -406,7 +406,7 @@ class CustomVariableProcessor {
                       
                       // Obtém o objeto de contato
                       const mentionContact = await context.bot.client.getContactById(mentionId);
-                      mentionName = `@${mentionContact.number || mentionContact.id.user}`;
+                      mentionName = `@${mentionContact?.number?.split('@')[0] || mentionContact?.id?.user?.split('@')[0]}`;
                       
                       return { mentionId, mentionName, mentionContact };
                     }

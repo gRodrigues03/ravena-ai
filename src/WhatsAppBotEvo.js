@@ -1587,7 +1587,7 @@
     }
 
     async sendMessage(chatId, content, options = {}) {
-      this.logger.debug(`[${this.id}] sendMessage to ${chatId} (Type: ${typeof content} / ${JSON.stringify(options).substring(0,150)})`); // , {content: typeof content === 'string' ? content.substring(0,30) : content, options}
+      this.logger.debug(`[${this.id}] sendMessage to ${chatId} (Type: ${typeof content} / ${JSON.stringify(options).substring(0,300)})`); // , {content: typeof content === 'string' ? content.substring(0,30) : content, options}
       try {
         const isGroup = chatId.endsWith('@g.us');
         this.loadReport.trackSentMessage(isGroup); // From original bot
@@ -1622,6 +1622,7 @@
         } else {
           if(options.mentions && options.mentions.length > 0){
             evoPayload.mentioned = options.mentions.map(s => s.split('@')[0]);
+            //this.logger.info(`[sendMessage] Debug mentioned`, {mentioned: evoPayload.mentioned});
           }
         }
 
@@ -1928,13 +1929,14 @@
         let contato;
         let contactId = ((typeof cid === "object") ? cid.id : cid) ?? null;
 
-        const number = contactId.split("@")[0];
+        const number = contactId; //.split("@")[0];
         contato = await this.recoverContactFromCache(number);
 
         if(!contato){
           //this.logger.debug(`[getContactDetails][${this.id}] Fetching contact details for: ${contactId}`);
           const profileData = await this.apiClient.post(`/chat/fetchProfile`, {number});
           if(profileData){
+            //this.logger.debug(`[getContactDetails][${this.id}] ${contactId}`, {profileData});
             contato = {
               isContact: false,
               id: { _serialized: contactId },
@@ -2172,7 +2174,7 @@
     }
 
     async _handleGroupParticipantsUpdate(groupUpdateData) {
-      this.logger.info(groupUpdateData);
+      this.logger.info("[_handleGroupParticipantsUpdate] ", {groupUpdateData});
 
       const groupId = groupUpdateData.id;
       const action = groupUpdateData.action;
@@ -2183,7 +2185,7 @@
           if(groupUpdateData.subject){
             groupName = groupUpdateData.subject;
           } else {
-            this.logger.info(`[_handleGroupParticipantsUpdate] Não veio nome do grupo no evento, buscando infos de '${groupId}'`);
+            //this.logger.info(`[_handleGroupParticipantsUpdate] Não veio nome do grupo no evento, buscando infos de '${groupId}'`);
             const groupDetails = await this.getChatDetails(groupId);
             groupName = groupDetails?.name || groupId;
           }
@@ -2195,17 +2197,18 @@
             gUpdAuthor = groupUpdateData.owner ?? "123456789@c.us";
           }
           
-          this.logger.debug(`[_handleGroupParticipantsUpdate][getContactDetails] responsibleContact`, {gUpdAuthor, groupUpdateData});
+          //this.logger.debug(`[_handleGroupParticipantsUpdate][getContactDetails] responsibleContact`, {gUpdAuthor, groupUpdateData});
           const responsibleContact = await this.getContactDetails(gUpdAuthor) ?? {id: gUpdAuthor.split("@")[0]+"@c.us", name: "Admin do Grupo"};
 
           for (const uid of participants) { // Dispara 1x para cada participant add
               const userId = (typeof uid === "object") ? uid.id : uid;
-              this.logger.debug(`[_handleGroupParticipantsUpdate][getContactDetails] userContact`, userId);
+              //this.logger.debug(`[_handleGroupParticipantsUpdate][getContactDetails] userContact`, userId);
               const userContact = await this.getContactDetails(userId);
 
               const eventData = {
                   group: { id: groupId, name: groupName },
-                  user: { id: userId.split('@')[0]+"@c.us", name: userContact?.name || userId.split('@')[0] },
+                  //user: { id: userId.split('@')[0]+"@c.us", name: userContact?.name || userId.split('@')[0] },
+                  user: { id: userId, name: userContact?.name || userId.split('@')[0] },
                   responsavel: { id: responsibleContact.id?._serialized, name: responsibleContact.name || 'Sistema' },
                   origin: { 
                       ...groupUpdateData, // Raw data from webhook related to this specific update

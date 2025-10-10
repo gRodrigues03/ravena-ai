@@ -524,7 +524,9 @@ class EventHandler {
    * @param {Object} data - Dados do evento
    */
   async processGroupJoin(bot, data) {
-    this.logger.info(`Usuário ${data.user.name} (${data.user.id}) entrou no grupo ${data.group.name} (${data.group.id}). Quem adicionou: ${data.responsavel.name}/${data.responsavel.id}`);
+    this.logger.info(`[processGroupJoin] `, {data});
+    
+    //this.logger.info(`Usuário ${data.user.name} (${data.user.id}) entrou no grupo ${data.group.name} (${data.group.id}). Quem adicionou: ${data.responsavel.name}/${data.responsavel.id}`);
     
     try {
       // Obtém os dados completos do chat
@@ -734,6 +736,8 @@ class EventHandler {
     try {
       if (!group.greetings) return null;
       
+      this.logger.info(`[generateGreetingMessage] `, {group, user, chatData});
+
       // Obtém os dados completos do chat, se não fornecidos
       if (!chatData) {
         try {

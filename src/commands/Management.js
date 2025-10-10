@@ -1771,7 +1771,7 @@ async setWelcomeMessage(bot, message, args, group) {
       // Zera mensagem
       group.customAIPrompt = "";
     } else {
-      group.customAIPrompt = args.join(" ").slice(0,150);
+      group.customAIPrompt = args.join(" ").slice(0,250);
     }
     
     
