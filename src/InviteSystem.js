@@ -195,8 +195,12 @@ class InviteSystem {
       if (this.bot.grupoInvites) {
         try {
           const inviteInfo = await this.bot.client.getInviteInfo(inviteCode);
-          console.log(inviteInfo);
-
+          this.logger.debug(`[inviteInfo] `, {inviteInfo});
+        } catch(ivInfoError){
+          this.logger.error('Erro buscando inviteInfo', ivInfoError);
+        }
+        
+        try {
           // Verifica se o autor está na lista de doadores
           let isDonator = false;
           let infoMessage = "";
