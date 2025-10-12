@@ -6,6 +6,7 @@ const AdminUtils = require('./utils/AdminUtils');
 const CustomVariableProcessor = require('./utils/CustomVariableProcessor');
 const LLMService = require('./services/LLMService');
 const SpeechCommands = require('./functions/SpeechCommands');
+const { aiCommand } = require('./functions/AICommands');
 const SummaryCommands = require('./functions/SummaryCommands');
 const NSFWPredict = require('./utils/NSFWPredict');
 const MuNewsCommands = require('./functions/MuNewsCommands');
@@ -164,7 +165,12 @@ class EventHandler {
 
       // Se mensagem de grupo, obtém ou cria o grupo
       let group = null;
+
+
       if (message.group) {
+        // Armazena mensagem para histórico de conversação
+        SummaryCommands.storeMessage(message, message.group);
+
         group = await this.getOrCreateGroup(message.group);
         if(!group.botNotInGroup){
           group.botNotInGroup = [];
@@ -177,8 +183,6 @@ class EventHandler {
           }
         }
         
-        // Armazena mensagem para histórico de conversação
-        await SummaryCommands.storeMessage(message, group);
         
         // Verifica apelido do usuário e atualiza o nome se necessário
         if (group.nicks && Array.isArray(group.nicks)) {
@@ -255,6 +259,9 @@ class EventHandler {
         if (await this.applyFilters(bot, message, group)) {
           return; // Mensagem foi filtrada
         }
+      } else {
+        // Armazena mensagem para histórico de conversação no pv
+        SummaryCommands.storeMessage(message, message.group);
       }
         
       
@@ -317,8 +324,22 @@ class EventHandler {
    */
   async processNonCommandMessage(bot, message, group) {
     // Verifica se é uma mensagem de voz para processamento automático de STT    
-    const processed = await SpeechCommands.processAutoSTT(bot, message, group);
-    if (processed) return;
+    const processed = await SpeechCommands.processAutoSTT(bot, message, group, {returnResult: true});
+    if (processed){
+      message.content = `Audio[${processed}]`;
+      message.caption = `Audio[${processed}]`;
+
+      // Armazena também áudios no histórico!
+      SummaryCommands.storeMessage(message, message.author);
+
+      if(false && bot.pvAI && processed.length > 0){ // Desabilitado por enquanto
+        this.logger.debug(`[processNonCommandMessage] Recebido áudio no PV e trasncrito, chamando LLM com '${processed}'`);
+        // Usa texto extraído do áudio como entrada pro LLM
+        const msgsLLM = await aiCommand(bot, message, [], group);
+        bot.sendReturnMessages(msgsLLM);
+      }
+      return;
+    } 
 
     let ignorePV = bot.ignorePV && bot.notInWhitelist(message.author) && message.group === null; 
 
@@ -335,20 +356,28 @@ class EventHandler {
       }
     }
 
-    if (group && message.type === 'text') {
-
-      // Vê se a mensagem não é um MuNews
-      try {
-        const isNewsDetected = await MuNewsCommands.detectNews(message.content, group.id);
-        if (isNewsDetected) {
-          // Opcionalmente, envia uma confirmação de que a MuNews foi detectada e salva
-          bot.sendMessage(process.env.GRUPO_LOGS, "📰 *MuNews detectada e salva!*").catch(error => {
-            this.logger.error('Erro ao enviar confirmação de MuNews:', error);
-          });
-          return;
+    if (message.type === 'text') {
+      if(group){
+        // Vê se a mensagem não é um MuNews
+        try {
+          const isNewsDetected = await MuNewsCommands.detectNews(message.content, group.id);
+          if (isNewsDetected) {
+            // Opcionalmente, envia uma confirmação de que a MuNews foi detectada e salva
+            bot.sendMessage(process.env.GRUPO_LOGS, "📰 *MuNews detectada e salva!*").catch(error => {
+              this.logger.error('Erro ao enviar confirmação de MuNews:', error);
+            });
+            return;
+          }
+        } catch (error) {
+          this.logger.error('Erro ao verificar MuNews:', error);
         }
-      } catch (error) {
-        this.logger.error('Erro ao verificar MuNews:', error);
+      } else {
+        // Msg no PV, responder usando IA
+        if(bot.pvAI){
+          this.logger.debug(`[processNonCommandMessage] PV sem comando, chamando LLM com '${message.content}'`);
+          const msgsLLM = await aiCommand(bot, message, [], group);
+          bot.sendReturnMessages(msgsLLM);
+        }
       }
     }
         
@@ -736,7 +765,8 @@ class EventHandler {
     try {
       if (!group.greetings) return null;
       
-      this.logger.info(`[generateGreetingMessage] `, {group, user, chatData});
+      // MENTIONS QUEBRADOS POR CAUSA DE LID
+      //this.logger.info(`[generateGreetingMessage] `, {group, user, chatData});
 
       // Obtém os dados completos do chat, se não fornecidos
       if (!chatData) {

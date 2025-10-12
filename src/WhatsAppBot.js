@@ -45,6 +45,7 @@ class WhatsAppBot {
     this.puppeteerOptions = options.puppeteerOptions || {};
     this.otherBots = options.otherBots || [];
     this.notificarDonate = options.notificarDonate;
+    this.pvAI = options.pvAI;
     
     // Acesso pelo painel por terceiros
     this.privado = options.privado ?? false;

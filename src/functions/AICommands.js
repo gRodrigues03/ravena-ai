@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs').promises;
 const Logger = require('../utils/Logger');
+const { getRecentMessages, formatMessagesForPrompt } = require('./SummaryCommands');
 const LLMService = require('../services/LLMService');
 const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
@@ -28,7 +29,7 @@ async function aiCommand(bot, message, args, group) {
   for(let cmd of fixedCommands){
     if(cmd.description && cmd.description.length > 0 && !cmd.description.toLowerCase().includes("alias") && !cmd.hidden){
       const usage = cmd.usage ? ` | Uso: ${cmd.usage}`: "";
-    	cmdSimpleList += `- ${bot.prefix}${cmd.name}: ${cmd.description}${usage}\n`;
+      cmdSimpleList += `- ${bot.prefix}${cmd.name}: ${cmd.description}${usage}\n`;
     }
   }
   for(let cmd in managementCommands){
@@ -39,7 +40,15 @@ async function aiCommand(bot, message, args, group) {
   const variaveisReturn = await bot.eventHandler.commandHandler.management.listVariables(bot, message, args, group);
   const variaveisList = variaveisReturn.content;
 
-  ctxContent += `\n\n## Comandos que você pode processar:\n\n${cmdSimpleList}\n\nPara os comandos personalizados criados com g-addCmd, você pode usar variáveis:\n${variaveisList}\n\nEstes são os comandos usados apenas por administradores para gerenciarem seus grupos: ${cmdGerenciaSimplesList}\n\nSempre que for informar uma variável em um comando, use {} para encapsular ela, como {titulo}, {pessoa}. Quando o comando de gerencia pedir mídia, o comando deve ser enviado na legenda da foto/vídeo ou em resposta (reply) à mensagem que contém midia. Lembre o usuário que com o comando !g-painel algumas configurações do gerenciar são mais fáceis de fazer, como mensagem de boas vindas e canais da twitch/youtube`;
+
+  let historicoCtx = "";
+  const msgsRecentes = (await getRecentMessages(chatId)).slice(0,15);
+
+  logger.debug(`[aiCommand] ${msgsRecentes.length} msgs recentes com ${chatId}`);
+  if(msgsRecentes.length > 0){
+    historicoCtx = `\n\nContexto das últimas mensagens deste chat: ---------------\n${formatMessagesForPrompt(msgsRecentes)}\n---------------\n`;
+  }
+  ctxContent += `\n\n## Comandos que você pode processar:\n\n${cmdSimpleList}\n\nPara os comandos personalizados criados com g-addCmd, você pode usar variáveis:\n${variaveisList}\n\nEstes são os comandos usados apenas por administradores para gerenciarem seus grupos: ${cmdGerenciaSimplesList}\n\nSempre que for informar uma variável em um comando, use {} para encapsular ela, como {titulo}, {pessoa}. Quando o comando de gerencia pedir mídia, o comando deve ser enviado na legenda da foto/vídeo ou em resposta (reply) à mensagem que contém midia. Lembre o usuário que com o comando !g-painel algumas configurações do gerenciar são mais fáceis de fazer, como mensagem de boas vindas e canais da twitch/youtube${historicoCtx}`;
   
   const customPersonalidade = (group?.customAIPrompt && group?.customAIPrompt?.length > 0) ? `\n\n((Sua personalidade: '${group.customAIPrompt}'))\n\n` : "";
 
@@ -47,9 +56,6 @@ async function aiCommand(bot, message, args, group) {
     logger.info(`[aiCommand][${group.name}] Personalidade custom: ${group.customAIPrompt}`);
     ctxContent += customPersonalidade;
   }
-
-
-  
   
   let question = (args.length > 0) ? args.join(" ") : (message.caption ?? message.content);
   const quotedMsg = await message.origin.getQuotedMessage();

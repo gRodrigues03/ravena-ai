@@ -208,13 +208,11 @@ ${formattedMessages}`;
 /**
  * Armazena uma mensagem no histórico de conversas do grupo
  * @param {Object} message - Os dados da mensagem
- * @param {Object} group - Os dados do grupo
+ * @param {Object} chatId - Id do grupo
  */
-async function storeMessage(message, group) {
-  try {
-    if (!message.group || !group) return;
-    
-    const conversationFile = path.join(dataDir, `latest-messages-${group.id}.json`);
+async function storeMessage(message, chatId) {
+  try {  
+    const conversationFile = path.join(dataDir, `latest-messages-${chatId}.json`);
     
     // Carrega mensagens existentes
     let messages = [];
@@ -223,7 +221,7 @@ async function storeMessage(message, group) {
       messages = JSON.parse(data);
     } catch (error) {
       // Arquivo provavelmente não existe ainda, tudo bem
-      logger.debug(`Nenhum arquivo de conversa existente para ${group.id}`);
+      logger.debug(`Nenhum arquivo de conversa existente para ${chatId}`);
     }
     
     // Adiciona nova mensagem
@@ -245,7 +243,7 @@ async function storeMessage(message, group) {
 
         if(response && !response.includes("Não foi poss") && !response.includes("Ocorreu um erro")){
           textContent = message.caption ? `${response}\nLegenda: ${message.caption}` : response;
-          logger.info(`[${group.id}][storeMessage] Imagem interpretada: ${textContent}`);
+          logger.info(`[${chatId}][storeMessage] Imagem interpretada: ${textContent}`);
         }
       }
     }
@@ -269,7 +267,7 @@ async function storeMessage(message, group) {
       
       // Salva mensagens atualizadas
       await fs.writeFile(conversationFile, JSON.stringify(messages, null, 2), 'utf8');
-      //logger.debug(`Mensagem armazenada no arquivo de conversa para ${group.id}`);
+      //logger.debug(`Mensagem armazenada no arquivo de conversa para ${chatId}`);
     }
   } catch (error) {
     logger.error('Erro ao armazenar mensagem:', error);
@@ -278,19 +276,19 @@ async function storeMessage(message, group) {
 
 /**
  * Obtém mensagens recentes para um grupo
- * @param {string} groupId - O ID do grupo
+ * @param {string} chatId - O ID do grupo
  * @returns {Promise<Array>} - Array de objetos de mensagem
  */
-async function getRecentMessages(groupId) {
+async function getRecentMessages(chatId) {
   try {
-    const conversationFile = path.join(dataDir, `latest-messages-${groupId}.json`);
+    const conversationFile = path.join(dataDir, `latest-messages-${chatId}.json`);
     
     // Carrega mensagens existentes
     try {
       const data = await fs.readFile(conversationFile, 'utf8');
       return JSON.parse(data);
     } catch (error) {
-      logger.debug(`Nenhum arquivo de conversa existente para ${groupId}`);
+      logger.debug(`Nenhum arquivo de conversa existente para ${chatId}`);
       return [];
     }
   } catch (error) {
@@ -301,19 +299,19 @@ async function getRecentMessages(groupId) {
 
 /**
  * Limpar as mensagens recentes para um grupo
- * @param {string} groupId - O ID do grupo
+ * @param {string} chatId - O ID do grupo
  * @returns {Promise<Bool>} - Se deu certo ou não
  */
-async function clearRecentMessages(groupId) {
+async function clearRecentMessages(chatId) {
   try {
-    const conversationFile = path.join(dataDir, `latest-messages-${groupId}.json`);
+    const conversationFile = path.join(dataDir, `latest-messages-${chatId}.json`);
     
     // Carrega mensagens existentes
     try {
       await fs.writeFile(conversationFile, "[]", 'utf8');
       return true;
     } catch (error) {
-      logger.debug(`Nenhum arquivo de conversa existente para ${groupId}`);
+      logger.debug(`Nenhum arquivo de conversa existente para ${chatId}`);
       return true;
     }
   } catch (error) {
@@ -358,8 +356,11 @@ const commands = [
   })
 ];
 
-// Exporta a função storeMessage para ser usada em EventHandler
+// Exporta as funções de histórico de conversa para serem usadas no EventHandler e outros
 module.exports.storeMessage = storeMessage;
+module.exports.getRecentMessages = getRecentMessages;
+module.exports.clearRecentMessages = clearRecentMessages;
+module.exports.formatMessagesForPrompt = formatMessagesForPrompt;
 
 // Exporta comandos
-module.exports.commands = commands;
+module.exports.commands = commands

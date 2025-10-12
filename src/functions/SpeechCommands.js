@@ -360,12 +360,9 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
           throw new Error('A API não retornou um executionId.');
         }
 
-        logger.info(`🚀 Processo de transcrição iniciado! ID de Execução: ${executionId}`);
-        logger.info(`Tempo estimado para a primeira verificação: ${estimatedTranscriptionTime} segundos.`);
-        logger.info('Verificando o status...');
+        logger.info(`[stt][${executionId}] ETA ${estimatedTranscriptionTime} segundos.`);
 
         // Avisa só se for demorar um pouquinho a mais
-
         if(estimatedTranscriptionTime > 15){
           bot.sendReturnMessages(new ReturnMessage({
             chatId: chatId,
@@ -496,7 +493,7 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
  * @param {Object} group - Dados do grupo
  * @returns {Promise<boolean>} - Se a mensagem foi processada
  */
-async function processAutoSTT(bot, message, group) {
+async function processAutoSTT(bot, message, group, opts) {
   const chatId = message.group || message.author;
   let audioPath = null;
   let wavPath = null;
@@ -550,20 +547,7 @@ async function processAutoSTT(bot, message, group) {
           throw new Error('A API não retornou um executionId.');
         }
 
-        logger.info(`🚀 Processo de transcrição iniciado! ID de Execução: ${executionId}`);
-        logger.info(`Tempo estimado para a primeira verificação: ${estimatedTranscriptionTime} segundos.`);
-        logger.info('Verificando o status...');
-
-        // No automático, não tem pq avisar sobre
-        // bot.sendReturnMessages(new ReturnMessage({
-        //   chatId: chatId,
-        //   content: `🔉 Transcrevendo áudio com _${audioDuration}s_, estimativa de _${estimatedTranscriptionTime}s_ até concluir.`,
-        //   options: {
-        //     quotedMessageId: message.origin.id._serialized,
-        //     evoReply: message.origin
-        //   }
-        // }));
-
+        logger.info(`[stt][${executionId}] ETA ${estimatedTranscriptionTime} segundos.`);
 
         let finalResult = null;
         let firstCheck = true;
@@ -617,40 +601,31 @@ async function processAutoSTT(bot, message, group) {
     }
 
     // Se a transcrição for bem-sucedida, envia-a
+    let contentRetorno = "";
     if (transcribedText && !transcribedText.includes("Erro ao transcrever áudio")) {
       // Cria ReturnMessage com a transcrição
+      contentRetorno = cleanupString(transcribedText?.trim() ?? "");
       const returnMessage = new ReturnMessage({
         chatId: chatId,
-        content: cleanupString(transcribedText?.trim() ?? ""),
+        content: contentRetorno,
         options: {
           quotedMessageId: message.origin.id._serialized,
           evoReply: message.origin
         }
       });
 
-      // Envia a mensagem
+      logger.info(`[processAutoSTT] Resultado STT enviado: ${transcribedText}`);
+
       await bot.sendReturnMessages(returnMessage);
-
-      logger.info(`[processAutoSTT] Resultado STT enviado com sucesso, processando via LLM uma melhoria para: ${transcribedText}`);
-
-      // Tenta melhorar o texto com LLM (assíncrono)
-      /*
-      try {
-        const improvedText = await llmService.getCompletion({
-          prompt: `Vou enviar no final deste prompt a transcrição de um áudio, coloque a pontuação mais adequada e formate corretamente maíusculas e minúsculas. Me retorne APENAS com a mensagem formatada: '${transcribedText}'`,
-        });
-
-        logger.info(`[processAutoSTT] Melhoramento via LLM recebido: ${improvedText}`);
-
-        // Nota: Aqui seria necessário um método para editar a mensagem já enviada
-      } catch (llmError) {
-        logger.error('[processAutoSTT] Melhoramento via LLM deu erro, ignorando.', llmError);
-      }*/
     } else {
       logger.warn(`[processAutoSTT] Transcrição vazia ou com erro para o chat ${chatId}`);
     }
 
-    return true;
+    if(opts.returnResult){
+      return contentRetorno;
+    } else {
+      return true;
+    }
   } catch (error) {
     logger.error('Erro no auto-STT:', error);
     return false;
