@@ -562,8 +562,8 @@ class EventHandler {
       const chat = await data.origin.getChat();
       
       // Verifica se o próprio bot é quem está entrando
-      const isBotJoining = data.user.id === bot.client.info.wid._serialized;
-      //console.log(`isBotJoining (${isBotJoining}}) = data.user.id (${data.user.id}) === bot.client.info.wid._serialized ${bot.client.info.wid._serialized}`);
+      const isBotJoining = data?.user?.id?.startsWith(bot.phoneNumber);
+      this.logger.debug(`[processGroupJoin] isBotJoining (${isBotJoining}}) = data.user.id (${data.user.id}) -startsWith- bot.phoneNumber ${bot.phoneNumber}`);
       
       // Obtém ou cria grupo
       const nomeGrupo = data.group?.name?.replace(/[^a-zA-Z0-9 ]/g, '').replace(/(?:^\w|[A-Z]|\b\w)/g, (w, i) => i === 0 ? w.toLowerCase() : w.toUpperCase()).replace(/\s+/g, '') ?? null;
@@ -574,9 +574,9 @@ class EventHandler {
       if (bot.grupoLogs) {
         try {
           if(isBotJoining){
-            bot.sendMessage(bot.grupoLogs, `🚪 Bot ${bot.id} entrou no grupo: ${data.group.name} (${nomeGrupo}/${data.group.id})\nQuem add: ${data.responsavel.name}/${data.responsavel.id}`).catch(error => {
-              this.logger.error('Erro ao enviar notificação de entrada no grupo para o grupo de logs:', error);
-            });
+            const msgJoin = `🚪 Bot ${bot.id} entrou no grupo: ${data.group.name} (${nomeGrupo}/${data.group.id})\nQuem add: ${data.responsavel.name}/${data.responsavel.id}`;
+            this.logger.info(`[processGroupJoin] ${msgJoin}`);
+            bot.sendMessage(bot.grupoLogs, msgJoin);
           }
         } catch (error) {
           this.logger.error('Erro ao enviar notificação de entrada no grupo para o grupo de logs:', error);
@@ -723,7 +723,12 @@ class EventHandler {
       const group = this.groups[data.group.id];
       
       // Verifica se é o bot que saiu
-      const isBotLeaving = data.user.id === bot.client.info.wid._serialized;
+
+      const isBotLeaving = data?.user?.id?.startsWith(bot.phoneNumber);
+      // NÃO FUNCIONA MAIS PQ VIROU LID
+      const infoGrupo = await bot.getChatById(data.group.id);
+
+      this.logger.debug(`[processGroupLeave] isBotLeaving (${isBotLeaving}}) = data.user.id (${data.user.id}) -startsWith- bot.phoneNumber ${bot.phoneNumber}`, {infoGrupo});
       
       // Envia notificação para o grupo de logs
       if (bot.grupoLogs) {

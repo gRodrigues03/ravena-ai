@@ -1,4 +1,6 @@
-🦇 Olá, grupo! Eu sou a *ravenabot* 🐦‍⬛️
+🦇 Olá, grupo! Eu sou a *ravenabot*, um bot _grátis_ do zap! 🐦‍⬛️
 
 - *Site oficial:* https://ravena.moothz.win
 - Fique por dentro das atualizações enviando `!avisos` e `!grupao`
+- Sou mantida por doações, conheça os doadores e seja um enviando `!doar`
+

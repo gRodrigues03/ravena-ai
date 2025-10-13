@@ -97,8 +97,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add new row to table
     addRowBtn.addEventListener('click', () => {
-        const newRow = createRow(Array.from(allHeaders), { enabled: false, nome: '', numero: '' });
-        botsTableBody.appendChild(newRow);
+        const generateRandomString = (length) => {
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234TUDO BOM, SEXTA FEIRA?U0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        };
+
+        const lastRow = botsTableBody.querySelector('tr:last-child');
+        
+        if (lastRow) {
+            const newRow = lastRow.cloneNode(true);
+            newRow.style.backgroundColor = '';
+
+            const inputs = newRow.querySelectorAll('input');
+            inputs.forEach(input => {
+                const key = input.dataset.key;
+                if (key === 'managementPW') {
+                    input.value = generateRandomString(15);
+                } else if (input.type === 'checkbox') {
+                    input.checked = false;
+                } else {
+                    input.value = '';
+                }
+            });
+
+            const deleteBtn = newRow.querySelector('.delete-btn');
+            if (deleteBtn) {
+                deleteBtn.onclick = () => newRow.remove();
+            }
+
+            botsTableBody.appendChild(newRow);
+        } else {
+            // Fallback for an empty table
+            const botData = {};
+            Array.from(allHeaders).forEach(header => {
+                if (header === 'managementPW') {
+                    botData[header] = generateRandomString(15);
+                } else if (header === 'enabled') {
+                    botData[header] = false;
+                } else {
+                    botData[header] = '';
+                }
+            });
+            const newRow = createRow(Array.from(allHeaders), botData);
+            botsTableBody.appendChild(newRow);
+        }
     });
 
     // Save all changes

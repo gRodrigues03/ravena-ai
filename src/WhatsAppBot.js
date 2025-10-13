@@ -102,7 +102,13 @@ class WhatsAppBot {
    * Inicializa o cliente WhatsApp
    */
   async initialize() {
-    this.logger.info(`Inicializando instância de bot ${this.id}, prefixo ${this.prefix}`);
+    this.logger.info(`Inicializando instância de bot ${this.id}, prefixo ${this.prefix}. `, {
+      grupoLogs: this.grupoLogs,
+      grupoInvites: this.grupoInvites,
+      grupoAvisos: this.grupoAvisos,
+      grupoInteracao: this.grupoInteracao,
+      grupoEstabilidade: this.grupoEstabilidade
+    });
 
     this.database.registerBotInstance(this);
 

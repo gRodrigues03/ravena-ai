@@ -861,7 +861,13 @@
       const wsUrl = `${this.evolutionWS}/${this.instanceName}`;
 
       const instanceDesc = this.websocket ? `Websocket to ${wsUrl}` : `Webhook on ${this.instanceName}:${this.webhookPort}`; 
-      this.logger.info(`[${this.id}] Initializing Evolution API bot instance ${this.instanceName} (Evo Instance: ${instanceDesc})`);
+      this.logger.info(`[${this.id}] Initializing Evolution API bot instance ${this.instanceName} (Evo Instance: ${instanceDesc})`, {
+        grupoLogs: this.grupoLogs,
+        grupoInvites: this.grupoInvites,
+        grupoAvisos: this.grupoAvisos,
+        grupoInteracao: this.grupoInteracao,
+        grupoEstabilidade: this.grupoEstabilidade
+      });
       this.database.registerBotInstance(this);
       this.startupTime = Date.now();
 

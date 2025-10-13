@@ -259,7 +259,7 @@ async function main() {
 
   process.on('uncaughtException', err => {
     logger.error("---- Erro Não tratado ");
-    logger.error(err);
+    logger.error(err.stack);
     logger.error("---- Fim ");
   });
 }
