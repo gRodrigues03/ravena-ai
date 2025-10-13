@@ -1429,7 +1429,7 @@
               return;
             }
 
-            const mentions = (evoMessageData.contextInfo?.mentionedJid ?? []).map(m => m.split("@")[0]+"@c.us");
+            const mentions = (evoMessageData.contextInfo?.mentionedJid ?? []); //.map(m => m.split("@")[0]+"@c.us");
             const authorContact = this.getContactDetails(author);
             const authorName = authorContact.pushName;
 
@@ -1629,7 +1629,7 @@
           evoPayload.mentionEveryOne = true;
         } else {
           if(options.mentions && options.mentions.length > 0){
-            evoPayload.mentioned = options.mentions.map(s => s.split('@')[0]);
+            evoPayload.mentioned = options.mentions; //.map(s => s.split('@')[0]);
             //this.logger.info(`[sendMessage] Debug mentioned`, {mentioned: evoPayload.mentioned});
           }
         }
