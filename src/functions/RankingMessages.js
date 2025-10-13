@@ -109,9 +109,9 @@ async function processMessage(message) {
     const chatId = message.group || message.author;
     
     // Obtém nome do usuário
-    let userName = "Fulano";
+    let userName = message.author;
     try {
-        userName = message.pushname ?? message.authorName ?? message.name ?? "Fulano";
+        userName = message.pushname ?? message.authorName ?? message.name ?? message.author ?? "Fulano";
     } catch (error) {
       logger.error('Erro ao obter nome da pessoa que enviou msg:', {error, message});
     }
