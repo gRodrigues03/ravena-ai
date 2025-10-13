@@ -109,14 +109,11 @@ async function processMessage(message) {
     const chatId = message.group || message.author;
     
     // Obtém nome do usuário
-    let userName = "Usuário";
+    let userName = "Fulano";
     try {
-      if (message.origin && message.origin.getContact) {
-        const contact = await message.origin.getContact();
-        userName = contact.pushname || contact.name || "Usuário";
-      }
+        userName = message.pushname ?? message.authorName ?? message.name ?? "Fulano";
     } catch (error) {
-      logger.error('Erro ao obter nome do contato:', error);
+      logger.error('Erro ao obter nome da pessoa que enviou msg:', {error, message});
     }
     
     // Atualiza contagem de mensagens
