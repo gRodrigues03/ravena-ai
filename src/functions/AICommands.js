@@ -72,14 +72,30 @@ async function aiCommand(bot, message, args, group) {
 
   const media = await getMediaFromMessage(message);
   if (!media && question.length < 5) {
-    return new ReturnMessage({
-      chatId: chatId,
-      content: 'Por favor, forneça uma pergunta ou uma imagem com uma pergunta. Exemplo: !ai Qual é a capital da França?',
-      options: {
-        quotedMessageId: message.origin.id._serialized,
-        evoReply: message.origin
-      }
-    });
+    // Envia o greeting se o PV estiver com IA habilitado
+    if(bot.pvAI){
+      const greetingPath = path.join(database.databasePath, 'textos', 'bot-greeting.txt');
+      let greetingContent = await fs.readFile(greetingPath, 'utf8') ?? "Oi, eu sou a ravenabot!";
+      
+      return new ReturnMessage({
+        chatId: chatId,
+        content: greetingContent,
+        reaction: "👋",
+        options: {
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
+        }
+      });
+    } else {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça uma pergunta ou uma imagem com uma pergunta. Exemplo: !ai Qual é a capital da França?',
+        options: {
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
+        }
+      });
+    }
   }
   
 

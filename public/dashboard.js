@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         headers.forEach(header => {
             const th = document.createElement('th');
             th.textContent = header;
+            th.className = header;
             headerRow.appendChild(th);
         });
         const actionTh = document.createElement('th');

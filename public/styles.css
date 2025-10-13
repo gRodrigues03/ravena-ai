@@ -814,6 +814,12 @@ nav a.active {
 .table-container {
     overflow-x: auto;
 }
+#botsTable th.nome{
+    min-width: 150px;
+}
+#botsTable th.numero{
+    min-width: 150px;
+}
 
 #botsTable {
     width: 100%;
@@ -835,7 +841,7 @@ nav a.active {
 }
 
 #botsTable tr:nth-child(even) {
-    background-color: #2c2a5a;
+    background-color: #413e88;;
 }
 
 #botsTable input[type="text"],
