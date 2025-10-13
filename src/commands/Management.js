@@ -3944,10 +3944,10 @@ async setWelcomeMessage(bot, message, args, group) {
       // Get the string to mute (full argument string)
       const muteString = args.join(' ');
       
-      if(muteString.length < 3){
+      if(muteString.length < 1){
         return new ReturnMessage({
           chatId: group.id,
-          content: `O *mute* precisa de pelo menos *3* caracteres (informado: '${muteString})'`
+          content: `O *mute* precisa de pelo menos *1* caracteres (informado: '${muteString})'`
         });
       } else {        
         // Initialize mutedStringsgs array if it doesn't exist
@@ -3965,7 +3965,7 @@ async setWelcomeMessage(bot, message, args, group) {
           
           return new ReturnMessage({
             chatId: group.id,
-            content: `Mensagens começando com "${muteString}" não serão mais ignoradas.`
+            content: `Mensagens começando com "${muteString}" não serão mais ignoradas (reactions incluídas).`
           });
         } else {
           // Add string to muted list
@@ -3974,7 +3974,7 @@ async setWelcomeMessage(bot, message, args, group) {
           
           return new ReturnMessage({
             chatId: group.id,
-            content: `Mensagens começando com "${muteString}" serão ignoradas.`
+            content: `Mensagens começando com "${muteString}" serão ignoradas (reactions incluídas).`
           });
         }
       }

@@ -97,7 +97,8 @@ class ReactionsHandler {
   async processReaction(bot, reaction) {
     try {
       //this.logger.info(`Processando reação: ${reaction.reaction} de ${reaction.senderId} na mensagem ${reaction.msgId._serialized}`);
-      
+
+
       // Verifica se este emoji mapeia para um comando
       const commandName = this.reactionCommands[reaction.reaction];
       if (!commandName) {
@@ -120,7 +121,6 @@ class ReactionsHandler {
       // Encontra e executa o comando
       const command = bot.eventHandler.commandHandler.fixedCommands.getCommand(commandName);
       if (command) {
-        this.logger.info(`Executando comando ${commandName} via reação ${reaction.reaction}`);
         
         // Extrai argumentos do conteúdo da mensagem, se disponível
         const msgText = formattedMessage.type === 'text' ? formattedMessage.content : formattedMessage.caption;
@@ -131,13 +131,25 @@ class ReactionsHandler {
         if (formattedMessage.group) {
           group = await bot.eventHandler.getOrCreateGroup(formattedMessage.group);
 
-          // Se o grupo estiver pausado, ignora a reação
-          if (group.paused) {
+          if (group.mutedStrings && Array.isArray(group.mutedStrings)) {
+            //this.logger.debug(`[processReaction] ${reaction.reaction}`, {muted: group.mutedStrings})
+            const isIgnored = group.mutedStrings.some(str => {
+              return str.includes(reaction.reaction);
+            });
+            
+            if (isIgnored) {
+              this.logger.debug(`Ignorando reação do comando '${commandName}' (${reaction.reaction}), mutada no grupo '${group.name}'`);
+              return false;
+            }
+          } else
+          if (group.paused) { // Se o grupo estiver pausado, ignora a reação
             this.logger.info(`Ignorando reação em grupo pausado: ${formattedMessage.group}`);
             return false;
           }
         }
         
+        this.logger.info(`Executando comando ${commandName} via reação ${reaction.reaction}`);
+
         // Executa o comando
         await bot.eventHandler.commandHandler.executeFixedCommand(bot, formattedMessage, command, args, group);
         return true;

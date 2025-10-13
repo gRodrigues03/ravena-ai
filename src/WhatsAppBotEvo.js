@@ -36,20 +36,6 @@
   const convertAsync = promisify(imagemagick.convert);
 
   class WhatsAppBotEvo {
-    /**
-     * @param {Object} options
-     * @param {string} options.id - Your internal Bot ID
-     * @param {string} options.phoneNumber - Phone number (for reference or if API needs it)
-     * @param {Object} options.eventHandler - Instance of your EventHandler
-     * @param {string} options.prefix
-     * @param {Array} options.otherBots
-     * @param {string} options.evolutionApiUrl - Base URL of Evolution API
-     * @param {string} options.evolutionApiKey - API Key for Evolution API
-     * @param {string} options.instanceName - Name of the Evolution API instance
-     * @param {string} options.webhookHost - Publicly accessible host for webhook (e.g., https://your.domain.com)
-     * @param {number} options.webhookPort - Local port for Express server to listen on
-     * @param {string} options.userAgent - (May not be used directly with Evo API but kept for options consistency)
-     */
     constructor(options) {
       this.id = options.id;
       this.vip = options.vip;
@@ -1886,9 +1872,7 @@
 
         // ## 4. Schedule the copied file for deletion after 10 minutes
         setTimeout((ofp,ofn) => {
-          fs.unlinkSync(ofp)
-            .then(() => console.log(`[createMedia] Deleted temporary file: ${ofn}`))
-            .catch(err => console.error(`[createMedia] Error deleting temp file ${ofn}:`, err));
+          fs.unlinkSync(ofp);
         }, 10 * 60 * 1000, outputFilePath, outputFileName); // 10 minutes in milliseconds
 
         // ## 5. Prepare data for the return object
