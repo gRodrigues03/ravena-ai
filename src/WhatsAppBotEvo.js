@@ -107,7 +107,7 @@
       this.grupoLogs = options.grupoLogs || process.env.GRUPO_LOGS;
       this.grupoInvites = options.grupoInvites || process.env.GRUPO_INVITES;
       this.grupoAvisos = options.grupoAvisos || process.env.GRUPO_AVISOS;
-      // ... other group IDs ...
+
       this.userAgent = options.userAgent || process.env.USER_AGENT;
 
 
@@ -391,16 +391,13 @@
     }
 
     async convertToSquarePNGImage(base64ImageContent) {
-      // tempId can still be useful for logging traceability, even without temp files
       const tempId = randomBytes(16).toString('hex');
 
       try {
-        // Validate and decode base64 input
         if (!base64ImageContent || typeof base64ImageContent !== 'string') {
           throw new Error('Invalid base64ImageContent: Must be a non-empty string.');
         }
 
-        //this.logger.info(`[convertToSquarePNGImage] [${tempId}] Input is base64. Decoding...`);
         const base64Data = base64ImageContent.includes(',') ? base64ImageContent.split(',')[1] : base64ImageContent;
 
         if (!base64Data) {
@@ -408,15 +405,8 @@
         }
 
         const imageBuffer = Buffer.from(base64Data, 'base64');
-        //this.logger.info(`[convertToSquarePNGImage] [${tempId}] Base64 decoded to buffer. Input buffer length: ${imageBuffer.length}`);
-
         const targetSize = 800; // Target dimension for the square output
-        //this.logger.info(`[convertToSquarePNGImage] [${tempId}] Starting square PNG image conversion with Sharp. Target size: ${targetSize}x${targetSize}`);
 
-        // 1. Resize the image to fit within targetSize, preserving aspect ratio.
-        //    'sharp.fit.inside' is equivalent to ffmpeg's 'force_original_aspect_ratio=decrease'.
-        //    'withoutEnlargement: false' ensures images smaller than targetSize ARE scaled up.
-        //    'kernel: sharp.kernel.lanczos3' uses Lanczos3 for high-quality resizing.
         const resizedImageBuffer = await sharp(imageBuffer)
           .resize({
             width: targetSize,
@@ -427,11 +417,6 @@
           })
           .toBuffer(); // Get the resized image as a buffer
 
-        //this.logger.info(`[convertToSquarePNGImage] [${tempId}] Image resized with Sharp.`);
-
-        // 2. Create a new transparent square canvas and composite the resized image onto it.
-        //    The 'gravity: sharp.gravity.center' option will center the resized image.
-        //    The background '{ r: 0, g: 0, b: 0, alpha: 0 }' makes the padding transparent.
         const finalImageBuffer = await sharp({
           create: {
             width: targetSize,
@@ -451,17 +436,12 @@
         })
         .toBuffer();
 
-        //this.logger.info(`[convertToSquarePNGImage] [${tempId}] Square PNG image created and composited with Sharp.`);
-
-        // Convert the final image buffer to a base64 string
         const base64Png = finalImageBuffer.toString('base64');
-        //this.logger.info(`[convertToSquarePNGImage] [${tempId}] Final PNG image converted to base64.`);
 
-        return base64Png; // Return raw base64 string
-
+        return base64Png;
       } catch (error) {
         this.logger.error(`[convertToSquarePNGImage] [${tempId}] Error during Sharp processing: ${error.message}`, error.stack);
-        throw error; // Re-throw the error to be caught by the caller
+        throw error;
       }
     }
 
@@ -513,7 +493,7 @@
     }
 
     async convertToSquareAnimatedGif(inputContent, keepFile = false) {
-      console.log("[convertToSquareAnimatedGif] ",inputContent.substring(0, 30));
+      this.logger.info("[convertToSquareAnimatedGif] ",inputContent.substring(0, 30));
       let inputPath = inputContent;
       let isTempInputFile = false;
       const tempId = randomBytes(16).toString('hex');
@@ -873,8 +853,6 @@
           socket.on('messages.upsert', (data) => this.handleWebsocket(data));
 
           socket.on('group-participants.update', (data) => {
-            //this.logger.info('group-participants.update', data);
-
             this.handleWebsocket(data);
           });
 
@@ -888,11 +866,6 @@
 
             this.handleWebsocket(data);
           });
-
-          // socket.on('contacts.update', (data) => {
-          //    this.logger.info('contacts.update', data);
-          //    this.handleWebsocket(data);
-          // });
 
           socket.on('send.message', (data) => {
             this.handleWebsocket(data);
@@ -924,10 +897,9 @@
         }
       } catch (error) {
         this.logger.error(`Error during webhook setup for instance ${this.instanceName}:`, error);
-        // Decide if we should throw or try to continue without webhooks for sending only
       }
       
-      // 3. Load donations to whitelist (from original bot)
+      // 3. Donates podem usar o PV do bot livre (whitelist)
       this._loadDonationsToWhitelist();
 
       // 4. Check instance status and connect if necessary
@@ -980,14 +952,12 @@
           } else {
             this.logger.warn(`[${this.id}] Received connection response for ${this.instanceName}, but no QR/Pairing code found. State: ${connectData?.state}. Waiting for webhook confirmation.`, connectData);
           }
-          // After attempting to connect, we wait for a 'connection.update' webhook.
         } else if (state === 'TIMEOUT' && !isRetry) {
           this.logger.warn(`Instance ${this.instanceName} timed out. Retrying connection once...`);
           await sleep(5000);
           this._checkInstanceStatusAndConnect(true);
         } else {
           this.logger.error(`Instance ${this.instanceName} is in an unhandled state: ${state}. Manual intervention may be required.`);
-          // Consider calling onDisconnected here if it's a definitively disconnected state
         }
 
         return { instanceDetails, extra };
@@ -1023,24 +993,17 @@
       if (this.eventHandler && typeof this.eventHandler.onDisconnected === 'function' && wasConnected) {
         this.eventHandler.onDisconnected(this, reason);
       }
-      // Optionally, attempt to reconnect after a delay
+      
       setTimeout(() => this._checkInstanceStatusAndConnect(), 30000); // Reconnect after 30s
     }
 
     async handleWebsocket(data){
+      // Aproveita o método do webhook
       return this._handleWebhook({websocket: true, body: data}, {sendStatus: () => 0 }, true);
     }
-    async _handleWebhook(req, res, socket = false) {
-      // this.logger.info(req.params);
-      // const botIdFromPath = req.params.botId;
-      // if (botIdFromPath !== this.id) {
-      //   this.logger.warn(`Webhook received for unknown botId ${botIdFromPath}. Ignoring.`);
-      //   return res.status(400).send('Unknown botId');
-      // }
 
+    async _handleWebhook(req, res, socket = false) {
       const payload = req.body;
-      //this.logger.debug(`[${this.id}] ${socket ? 'Websocket' : 'Webhook'} received: Event: ${payload.event}, Instance: ${payload.instance}`, payload.data?.key?.id || payload.data?.id);
-      //console.log(payload);
 
       if(!payload?.event){
         return res.status(200).send(`hello-${this.instanceName}-${this.id}`);
@@ -1053,6 +1016,8 @@
       
       try {
         switch (payload.event) {
+
+          // Connect, disconnect...
           case 'connection.update':
             const connectionState = payload.data?.state.toUpperCase();
             this.logger.info(`[${this.id}] Connection update: ${connectionState}`);
@@ -1063,34 +1028,8 @@
             }
             break;
 
+          // Pra saber quando uma mensagem foi enviada com sucesso
           case 'send.message':
-  /*
-  {
-    event: 'send.message',
-    instance: 'ravena-testes',
-    data: {
-      key: {
-        remoteJid: '120363402005217365@g.us',
-        fromMe: true,
-        id: '3EB0B46BB2D742C4B85CC492153D8CA463DAB035'
-      },
-      pushName: '',
-      status: 'PENDING',
-      message: {
-        conversation: '🗑 Só posso apagar minhas próprias mensagens ou mensagens de outros se eu for admin do grupo.'
-      },
-      contextInfo: null,
-      messageType: 'conversation',
-      messageTimestamp: 1748533669,
-      instanceId: 'e1af61d2-4abc-4e85-9efb-b8f19df5eebc',
-      source: 'unknown'
-    },
-    server_url: 'http://localhost:4567',
-    date_time: '2025-05-29T12:47:49.381Z',
-    sender: '555596424307@s.whatsapp.net', // CUIDAR ISSO PQ MUDA ESSE LIXO???
-    apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
-  }
-  */
             const incomingSentMessageData = Array.isArray(payload.data) ? payload.data[0] : payload.data;
             if (incomingSentMessageData && incomingSentMessageData.key && incomingSentMessageData.key.fromMe) {
               const incomingSentMessageData = Array.isArray(payload.data) ? payload.data[0] : payload.data;
@@ -1110,6 +1049,7 @@
             }
             break;
 
+          // Principal evento - receber mensagens
           case 'messages.upsert':
             this.lastMessageReceived = Date.now();
             const incomingMessageData = Array.isArray(payload.data) ? payload.data[0] : payload.data;
@@ -1123,7 +1063,7 @@
 
               incomingMessageData.event = "messages.upsert";
               incomingMessageData.sender = payload.sender;
-              //console.log(incomingMessageData);
+              //this.logger.info(incomingMessageData);
               this.formatMessageFromEvo(incomingMessageData).then(formattedMessage => {
                 if (formattedMessage && this.eventHandler && typeof this.eventHandler.onMessage === 'function') {
                   if(!incomingMessageData.key.fromMe){ // Só rodo o onMessage s enão for msg do bot. preciso chamar o formatMessage pra elas serem formatadas e irem pro cache
@@ -1137,89 +1077,32 @@
             }
             break;
           
-          case 'groups.upsert':
-  /*
-  {
-    event: 'groups.upsert',
-    instance: 'ravena-testes',
-    data: [
-      {
-        id: '120363402005217365@g.us',
-        subject: '💚mutez Subes ONLINE',
-        subjectOwner: '555596424307@s.whatsapp.net',
-        subjectTime: 1748560136,
-        size: 2,
-        creation: 1745262897,
-        owner: '555598273712@s.whatsapp.net',
-        desc: 'canal para inscritos na twitch do muutiz',
-        descId: '8F5C7FE14D2F39D2',
-        restrict: false,
-        announce: false,
-        isCommunity: false,
-        isCommunityAnnounce: false,
-        joinApprovalMode: false,
-        memberAddMode: true,
-        participants: [Array],
-        author: '555598273712@s.whatsapp.net'
-      }
-    ],
-    server_url: 'http://localhost:4567',
-    date_time: '2025-05-29T20:21:26.033Z',
-    sender: '555596424307@s.whatsapp.net',
-    apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
-  }
-  */        
-            // Simular que um membro foi add
+          // Bot entrou num grupo (ou criou)
+          case 'groups.upsert':     
             const groupUpsertData = payload.data[0];
             groupUpsertData.action = "add";
             groupUpsertData.sender = payload.sender;
             groupUpsertData.isBotJoining = true; // Pra saber se não foi o bot add no grupo
             if (groupUpsertData && groupUpsertData.id && groupUpsertData.action && groupUpsertData.participants) {
-               this._handleGroupParticipantsUpdate(groupUpsertData);
+              // No wwebjs era tudo no mesmo evento, então eu simulo
+              this._handleGroupParticipantsUpdate(groupUpsertData);
             }
             break;
+
+          // Mudou os membros do grupo (entrou/saiu gente)
           case 'group-participants.update':
-            /*{
-  event: 'group-participants.update',
-  instance: 'ravena-testes',
-  data: {
-    id: '120363402005217365@g.us',
-    author: '555598273712@s.whatsapp.net',
-    participants: [ '559591146078@s.whatsapp.net' ],
-    action: 'remove'
-  },
-  server_url: 'http://localhost:4567',
-  date_time: '2025-05-28T17:14:08.899Z',
-  sender: '555596424307@s.whatsapp.net',
-  apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
-            }*/
             const groupUpdateData = payload.data;
             groupUpdateData.isBotJoining = false;
             if (groupUpdateData && groupUpdateData.id && groupUpdateData.action && groupUpdateData.participants) {
-               //this.logger.info(`[${this.id}] Group participants update:`, groupUpdateData);
                this._handleGroupParticipantsUpdate(groupUpdateData);
             }
             break;
-  /*
-  {
-    event: 'contacts.update',
-    instance: 'ravena5',
-    data: {
-      remoteJid: '120363419136690677@g.us',
-      pushName: 'thur',
-      profilePicUrl: 'https://pps.whatsapp.net/v/t61.24694-24/491873879_682709417977241_6996710407633107392_n.jpg?ccb=11-4&oh=01_Q5Aa1gEbquJJ4ACmZNCLVVM5GVC7ovHNTLYASKJklr9nYWBMEQ&oe=68496F52&_nc_sid=5e03e0&_nc_cat=105',
-      instanceId: '73edb4c1-ba23-4b09-b7d0-cf54da0a0eb6'
-    },
-    server_url: 'http://localhost:7654',
-    date_time: '2025-06-01T11:08:25.047Z',
-    sender: '555591537296@s.whatsapp.net',
-  }
-  */
+
           case 'contacts.update':
             if(Array.isArray(payload.data)){
               for(const cttData of payload.data){
-                if(cttData.pushname){ // Atualiza só se veio o nome, se não não tem sentido
-                  updateContact(cttData);
+                if(cttData.pushname || cttData.pushName){ // Atualiza só se veio o nome, se não não tem sentido
+                  this.updateContact(cttData);
                 }
               }
             }
@@ -1234,14 +1117,11 @@
       res.sendStatus(200);
     }
 
-    async formatMessage(data){
-      // Usada no ReactionsHandler pq a message que vem lá era do wwebjs
-      // Agora o cache já retorna a mensagem formatada, não precisa formatar de novo
+    async formatMessage(data){ // Fallback
       return data;
     }
 
     numeroMaisProvavel(numeros){
-      //this.logger.info(`[numeroMaisProvavel] `, numeros);
       const validSenders = Array.isArray(numeros) ? numeros.filter(Boolean) : [];
       const priorityOrder = ['@s.whatsapp.net', '@c.us', '@lid'];
 
@@ -1257,9 +1137,7 @@
     }
 
     formatMessageFromEvo(evoMessageData, skipCache = false) {
-      // Explicitly return a new Promise
-      return new Promise(async (resolve, reject) => { // Executor function is async to use await inside
-        //this.logger.info(JSON.stringify(evoMessageData, null, "\t"));
+      return new Promise(async (resolve, reject) => {
         try {
           const key = evoMessageData?.key;
           const waMessage = evoMessageData?.message; // The actual message content part
@@ -1415,16 +1293,21 @@
               return;
             }
 
-            const mentions = (evoMessageData.contextInfo?.mentionedJid ?? []); //.map(m => m.split("@")[0]+"@c.us");
-            const authorContact = this.getContactDetails(author);
-            const authorName = authorContact.pushName;
+            const mentions = (evoMessageData.contextInfo?.mentionedJid ?? []);
+
+            let authorName = evoMessageData.pushname ?? evoMessageData.pushName; // Me explica pq pode vir dos 2 jeito?
+            if(!authorName){
+              const authorContact = await this.getContactDetails(author);
+              this.logger.info(`[formatMessageFromEvo] Nao veio autor na msg, buscando contato`, {authorContact});
+              authorName = authorContact.pushname ?? "Pessoa";
+            }
 
             const formattedMessage = {
               evoMessageData: evoMessageData, // pra ser recuperada no cache
               id: key.id,
               fromMe: evoMessageData.key.fromMe,
               group: isGroup ? chatId : null,
-              from: isGroup ? chatId : author+"@c.us",
+              from: isGroup ? chatId : author,
               author: this._normalizeId(author),
               name: authorName,
               authorName: authorName,
@@ -1443,7 +1326,6 @@
 
               getContact: async () => {
                   const contactIdToFetch = isGroup ? (key.participant || author) : author;
-                  //this.logger.debug(`[formattedMessage][getContactDetails] getContact`, {contactIdToFetch, author, authorName, evoKey: evoMessageData.key});
                   return await this.getContactDetails(author, authorName);
               },
 
@@ -1485,7 +1367,6 @@
               id: { _serialized: `${evoMessageData.key.remoteJid}_${evoMessageData.key.fromMe}_${evoMessageData.key.id}`},
               author: this._normalizeId(formattedMessage.author),
               from: formattedMessage.from,
-              // If this.sendReaction is async, this will correctly return a Promise
               react: (emoji) => this.sendReaction(evoMessageData.key.remoteJid, evoMessageData.key.id, emoji), 
               getContact: formattedMessage.getContact,
               getChat: formattedMessage.getChat,
@@ -1507,10 +1388,7 @@
           }
         } catch (error) {
           this.logger.error(`[${this.id}] Error formatting message from Evolution API:`, error, evoMessageData);
-          // To match original behavior of returning null on error (which means promise resolves with null)
           resolve(null); 
-          // If you'd rather have the promise reject on error, use:
-          // reject(error); 
         }
       });
     }
@@ -1520,15 +1398,12 @@
     }
 
     async _downloadMediaAsBase64(mediaInfo, messageKey, evoMessageData) {
-      //this.logger.debug(`[${this.id}] Download media for: ${mediaInfo.filename}`);
 
       if (!messageKey || !messageKey.id || !messageKey.remoteJid) {
         this.logger.error(`[${this.id}] Crucial messageKey information (id, remoteJid) is missing. Cannot use /chat/getBase64FromMediaMessage.`);
-        // Proceed to fallback if messageKey is invalid or essential parts are missing.
       }
 
       if (messageKey && messageKey.id && messageKey.remoteJid && this.evolutionApiUrl && this.evolutionApiKey && this.instanceName) {
-        //this.logger.info(`[${this.id}] Attempting media download via Evolution API POST /chat/getBase64FromMediaMessage for: ${mediaInfo.filename}`);
         try {
           const endpoint = `${this.evolutionApiUrl}/chat/getBase64FromMediaMessage/${this.instanceName}`;
           const payload = {message: evoMessageData};
@@ -1539,14 +1414,12 @@
           if (messageKey.participant) {
             payload.participant = messageKey.participant;
           }
-          //this.logger.debug(`[${this.id}] Calling Evolution API POST endpoint: ${endpoint} with payload: ${this.shortJson(payload)}`);
 
           const response = await axios.post(endpoint, payload, {
             headers: {
               'apikey': this.evolutionApiKey,
               'Content-Type': 'application/json', // Explicitly set Content-Type for POST
-            },
-            // timeout: 30000, // 30 seconds, for example
+            }
           });
 
           // Process the response (same logic as before):
@@ -1616,7 +1489,6 @@
         } else {
           if(options.mentions && options.mentions.length > 0){
             evoPayload.mentioned = options.mentions; //.map(s => s.split('@')[0]);
-            //this.logger.info(`[sendMessage] Debug mentioned`, {mentioned: evoPayload.mentioned});
           }
         }
 
@@ -1727,9 +1599,6 @@
               "fullName": content.name ?? content.pushname,
               "wuid": content.number,
               "phoneNumber": content.number
-              // "organization": "Company Name",
-              // "email": "email",
-              // "url": "url page"
           }];
         } else if (content instanceof Poll || content.isPoll) {
           endpoint = '/message/sendPoll';
@@ -1740,15 +1609,12 @@
           evoPayload.values = content.pollOptions;
         } else {
           this.logger.error(`[${this.id}] sendMessage: Unhandled content type for Evolution API. Content:`, content);
-          //throw new Error('Unhandled content type for Evolution API');
           return;
         }
 
-
-        //this.logger.info(`EVO- API posting, ${endpoint}`, evoPayload);
         const response = await this.apiClient.post(endpoint, evoPayload);
 
-        // Mimic whatsapp-web.js Message object structure for return (as much as useful)
+        // Simular o Message do whatsapp-web.js
         return {
           id: {
             _serialized: response.key?.id || `evo-msg-${this.rndString()}`,
@@ -1756,13 +1622,13 @@
             fromMe: true, // Sent by us
             participant: response.key?.participant // if sent to group, bot is participant
           },
-          ack: this._mapEvoStatusToAck(response.status), // You'll need to map Evo's status
+          ack: this._mapEvoStatusToAck(response.status),
           body: typeof content === 'string' ? content : `[${evoPayload.mediaMessage?.mediaType || 'media'}]`,
           type: typeof content === 'string' ? 'text' : (evoPayload.mediaMessage?.mediaType || 'unknown'),
           timestamp: Math.floor(Date.now() / 1000),
-          from: this.phoneNumber ? `${this.phoneNumber.replace(/\D/g, '')}@c.us` : this.instanceName, // Approximate sender
+          from: this.phoneNumber ? `${this.phoneNumber.replace(/\D/g, '')}@c.us` : this.instanceName,
           to: chatId,
-          url: (content && content.url) ? content.url : undefined, // if media sent by URL
+          url: (content && content.url) ? content.url : undefined,
           _data: response,
           getInfo: () => { // Usado no StreamSystem pra saber se foi enviada
             return { delivery: [1], played: [1],read: [1] };
@@ -1771,21 +1637,18 @@
 
       } catch (error) {
         this.logger.error(`[${this.id}] Error sending message to ${chatId} via Evolution API:`, error);
-        throw error; // Re-throw for the caller (e.g., CommandHandler) to handle
+        throw error;
       }
     }
     
     _mapEvoStatusToAck(status) {
-      // Based on Evolution API documentation for message status
-      // PENDING: 0, SENT: 1, DELIVERED: 2, READ: 3, ERROR: -1
-      // This is a guess, check Evo docs for actual status strings/numbers
       if (!status) return 0; // Undefined or pending
       status = status.toUpperCase();
       if (status === 'SENT' || status === 'DELIVERED_TO_SERVER') return 1; // Message sent to server
       if (status === 'DELIVERED_TO_USER' || status === 'DELIVERED') return 2; // Delivered to recipient
       if (status === 'READ' || status === 'SEEN') return 3; // Read by recipient
       if (status === 'ERROR' || status === 'FAILED') return -1;
-      return 0; // Default for other statuses like "PENDING"
+      return 0;
     }
 
     async sendReturnMessages(returnMessages) {
@@ -1794,7 +1657,7 @@
       }
       const validMessages = returnMessages.filter(msg => msg && msg.isValid && msg.isValid());
       if (validMessages.length === 0) {
-        this.logger.warn(`[${this.id}] No valid ReturnMessages to send.`);
+        this.logger.warn(`[${this.id}] Sem ReturnMessages válidas pra enviar.`);
         return [];
       }
       const results = [];
@@ -1814,11 +1677,11 @@
             try {
                 await this.sendReaction(message.chatId, result.id._serialized, message.reaction); // Assuming result.id has the ID
             } catch (reactError) {
-                this.logger.error(`[${this.id}] Failed to send reaction "${message.reaction}" to ${result.id._serialized}:`, reactError);
+                this.logger.error(`[${this.id}] Erro enviando reaction "${message.reaction}" pra ${result.id._serialized}:`, reactError);
             }
           }
         } catch(sendError) {
-          this.logger.error(`[${this.id}] Failed to send one of the ReturnMessages to ${message.chatId}:`, sendError);
+          this.logger.error(`[${this.id}] Falha enviando ReturnMessages pra ${message.chatId}:`, sendError);
           results.push({ error: sendError, messageContent: message.content }); // Push error for this message
         }
       }
@@ -1856,36 +1719,29 @@
           throw new Error(`File not found: ${filePath}`);
         }
 
-        // ## 1. Define output directory and ensure it exists
+
         const outputDir = path.join(__dirname, '..', 'public', 'attachments');
-        // Use the promise-based version of mkdir with recursive option
         await fs.mkdirSync(outputDir, { recursive: true });
 
-        // ## 2. Generate a random filename with the correct extension
         const extension = path.extname(filePath); // e.g., '.mp4'
         const tempId = randomBytes(8).toString('hex');
         const outputFileName = `${tempId}${extension}`;
         const outputFilePath = path.join(outputDir, outputFileName);
 
-        // ## 3. Copy the file to the public directory
         await fs.copyFileSync(filePath, outputFilePath);
 
-        // ## 4. Schedule the copied file for deletion after 10 minutes
         setTimeout((ofp,ofn) => {
           fs.unlinkSync(ofp);
         }, 10 * 60 * 1000, outputFilePath, outputFileName); // 10 minutes in milliseconds
 
-        // ## 5. Prepare data for the return object
         const data = fs.readFileSync(filePath, { encoding: 'base64' });
         const filename = path.basename(filePath);
         const mimetype = customMime ? customMime : (mime.lookup(filePath) || 'application/octet-stream');
         const fileUrl = `${process.env.BOT_DOMAIN_LOCAL ?? process.env.BOT_DOMAIN}/attachments/${outputFileName}`;
 
-        console.log(`[createMedia] ${fileUrl}`);
-        // Return an object compatible with the MessageMedia structure
+        this.logger.info(`[createMedia] ${fileUrl}`);
         return { mimetype, data, filename, source: 'file', url: fileUrl, isMessageMedia: true };
       } catch (error) {
-        // Assuming 'this.logger' is defined in your class context
         console.error(`Error creating media from ${filePath}:`, error);
         throw error;
       }
@@ -1894,12 +1750,10 @@
 
     async createMediaFromURL(url, options = { unsafeMime: true, customMime: false }) {
       try {
-        // For Evolution API, passing URL directly to `sendMessage` is often possible if `content.url` is used.
         const filename = path.basename(new URL(url).pathname) || 'media_from_url';
         let mimetype = mime.lookup(url.split("?")[0]) || (options.unsafeMime ? 'application/octet-stream' : null);
         
         if (!mimetype && options.unsafeMime) {
-            // Try to get Content-Type header if it's a direct download
             try {
                 const headResponse = await axios.head(url);
                 this.logger.info("mimetype do header? ", headResponse);
@@ -1913,8 +1767,7 @@
       }
     }
     
-    // --- Placeholder/To be implemented based on Evo API specifics ---
-    async getContactDetails(cid, prefetchedName = false) {
+    async getContactDetails(cid, prefetchedName = false, forceCacheRefresh = false) {
       if (!cid) return null;
 
       try {
@@ -1922,13 +1775,11 @@
         let contactId = ((typeof cid === "object") ? cid.id : cid) ?? null;
 
         const number = contactId; //.split("@")[0];
-        contato = await this.recoverContactFromCache(number);
+        contato = forceCacheRefresh ? false : await this.recoverContactFromCache(number);
 
         if(!contato){
-          //this.logger.debug(`[getContactDetails][${this.id}] Fetching contact details for: ${contactId}`);
           const profileData = await this.apiClient.post(`/chat/fetchProfile`, {number});
           if(profileData){
-            //this.logger.debug(`[getContactDetails][${this.id}] ${contactId}`, {profileData});
             contato = {
               isContact: false,
               id: { _serialized: contactId },
@@ -2044,40 +1895,18 @@
       }
     }
     async getChatDetails(chatId) {
-      /*
-  {
-    "id": "120363295648424210@g.us",
-    "subject": "Example Group",
-    "subjectOwner": "553198296801@s.whatsapp.net",
-    "subjectTime": 1714769954,
-    "pictureUrl": null,
-    "size": 1,
-    "creation": 1714769954,
-    "owner": "553198296801@s.whatsapp.net",
-    "desc": "optional",
-    "descId": "BAE57E16498982ED",
-    "restrict": false,
-    "announce": false,
-    "participants": [
-      {
-        "id": "553198296801@s.whatsapp.net",
-        "admin": "superadmin"
-      }
-    ]
-  }
-      */
       if (!chatId) return null;
       try {
         this.logger.debug(`[${this.id}] Fetching chat details for: ${chatId}`);
         if (chatId.endsWith('@g.us')) {
           const groupData = await this.apiClient.get(`/group/findGroupInfos`, { groupJid: chatId });
-          //this.logger.debug(`[${this.id}] groupInfos:`, groupData);
 
           return {
             setSubject: async (title) => {
               return await this.apiClient.post(`/group/updateGroupSubject`, { groupJid: chatId, subject: title });
             },
             fetchMessages: async (limit = 30) => {
+              // Não rola
               //https://doc.evolution-api.com/v2/api-reference/chat-controller/find-messages
               return false;
             },
@@ -2092,17 +1921,16 @@
             name: groupData.subject,
             isGroup: true,
             participants: groupData.participants.map(p => {
-              const telefone = this.numeroMaisProvavel([p.phoneNumber, p.id])?.split("@")[0];
+              //const telefone = this.numeroMaisProvavel([p.phoneNumber, p.id])?.split("@")[0];
               return {
-                id: { _serialized: telefone+"@c.us" },
+                id: { _serialized: p.id },
+                phoneNumber: p.phoneNumber ?? null,
                 isAdmin: p.admin?.includes("admin") ?? false
               }
-            }), // Structure this as needed
-            // ... other group fields like description (subjectOwner, etc.)
+            }),
             _rawEvoGroup: groupData
           };
         } else { // User chat
-          // For user chats, often there isn't a separate "chat" object beyond the contact
           this.logger.debug(`[getChatDetails][getContactDetails] getContact`, chatId);
           const contact = await this.getContactDetails(chatId);
           return {
@@ -2110,12 +1938,10 @@
             id: { _serialized: chatId },
             name: contact.name || contact.pushname,
             isGroup: false,
-            // ...
-            _rawEvoContactForChat: contact // if needed
+            _rawEvoContactForChat: contact
           };
         }
       } catch (error) {
-        //this.logger.error(`[${this.id}] Failed to get chat details for ${chatId}:`, error);
         // Se estiver buscando grupo, retorna null pra saber que o bot não faz parte
         // Se for contato, cria um placeholder pra não bugar algumas coisas
         if(chatId.includes("@g")){
@@ -2177,7 +2003,6 @@
           if(groupUpdateData.subject){
             groupName = groupUpdateData.subject;
           } else {
-            //this.logger.info(`[_handleGroupParticipantsUpdate] Não veio nome do grupo no evento, buscando infos de '${groupId}'`);
             const groupDetails = await this.getChatDetails(groupId);
             groupName = groupDetails?.name || groupId;
           }
@@ -2224,30 +2049,7 @@
     }
 
     async isUserAdminInGroup(userId, groupId) {
-      /*
-  {
-    "participants": [
-      {
-        "id": "553198296801@s.whatsapp.net",
-        "admin": "superadmin"
-      }
-    ]
-  }
-      */
-      if (!userId || !groupId) return false;
-      try {
-        const response = await this.apiClient.get(`/group/participants`, { groupJid: groupId });
-        const member = response.participants.find(m => m.id.split("@")[0] === userId.split("@")[0]);
-        if(member){
-          const isAdmin = (member.admin ?? "").includes("admin");
-          return isAdmin;
-        }
-
-        return false;
-      } catch (error) {
-        this.logger.error(`[${this.id}] Error checking admin status for ${userId} in ${groupId}:`, error);
-        return false;
-      }
+      return this.adminUtils.isAdmin(userId, {id: groupId}, null, this.client);
     }
 
     async fetchAndPrepareBlockedContacts() {
@@ -2255,16 +2057,11 @@
       // It has /contacts/blockUnblock. This functionality might be limited or require different handling.
       this.blockedContacts = []; // Reset
       this.logger.info(`[${this.id}] Blocked contacts list management needs verification with Evolution API capabilities.`);
-      // If an endpoint is found, implement fetching here. Example:
-      // try {
-      //   const blockedList = await this.apiClient.get(`/contacts/blockedlist`); // Hypothetical
-      //   this.blockedContacts = blockedList.map(jid => ({ id: { _serialized: jid } }));
-      // } catch (e) { this.logger.warn('Could not fetch blocked contacts.'); }
+
       this.prepareOtherBotsBlockList(); // From original bot
     }
 
     async _loadDonationsToWhitelist() {
-      // From original bot, should work as is if database methods are stable
       try {
           const donations = await this.database.getDonations();
           for(let don of donations){
@@ -2279,7 +2076,6 @@
     }
 
     async _sendStartupNotifications() {
-      // From original bot
       if (!this.isConnected) return;
       if (this.grupoLogs) {
         try {
@@ -2288,8 +2084,7 @@
       }
       if (this.grupoAvisos) {
         try {
-          // const startMessage = `🟢 [${this.phoneNumber.slice(2,4)}] *${this.id}* (Evo) tá _on_! (${new Date().toLocaleString("pt-BR")})`;
-          // await this.sendMessage(this.grupoAvisos, startMessage); // Original was commented out
+          // await this.sendMessage(this.grupoAvisos, `🟢 [${this.phoneNumber.slice(2,4)}] *${this.id}* (Evo) tá _on_! (${new Date().toLocaleString("pt-BR")})`);
         } catch (error) { this.logger.error(`[${this.id}] Error sending startup notification to grupoAvisos:`, error); }
       }
     }
@@ -2336,6 +2131,7 @@
       if (this.webhookServer) {
         this.webhookServer.close(() => this.logger.info(`[${this.id}] Webhook server closed.`));
       }
+
       this._onInstanceDisconnected('DESTROYED'); // Mark as disconnected internally
       try {
         //await this.apiClient.post(`/instance/logout`); // Logout the instance
@@ -2344,7 +2140,6 @@
         this.logger.error(`[${this.id}] Error logging out instance ${this.instanceName}:`, error);
       }
       if (this.loadReport) this.loadReport.destroy();
-      // Clean up other resources if necessary
     }
 
     async restartBot(reason = 'Restart requested') {
@@ -2356,14 +2151,12 @@
           } catch (e) { this.logger.warn(`[${this.id}] Could not send restart notification during restart:`, e.message); }
       }
       
-      // Simplified destroy for restart (don't fully logout instance if it's a soft restart)
       if (this.webhookServer) {
         this.webhookServer.close();
         this.webhookServer = null;
       }
       this._onInstanceDisconnected('RESTARTING');
       if (this.loadReport) this.loadReport.destroy();
-      // if (this.streamSystem) this.streamSystem.destroy(); this.streamSystem = null;
 
       this.logger.info(`[${this.id}] Bot resources partially cleared, attempting re-initialization...`);
       await sleep(2000);

@@ -25,19 +25,26 @@ class MentionHandler {
    */
   async processMention(bot, message, group, text) {
     try {
-      if (!text) return false;
-
-      // Obtém o número de telefone do bot para verificar menções
-      const botNumber = bot.client?.info?.wid?._serialized?.split('@')[0] ?? bot.phoneNumber;
-      //const botNumber = bot.client.info?.wid?._serialized || bot.client.user?.id || '';
       
-      // Verifica se a mensagem COMEÇA com uma menção ao bot
-      const mentionRegexStart = new RegExp(`^\\s*@${botNumber}\\b`, 'i');
-      if (!mentionRegexStart.test(text)) {
-        return false;
-      }
+      //this.logger.debug(`[processMention] ${bot.phoneNumber} mencionado?`, {message});
 
-      this.logger.info(`Menção ao bot detectada no início da mensagem de ${message.author} em ${message.group || 'chat privado'}`);
+      //if(message.mentions && message.mentions.length > 0){
+        //const cttFirstMention = await bot.getContactDetails(message.mentions[0], 6, true);
+        //this.logger.debug(`[processMention] Mensagem tem ${message.mentions.length} mentions, buscando contato do primeiro`, {message, mentions: message.mentions, cttFirstMention});
+      //}
+  
+      const botNumber = bot.phoneNumber; // Na real, preciso saber o @lid
+
+      const mentionRegexStart = new RegExp(`^\\s*@${botNumber}\\b`, 'i');
+
+
+      // Com os @lids, pode ser que não apareça o numero do bot...
+      // OU a frase começa com o @numeroBot ou ele tá no mentions
+      const botMencionado = mentionRegexStart.test(text) || message.mentions.some(m => m.startsWith(botNumber));
+      
+      if(!botMencionado) return;
+
+      this.logger.info(`[processMention] Menção ao bot detectada no início da mensagem de ${message.author} em ${message.group || 'chat privado'}`);
       
       // Reage com o emoji "antes"
       try {

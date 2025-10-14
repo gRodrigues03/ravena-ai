@@ -2,18 +2,20 @@
 
 ![Ravenabot AI - img by chatgpt](ravenabanner.png)
 
-> Novo código da ravena completamente desenvolvido utilizando LLM Claude 3.7 Sonnet. Esta versão apresenta uma arquitetura modular, suporte a múltiplas instâncias, comandos personalizáveis e integração com plataformas de streaming. Livre para uso, sem garantias. Consulte o arquivo "Prompts" para ver as coisas que eu pedi pro Claude. Leia mais sobre os [design patterns aqui](docs/DesignPatterns.md).
+> Novo código da ravena completamente desenvolvido utilizando LLM Claude 3.7 Sonnet e Gemini 2.5 Pro. Esta versão apresenta uma arquitetura modular, suporte a múltiplas instâncias, comandos personalizáveis e integração com plataformas de streaming. Livre para uso, sem garantias. Consulte o arquivo "Prompts" para ver as coisas que eu pedi pro Claude. Leia mais sobre os [design patterns aqui](docs/DesignPatterns.md).
 
 ## 🔮 Visão Geral
 
-RavenaBot é um bot para WhatsApp que vem sendo desenvolvido há quase 4 anos, apenas como uma brincadeira/hobby. Começou como um bot da twitch (pra aprender um pouco da API deles com python) e depois foi integrado ao WhatsApp (pra aprender sobre nodejs) - virando um _spaghetti code_ absurdo, aí veio a ideia de refazer todo o código do zero, mas com uma ajudinha especial dos LLM (pra ver o estado atual de criação de código assistido por IA).
+RavenaBot é um bot para WhatsApp que vem sendo desenvolvido há quase 4 anos (desde 2021), apenas como uma brincadeira/hobby. Começou como um bot da twitch (pra aprender um pouco da API deles com python) e depois foi integrado ao WhatsApp (pra aprender sobre nodejs) - virando um _spaghetti code_ absurdo, aí veio a ideia de refazer todo o código do zero, mas com uma ajudinha especial dos LLM (pra ver o estado atual de criação de código assistido por IA).
 O foco deste bot é a utilização do mesmo em grupos, onde ele pode notificar status das lives, responder comandos com utilidades (!clima, !gpt, ..,), criar comandos personalizados do grupo (como nightbot, StreamElements, etc.).
 
 Este bot foi implemetado utilizando duas tecnologias:
 - [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js): Manipula o WhatsAppWeb através de um navegador controlado pelo puppeteer, fácil de configurar, mas com muitas mensagens fica com delay, trava e/ou desconecta. **Recomendo** *muito* utilizar ele, pela facilidade de configurar - o padrão do bot é usar isso, não se preocupe
 - [EvoutionAPI](github.com/EvolutionAPI/evolution-api): Os bots ficam logados no Evolution que utiliza o [Baileys](https://github.com/WhiskeySockets/Baileys), direto no websocket do whatsapp. Extremamente rápido e não dá delays (até agora), mais difícil de implementar. _Para ativar, é necessário definir no bots.json_
 
-Bots deste tipo **não são permitidos**, então não use em seu número principal - compre um chip só pra isso.
+Obs.: Eu criei o wrapper pra EvolutionAPI me baseando na implementação do wwebjs, então existem _muitos_ fallbacks, não se assuste.
+
+⚠️ **Atenção**: Bots deste tipo ***não são permitidos***, então não use em seu número principal - compre um chip só pra isso.
 
 
 ## 🚀 Recursos Principais
@@ -36,22 +38,6 @@ Bots deste tipo **não são permitidos**, então não use em seu número princip
 ## 🐦‍⬛ Quero usar agora!
 
 Se você quer interagir com o bot e testar ele, eu disponibilizo o mesmo _gratuitamente_ em alguns números, você pode conferir o status dos bots [aqui neste link](https://ravena.moothz.win/)
-
-## ✅ TODO - O que esperar do futuro
-
-Lista completa do que já foi feito [aqui](docs/TODO.md)
-
-- [x] Migrar do **whatsapp-web.js** pro **EvolutionAPI**
-  - [x] Sticker Animado (gambiarra com links)
-  - [ ] Eventos de connection
-- [x] Melhorias com redis
-  - [x] Cache para !resumo e !interagir
-  - [x] Cooldowns
-- [x] Fix Reactions
-- [x] Bot tentando notificar sem estar nos grupos
-- [x] Novo Jogo: Anagrama (Obrigado, Zack!)
-- [ ] Add !g-resetFaladores
-- [ ] Novo Comando: busca no youtube
 
 ## 🔧 Como hospedar sua própria ravena
 Se você não entende nada de programação ou nunca rodou aplicativos via código fonte, o melhor mesmo é chamar seu amigo da TI pra dar aquele help.
@@ -189,7 +175,7 @@ GRUPOS_PLACA_PREMIUM=grupo1,grupo2  # Nomes de grupos que podem usar a API placa
 # URL de APIs Locais
 API_TIMEOUT=10000           # 
 SDWEBUI_URL=http://192.168.3.200:7860     # Porta padrão SDWebui
-SDWEBUI_TOKEN=                # base64 de user:password de --api-auth
+SDWEBUI_TOKEN=                # base64 de 'user:password' informada no --api-auth
 LOCAL_LLM_ENDPOINT=http://localhost:9666  # Porta padrão LMStudio
 LOCAL_LLM_MODEL=google/gemma-3-12b      # Pegar nome do /v1/models
 OLLAMA_ENDPOINT=http://localhost:11434
@@ -232,9 +218,15 @@ CHROME_PATH=C:/Program Files/Google/Chrome/Application/chrome.exe
 # Nem todos emojis são suportados na EvoAPI para 'reagir' às mensagens
 LOADING_EMOJI=🌀
 ```
-## 🧩 Criando Novos Comandos
+## 🧩 Contribuindo: Implementandos Novos Comandos
 
-Para adicionar um novo comando fixo, crie um arquivo `.js` na pasta `src/functions/`.
+Para contribuir com o bot e adicionar um novo comando fixo, crie um arquivo `.js` na pasta `src/functions/`.
+
+Alguns comandos que outros usuários criaram:
+- [Listas](src/functions/ListCommands.js)
+- [Busca de Áudios no MyInstants](src/functions/MyInstantsAudioSearch.js)
+- [Jogo: Anagrama](src/functions/AnagramGame.js)
+
 Aqui vai uma boa base pra começar:
 
 ```javascript
@@ -272,8 +264,9 @@ const commands = [
 module.exports = { commands };
 ```
 
-### 🤖 Criar comandos usando IA
+### 🤖 Contribuindo: Criar comandos usando IA
 Se você sabe pedir pras LLMs programarem, aqui vai uma dica de como fazer:
+
 Anexe os seguintes arquivos:
 ```
 - models/Group.js
@@ -295,30 +288,6 @@ Exemplo:
 - Entrada: !soletrar batata porco
 - Saída: B-A-T-A-T-A | P-O-R-C-O
 ```
-
-
-
-### Propriedades de Comando
-
-| Propriedade | Tipo | Descrição |
-|-------------|------|-----------|
-| `name` | string | **Obrigatório**. Nome do comando (usado após o prefixo). |
-| `description` | string | Descrição do comando, exibido no menu. |
-| `method` | function | **Obrigatório**. Função a ser executada. Recebe `(bot, message, args, group)`. |
-| `needsMedia` | boolean | Se `true`, o comando requer mídia. |
-| `needsQuotedMsg` | boolean | Se `true`, o comando requer mensagem citada. |
-| `aliases` | array | Nomes alternativos para o comando. |
-| `cooldown` | number | Tempo de espera (segundos) entre usos do comando. |
-| `adminOnly` | boolean | Se `true`, apenas administradores podem usar. |
-| `groupOnly` | boolean | Se `true`, o comando só pode ser usado em grupos. |
-| `privateOnly` | boolean | Se `true`, o comando só pode ser usado em chats privados. |
-| `enabled` | boolean | Se `false`, o comando está desativado. |
-| `hidden` | boolean | Se `true`, o comando não é mostrado no menu. |
-
-## 📊 A definir
-
-Aqui vou refatorar a parte do README que fala sobre os comandos, em breve.
-
 
 ## 📝 Licença
 

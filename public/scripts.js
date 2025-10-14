@@ -344,6 +344,17 @@ function renderBotCard(botContainer, data, bot){
             </div>`;
     }
     
+    let divMsgs = `<div class="detail-item"><span class="detail-label label-desconectado">Desconectado</span></div>`;
+    if(bot.connected){
+        divMsgs = `<div class="detail-item">
+                <span class="detail-label">Última mensagem:</span>
+                <span class="detail-value tooltip-container">
+                    ${formatTimeSince(minutesSinceLastMessage)}
+                    <span class="tooltip-text">Recebida em: ${formatTime(bot.lastMessageReceived)}</span>
+                </span>
+            </div>`;
+    }
+
     botCard.innerHTML = `
         <div class="bot-header">
             <div class="bot-title">
@@ -360,13 +371,7 @@ function renderBotCard(botContainer, data, bot){
                 <span class="detail-value">${phoneNumber || 'Não disponível'}</span>
             </div>
             ${divResponsavel}
-            <div class="detail-item">
-                <span class="detail-label">Última mensagem:</span>
-                <span class="detail-value tooltip-container">
-                    ${formatTimeSince(minutesSinceLastMessage)}
-                    <span class="tooltip-text">Recebida em: ${formatTime(bot.lastMessageReceived)}</span>
-                </span>
-            </div>
+            ${divMsgs}
             <div class="detail-item">
                 <span class="detail-label">Msgs/hora:</span>
                 <span class="detail-value-highlight">

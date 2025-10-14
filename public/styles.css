@@ -332,6 +332,11 @@ h1 {
     font-weight: 500;
 }
 
+.label-desconectado{
+    width: 100%;
+    text-align: center;
+}
+
 .detail-value {
     color: white;
     font-weight: 600;
