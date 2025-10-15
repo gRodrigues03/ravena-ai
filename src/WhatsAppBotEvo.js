@@ -162,6 +162,9 @@
         setProfilePicture: (arg) => {
           this.updateProfilePicture(arg);
         },
+        setPrivacySettings:(arg) => {
+          this.updatePrivacySettings(arg);
+        },
         acceptInvite: (arg) => {
           return this.acceptInviteCode(arg);
         },
@@ -171,7 +174,7 @@
         },
         info: {
           wid: {
-            _serialized: `${options.phoneNumber}@c.us`
+            _serialized: `${options.phoneNumber}`
           }
         }
       }
@@ -1874,6 +1877,25 @@
         this.apiClient.delete(`/group/leaveGroup`, { groupJid });
       } catch(e){
         this.logger.warn(`[leaveGroup] Erro saindo do grupo '${groupJid}'`, e);
+      }
+    }
+
+    updatePrivacySettings(privacy){
+      try{
+        // Tudo é obrigatório, se não a Evo reclama
+        privacy = {
+          "readreceipts": privacy?.readreceipts ?? "all", // all, none
+          "profile": privacy?.profile ?? "all", // all, contacts, contact_blacklist, none 
+          "status": privacy?.status ?? "all", // all, contacts, contact_blacklist, none 
+          "online": privacy?.online ?? "all", // all, match_last_seen
+          "last": privacy?.last ?? "all", // all, contacts, contact_blacklist, none 
+          "groupadd": privacy?.groupadd ?? "contact_blacklist" // all, contacts, contact_blacklist 
+        }
+
+        this.logger.debug(`[updatePrivacySettings][${this.instanceName}] `, { privacy });
+        this.apiClient.post(`/chat/updatePrivacySettings`, { ...privacy });
+      } catch(e){
+        this.logger.warn(`[updatePrivacySettings] Erro aletrando configs de privacidade '${url}'`, e);
       }
     }
 

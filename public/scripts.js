@@ -352,6 +352,25 @@ function renderBotCard(botContainer, data, bot){
                     ${formatTimeSince(minutesSinceLastMessage)}
                     <span class="tooltip-text">Recebida em: ${formatTime(bot.lastMessageReceived)}</span>
                 </span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Msgs/hora:</span>
+                <span class="detail-value-highlight">
+                    ${msgsHr}
+                    <span class="msgs-badge ${msgActivityClass}">
+                        ${msgsHr === 0 ? '💤' : msgsHr > 100 ? '🔥' : msgsHr > 50 ? '📊' : '📝'}
+                    </span>
+                </span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Delay médio:</span>
+                <span class="detail-value-highlight tooltip-container">
+                    ${avgResponseTime.toFixed(1)}s
+                    <span class="response-badge ${responseTimeClass}">
+                        ${responseTimeEmoji}
+                    </span>
+                    <span class="tooltip-text">Delay máximo: ${maxResponseTime}s</span>
+                </span>
             </div>`;
     }
 
@@ -372,25 +391,6 @@ function renderBotCard(botContainer, data, bot){
             </div>
             ${divResponsavel}
             ${divMsgs}
-            <div class="detail-item">
-                <span class="detail-label">Msgs/hora:</span>
-                <span class="detail-value-highlight">
-                    ${msgsHr}
-                    <span class="msgs-badge ${msgActivityClass}">
-                        ${msgsHr === 0 ? '💤' : msgsHr > 100 ? '🔥' : msgsHr > 50 ? '📊' : '📝'}
-                    </span>
-                </span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Delay médio:</span>
-                <span class="detail-value-highlight tooltip-container">
-                    ${avgResponseTime.toFixed(1)}s
-                    <span class="response-badge ${responseTimeClass}">
-                        ${responseTimeEmoji}
-                    </span>
-                    <span class="tooltip-text">Delay máximo: ${maxResponseTime}s</span>
-                </span>
-            </div>
             ${detalhes}
             ${buttonsHtml}
         </div>

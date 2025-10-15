@@ -1366,6 +1366,9 @@ class BotAPI {
    */
   async notifyGroupsAboutDonation(name, amount, message, donationTotal = 0) {
     try {
+
+      const ignorar = message.includes("#ravprivate") ?? false;
+
       // Prepara a mensagem de notificação
       const totalMsg = (donationTotal > 0) ? `> _${name}_ já doou um total de R$${donationTotal.toFixed(2)}\n\n` : "";
 
@@ -1383,36 +1386,35 @@ class BotAPI {
       // Apenas um dos bots devem enviar msg sobre donate
       const bot = this.bots.find(b => b.notificarDonate) ?? this.bots[Math.floor(Math.random() * this.bots.length)];
 
-      //for (const bot of this.bots) {
-        // Primeiro notifica o grupo de logs
-        if (bot.grupoLogs) {
-          try {
-            await bot.sendMessage(bot.grupoLogs, donationMsg, {marcarTodos: true});
-          } catch (error) {
-            this.logger.error(`Erro ao enviar notificação de doação para grupoLogs (${bot.grupoLogs}):`, error);
-          }
+      // Primeiro notifica o grupo de logs
+      if (bot.grupoLogs) {
+        try {
+          await bot.sendMessage(bot.grupoLogs, donationMsg, {marcarTodos: true});
+        } catch (error) {
+          this.logger.error(`Erro ao enviar notificação de doação para grupoLogs (${bot.grupoLogs}):`, error);
         }
-        
-        // Notifica o grupo de avisos
-        if (bot.grupoAvisos) {
+      }
+      
+      // Notifica o grupo de avisos
+      if (bot.grupoAvisos && !ignorar) {
+        try {
+          const sentMsg = await bot.sendMessage(bot.grupoAvisos, donationMsg, {marcarTodos: true});
+          
+          // Tenta fixar a mensagem
           try {
-            const sentMsg = await bot.sendMessage(bot.grupoAvisos, donationMsg, {marcarTodos: true});
-            
-            // Tenta fixar a mensagem
-            try {
-              if (sentMsg && sentMsg.pin) {
-                await sentMsg.pin(pinDuration);
-              }
-            } catch (pinError) {
-              this.logger.error('Erro ao fixar mensagem no grupoAvisos:', pinError);
+            if (sentMsg && sentMsg.pin) {
+              await sentMsg.pin(pinDuration);
             }
-          } catch (error) {
-            this.logger.error(`Erro ao enviar notificação de doação para grupoAvisos (${bot.grupoAvisos}):`, error);
+          } catch (pinError) {
+            this.logger.error('Erro ao fixar mensagem no grupoAvisos:', pinError);
           }
-        //}
+        } catch (error) {
+          this.logger.error(`Erro ao enviar notificação de doação para grupoAvisos (${bot.grupoAvisos}):`, error);
+        }
+
         
         // Notifica o grupo de interação
-        if (bot.grupoInteracao) {
+        if (bot.grupoInteracao && !ignorar) {
           try {
             const sentMsg = await bot.sendMessage(bot.grupoInteracao, donationMsg, {marcarTodos: true});
             

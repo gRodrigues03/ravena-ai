@@ -9,7 +9,7 @@ const logger = new Logger('anonymous-message');
 const database = Database.getInstance();
 
 // Constantes
-const COOLDOWN_HOURS = 6; // Cooldown de 12 horas
+const COOLDOWN_HOURS = 2;
 const COOLDOWN_MS = COOLDOWN_HOURS * 60 * 60 * 1000; // Cooldown em milissegundos
 
 // Caminho para o arquivo de mensagens anônimas
@@ -110,6 +110,10 @@ function checkUserCooldown(userId, targetGroup) {
   return { onCooldown: false, timeLeft: 0 };
 }
 
+function cleanId(id){
+  return id.split('@')[0].split(':')[0];
+}
+
 /**
  * Envia uma mensagem anônima para um grupo
  * @param {WhatsAppBot} bot - Instância do bot
@@ -121,12 +125,12 @@ function checkUserCooldown(userId, targetGroup) {
 async function anonymousMessage(bot, message, args, group) {
   try {
     // Verifica o ID do remetente
-    const senderId = message.author;
+    const senderIds = [cleanId(message.author), cleanId(message.key.remoteJidAlt ?? "-"), cleanId(message.key.remoteJid ?? "-")];
     
     // Verifica se há argumentos suficientes
     if (args.length < 2) {
       return new ReturnMessage({
-        chatId: senderId,
+        chatId: senderIds[0],
         content: `⚠️ Formato incorreto. Use: !anonimo ${group.name} mensagem\n\nExemplo: !anonimo ${group.name} Olá, esta é uma mensagem anônima!`
       });
     }
@@ -135,10 +139,10 @@ async function anonymousMessage(bot, message, args, group) {
     const targetGroupName = args[0].toLowerCase();
 
     // Verifica cooldown
-    const cooldownCheck = checkUserCooldown(senderId, targetGroupName);
+    const cooldownCheck = checkUserCooldown(senderIds[0], targetGroupName);
     if (cooldownCheck.onCooldown) {
       return new ReturnMessage({
-        chatId: senderId,
+        chatId: senderIds[0],
         content: `🌀 Você precisa esperar ${cooldownCheck.timeLeft} hora(s) para enviar outra mensagem anônima.`
       });
     }
@@ -150,7 +154,7 @@ async function anonymousMessage(bot, message, args, group) {
     // Verifica se a mensagem é muito curta
     if (anonymousText.length < 5) {
       return new ReturnMessage({
-        chatId: senderId,
+        chatId: senderIds[0],
         content: '⚠️ A mensagem é muito curta. Por favor, escreva algo mais substancial.'
       });
     }
@@ -166,7 +170,7 @@ async function anonymousMessage(bot, message, args, group) {
     
     if (!targetGroup) {
       return new ReturnMessage({
-        chatId: senderId,
+        chatId: senderIds[0],
         content: `❌ Grupo "${targetGroupName}" não encontrado. Verifique o nome e tente novamente.`
       });
     }
@@ -177,18 +181,20 @@ async function anonymousMessage(bot, message, args, group) {
       
       // Verifica se o usuário está no grupo (OBRIGATÓRIO)
       const participants = await chat.participants;
-      const isUserInGroup = participants.some(p => p.id._serialized === senderId);
+      const isUserInGroup = participants.some(p => senderIds.some(sI => p.id._serialized.startsWith(sI) || p.phoneNumber?.startsWith(sI)));
       
+      //logger.debug(`[anonimo] `,{message, participants, senderIds, isUserInGroup});
+
       if (!isUserInGroup) {
         return new ReturnMessage({
-          chatId: senderId,
+          chatId: senderIds[0],
           content: `❌ Você não é membro do grupo "${targetGroup.name}". Apenas membros podem enviar mensagens anônimas para este grupo.`
         });
       }
     } catch (error) {
       logger.error('Erro ao verificar grupo ou participantes:', error);
       return new ReturnMessage({
-        chatId: senderId,
+        chatId: senderIds[0],
         content: `❌ Não foi possível acessar o grupo. O bot pode não estar mais nele ou o grupo foi excluído.`
       });
     }
@@ -199,7 +205,7 @@ async function anonymousMessage(bot, message, args, group) {
     
     // Adiciona nova mensagem ao registro
     anonMessages.push({
-      senderId,
+      senderId: senderIds[0],
       targetGroupId: targetGroup.id,
       targetGroupName: targetGroup.name,
       message: anonymousText,
@@ -219,14 +225,14 @@ async function anonymousMessage(bot, message, args, group) {
       
       // Confirma o envio para o remetente
       return new ReturnMessage({
-        chatId: senderId,
+        chatId: senderIds[0],
         content: `✅ Sua mensagem anônima foi enviada com sucesso para o grupo "${targetGroup.name}".\n\nVocê poderá enviar outra mensagem anônima em ${COOLDOWN_HOURS} horas.`
       });
     } catch (error) {
       logger.error('Erro ao enviar mensagem anônima:', error);
       
       return new ReturnMessage({
-        chatId: senderId,
+        chatId: senderIds[0],
         content: `❌ Erro ao enviar mensagem anônima: ${error.message}`
       });
     }

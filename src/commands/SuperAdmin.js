@@ -34,6 +34,7 @@ class SuperAdmin {
       'block': {'method': 'blockUser', 'description': 'Bloqueia um usuário'},
       'unblock': {'method': 'unblockUser', 'description': 'Desbloqueia um usuário'},
       'leaveGrupo': {'method': 'leaveGroup', 'description': 'Sai de um grupo com opção de bloquear membros'},
+      'privacidade': {'method': 'setDefaultPrivacySettings', 'description': 'Seta padrões de privacidade'},
       'foto': {'method': 'changeProfilePicture', 'description': 'Altera foto de perfil do bot'},
       'simular': {'method': 'simulateStreamEvent', 'description': 'Simula evento de stream'},
       'restart': {'method': 'restartBot', 'description': 'Reinicia o bot'},
@@ -837,6 +838,63 @@ class SuperAdmin {
       }
     } catch (error) {
       this.logger.error('Erro no comando leaveGroup:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Erro ao processar comando.'
+      });
+    }
+  }
+
+  
+  /**
+   * Coloca as configs de privacidade no padrão do bot
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @returns {Promise<ReturnMessage>} - Retorna mensagem de sucesso ou erro
+   */
+  async setDefaultPrivacySettings(bot, message, args) {
+    try {
+      const chatId = message.group || message.author;
+      
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
+            
+      try {
+        // Obtém a mídia da mensagem
+        const media = message.content;
+        
+        // Altera as configs
+        const privacySettings = {
+          "readreceipts": "all",
+          "profile": "all",
+          "status": "all",
+          "online": "all",
+          "last": "all",
+          "groupadd": "contact_blacklist" 
+        }
+        await bot.client.setPrivacySettings(privacySettings);
+        
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `✅ Configs de privacidade no defualt!\n${JSON.stringify(privacySettings, null, "\t")}`
+        });
+      } catch (privacyError) {
+        this.logger.error('Erro ao definir configs de privacidade:', privacyError);
+        
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `❌ Erro ao definir configs de privacidade: ${privacyError.message}`
+        });
+      }
+    } catch (error) {
+      this.logger.error('Erro no comando setDefaultPrivacySettings:', error);
       
       return new ReturnMessage({
         chatId: message.group || message.author,
