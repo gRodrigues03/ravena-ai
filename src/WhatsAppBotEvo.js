@@ -1978,13 +1978,13 @@
           };
         }
 
-        this.logger.debug(`[getChatDetails] Grupo '${chatId}' buscando, colocando no cache`, {chat});
+        //this.logger.debug(`[getChatDetails] Grupo '${chatId}' buscando, colocando no cache`, {chat});
         this.cacheManager.putChatInCache(chat);
 
         return chat;
       } catch (error) {
         try{
-          this.logger.error(`[getChatDetails] Erro buscando chat ${chatId} na API, tentando cache`);
+          //this.logger.error(`[getChatDetails] Erro buscando chat ${chatId} na API, tentando cache`);
           chat = await this.cacheManager.getChatFromCache(chatId);
 
           if(chat){
@@ -1997,7 +1997,7 @@
             }  
           }
         } catch(e){
-          this.logger.error(`[getChatDetails] Erro buscando chat ${chatId} ate no cache`, e);
+          //this.logger.error(`[getChatDetails] Erro buscando chat ${chatId} ate no cache`, e);
 
           // Se estiver buscando grupo, retorna null pra saber que o bot não faz parte
           // Se for contato, cria um placeholder pra não bugar algumas coisas
