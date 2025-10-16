@@ -26,57 +26,62 @@ class MentionHandler {
   async processMention(bot, message, group, text) {
     try {
       
-      //this.logger.debug(`[processMention] ${bot.phoneNumber} mencionado?`, {message});
-
-      //if(message.mentions && message.mentions.length > 0){
-        //const cttFirstMention = await bot.getContactDetails(message.mentions[0], 6, true);
-        //this.logger.debug(`[processMention] Mensagem tem ${message.mentions.length} mentions, buscando contato do primeiro`, {message, mentions: message.mentions, cttFirstMention});
-      //}
-  
-      const botNumber = bot.phoneNumber; // Na real, preciso saber o @lid
-
-      const mentionRegexStart = new RegExp(`^\\s*@${botNumber}\\b`, 'i');
-
-
-      // Com os @lids, pode ser que não apareça o numero do bot...
-      // OU a frase começa com o @numeroBot ou ele tá no mentions
-      const botMencionado = mentionRegexStart.test(text) || message.mentions.some(m => m.startsWith(botNumber));
-      
-      if(!botMencionado) return;
-
-      this.logger.info(`[processMention] Menção ao bot detectada no início da mensagem de ${message.author} em ${message.group || 'chat privado'}`);
-      
-      // Reage com o emoji "antes"
-      try {
-        await message.origin.react(this.reactions.before);
-      } catch (reactError) {
-        this.logger.error('Erro ao aplicar reação "antes":', reactError);
-      }
-      
-      // Remove a menção do prompt
-      const prompt = text.replace(mentionRegexStart, '').trim();
-
-      if (!prompt) {
-        // Apenas uma menção sem texto, envia uma resposta padrão
-        const chatId = message.group || message.author;
-        const returnMessage = new ReturnMessage({
-          chatId: chatId,
-          content: "Olá! Como posso te ajudar? Você pode tirar dúvida de quais comandos eu tenho e também como usar eles, com exemplos, é só pedir! Se quiser saber meus comandos, envie !cmd",
-          reactions: {
-            after: this.reactions.after
-          }
-        });
+      // Só pra grupos
+      if(!message.group) return;
+      if(message.mentions && message.mentions.length > 0){
         
-        await bot.sendReturnMessages(returnMessage);
+        // Por enquanto, a única maneira é pegar a info do grupo pra descobrir o LID do bot nele
+        const chatInfo = await bot.getChatDetails(message.group);
+    
+        // 1° passo: descobrir o lid do bot nesse grupo (obrigado evo 2.3.5)
+        const botNumber = bot.getLidFromPn(bot.phoneNumber, chatInfo);
+
+        const mentionRegexStart = new RegExp(`^\\s*@${botNumber}\\b`, 'i');
+
+        // OU a frase começa com o @numeroBot ou ele tá no mentions
+        const botMencionado = mentionRegexStart.test(text) || message.mentions.some(m => m.startsWith(botNumber));
+        
+        if(!botMencionado) return;
+
+        this.logger.info(`[processMention] Menção ao bot detectada no início da mensagem de ${message.author} em ${message.group || 'chat privado'}`);
+        
+        // Reage com o emoji "antes"
+        try {
+          await message.origin.react(this.reactions.before);
+        } catch (reactError) {
+          this.logger.error('Erro ao aplicar reação "antes":', reactError);
+        }
+        
+        // Remove a menção do prompt
+        const prompt = text.replace(mentionRegexStart, '').trim();
+
+        if (!prompt) {
+          // Apenas uma menção sem texto, envia uma resposta padrão
+          const chatId = message.group || message.author;
+          const returnMessage = new ReturnMessage({
+            chatId: chatId,
+            content: "Olá! Como posso te ajudar? Você pode tirar dúvida de quais comandos eu tenho e também como usar eles, com exemplos, é só pedir! Se quiser saber meus comandos, envie !cmd",
+            reactions: {
+              after: this.reactions.after
+            }
+          });
+          
+          await bot.sendReturnMessages(returnMessage);
+          return true;
+        }
+
+        this.logger.info(`Processando prompt para LLM: "${prompt}"`);
+        const args = prompt.split(" ") ?? [];
+
+        const msgsLLM = await aiCommand(bot, message, args, group);
+        await bot.sendReturnMessages(msgsLLM);
         return true;
+
+      } else {
+        return
       }
 
-      this.logger.info(`Processando prompt para LLM: "${prompt}"`);
-      const args = prompt.split(" ") ?? [];
-
-      const msgsLLM = await aiCommand(bot, message, args, group);
-      await bot.sendReturnMessages(msgsLLM);
-      return true;
+      
     } catch (error) {
       this.logger.error('Erro ao processar menção:', error);
       return false;

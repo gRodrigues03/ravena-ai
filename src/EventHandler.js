@@ -723,15 +723,15 @@ class EventHandler {
       const group = this.groups[data.group.id];
       
 
-      // Verifica se é o bot que saiu
-      //const infoGrupo = await bot.client.getChatById(data.group.id);
-      //const numeroByLid = infoGrupo.participants.find(p => p.id?._serialized?.startsWith(data?.user?.id))?.phoneNumber ?? "";
+      // Por enquanto, a única maneira é pegar a info do grupo pra descobrir o LID do bot nele
+      const chatInfo = await bot.getChatDetails(data.group.id);
+    
+      // 1° passo: descobrir o lid do bot nesse grupo (obrigado evo 2.3.5)
+      const botNumber = bot.getLidFromPn(bot.phoneNumber, chatInfo);
 
-      // PRECISO saber qual o @lid do bot nesse grupo, já que só vem o @lid no event
-      const botLid = bot.phoneNumber;
+      const isBotLeaving = data?.user?.id?.startsWith(botNumber);
 
-      const isBotLeaving = data?.user?.id?.startsWith(botLid);// || numeroByLid.startsWith(bot.phoneNumber);
-      this.logger.debug(`[processGroupLeave] isBotLeaving (${isBotLeaving}}) = data.user.id (${data.user.id}) -startsWith- bot.phoneNumber ${botLid}`);
+      this.logger.debug(`[processGroupLeave] isBotLeaving (${isBotLeaving}}) = data.user.id (${data.user.id}) -startsWith- bot.phoneNumber ${botNumber}`, {data, chatInfo});
       
       // Envia notificação para o grupo de logs
       if (bot.grupoLogs) {

@@ -11,6 +11,7 @@ class CacheManager {
 
     this.messageCache = []; // For in-memory fallback
     this.contactCache = []; // For in-memory fallback
+    this.chatCache = []; // For in-memory fallback
 
     this.redisClient = null;
 
@@ -29,6 +30,44 @@ class CacheManager {
       this.logger.info('CacheManager: No redisURL provided. Using in-memory cache only.');
     }
   }
+
+  async putChatInCache(data) {
+    if (!data || !data.id || typeof data.id?._serialized === 'undefined') {
+      this.logger.debug('CacheManager (putChatInCache): Invalid chat data.', {data});
+      return;
+    }
+    const chatId = data.id._serialized;
+    const redisKey = `chat:${chatId}`;
+
+    if (this.redisClient) {
+      try {
+        await this.redisClient.set(redisKey, JSON.stringify(data), 'EX', this.redisTTL);
+        return;
+      } catch (err) {
+        this.logger.error(`CacheManager (putChatInCache): Error caching chat ${chatId} in Redis: ${err.message}. Falling back.`);
+      }
+    }
+    this.chatCache.push(data);
+    if (this.chatCache.length > this.maxCacheSize) {
+      this.chatCache.shift();
+    }
+  }
+
+  async getChatFromCache(id) {
+    if (typeof id === 'undefined' || id === null) return null;
+    const redisKey = `chat:${id}`;
+
+    if (this.redisClient) {
+      try {
+        const cachedData = await this.redisClient.get(redisKey);
+        if (cachedData) return JSON.parse(cachedData);
+      } catch (err) {
+        this.logger.error(`CacheManager (getChatFromCache): Error retrieving chat ${id} from Redis: ${err.message}. Falling back.`);
+      }
+    }
+    return this.chatCache.find(m => m.key && m.key.id == id) || null;
+  }
+
 
   async putMessageInCache(data) {
     if (!data || !data.key || typeof data.key.id === 'undefined') {

@@ -320,7 +320,7 @@ class CustomVariableProcessor {
             const availableMentions = context.message.origin.mentionedIds.filter(id => !usedMentions.includes(id));
             this.logger.debug(`[processContextVariables][availableMentions] `,availableMentions);
             if (availableMentions.length > 0) {
-              // Seleciona uma menção aleatória das disponíveis
+              // Seleciona uma menção aleatória das disponíveis, sem pegar contato
               const randomIndex = Math.floor(Math.random() * availableMentions.length);
               mentionId = availableMentions[randomIndex];
               

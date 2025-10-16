@@ -1698,13 +1698,13 @@
       const contato = {
         isContact: false,
         id: { _serialized: contactData },
-        name: profileData.name,
-        pushname: profileData.name,
+        name: contactData.name,
+        pushname: contactData.name,
         number: number,
         isUser: true,
-        status: profileData.status,
-        isBusiness: profileData.isBusiness,
-        picture: profileData.picture,
+        status: contactData.status,
+        isBusiness: contactData.isBusiness,
+        picture: contactData.picture,
         block: async () => {
           return await this.setCttBlockStatus(number, "block");
         },
@@ -1821,7 +1821,7 @@
         return contato;
       } catch (error) {
         this.logger.error(`[${this.id}] Failed to get contact ${cid ?? "semCid"} details.`); //, error
-        return { id: { _serialized: "000000000000@c.us" }, name: "000000000000", pushname: "000000000000", number: "000000000000", isUser: true, _isPartial: true }; // Basic fallback
+        return { id: { _serialized: cid }, name: cid, pushname: cid, number: cid, isUser: true, _isPartial: true }; // Basic fallback
       }
     }
 
@@ -1916,14 +1916,29 @@
         this.logger.warn(`[updateProfileStatus] Erro definindo status '${status}'`, status);
       }
     }
+
+    // evo 2.3.5 agora tem o phoneNumber
+    getLidFromPn(pn, chat){
+      return (chat?.participants?.find(p => p.phoneNumber.startsWith(pn))?.id?._serialized) ?? pn;
+    }
+    getPnFromLid(lid, chat){
+      return (chat?.participants?.find(p => p.id?._serialized.startsWith(lid))?.phoneNumber) ?? lid;
+    }
+
+
+
     async getChatDetails(chatId) {
       if (!chatId) return null;
+      let chat;
+      
       try {
+
+
         this.logger.debug(`[${this.id}] Fetching chat details for: ${chatId}`);
         if (chatId.endsWith('@g.us')) {
           const groupData = await this.apiClient.get(`/group/findGroupInfos`, { groupJid: chatId });
 
-          return {
+          chat = {
             setSubject: async (title) => {
               return await this.apiClient.post(`/group/updateGroupSubject`, { groupJid: chatId, subject: title });
             },
@@ -1943,7 +1958,6 @@
             name: groupData.subject,
             isGroup: true,
             participants: groupData.participants.map(p => {
-              //const telefone = this.numeroMaisProvavel([p.phoneNumber, p.id])?.split("@")[0];
               return {
                 id: { _serialized: p.id },
                 phoneNumber: p.phoneNumber ?? null,
@@ -1955,7 +1969,7 @@
         } else { // User chat
           this.logger.debug(`[getChatDetails][getContactDetails] getContact`, chatId);
           const contact = await this.getContactDetails(chatId);
-          return {
+          chat = {
             isContact: true,
             id: { _serialized: chatId },
             name: contact.name || contact.pushname,
@@ -1963,14 +1977,36 @@
             _rawEvoContactForChat: contact
           };
         }
+
+        this.logger.debug(`[getChatDetails] Grupo '${chatId}' buscando, colocando no cache`, {chat});
+        this.cacheManager.putChatInCache(chat);
+
+        return chat;
       } catch (error) {
-        // Se estiver buscando grupo, retorna null pra saber que o bot não faz parte
-        // Se for contato, cria um placeholder pra não bugar algumas coisas
-        if(chatId.includes("@g")){
-          return null;
-        } else {
-          return { id: { _serialized: chatId }, name: chatId.split('@')[0], isGroup: false, _isPartial: true }; // Basic fallback
-        }
+        try{
+          this.logger.error(`[getChatDetails] Erro buscando chat ${chatId} na API, tentando cache`);
+          chat = await this.cacheManager.getChatFromCache(chatId);
+
+          if(chat){
+            return chat;
+          } else {
+            if(chatId.includes("@g")){
+              return null;
+            } else {
+              return { id: { _serialized: chatId }, name: chatId.split('@')[0], isGroup: false, _isPartial: true }; // Basic fallback
+            }  
+          }
+        } catch(e){
+          this.logger.error(`[getChatDetails] Erro buscando chat ${chatId} ate no cache`, e);
+
+          // Se estiver buscando grupo, retorna null pra saber que o bot não faz parte
+          // Se for contato, cria um placeholder pra não bugar algumas coisas
+          if(chatId.includes("@g")){
+            return null;
+          } else {
+            return { id: { _serialized: chatId }, name: chatId.split('@')[0], isGroup: false, _isPartial: true }; // Basic fallback
+          }
+        }    
       }
     }
 
@@ -2022,10 +2058,11 @@
 
       try {
           let groupName;
+          let groupDetails;
           if(groupUpdateData.subject){
             groupName = groupUpdateData.subject;
           } else {
-            const groupDetails = await this.getChatDetails(groupId);
+            groupDetails = await this.getChatDetails(groupId);
             groupName = groupDetails?.name || groupId;
           }
 
@@ -2044,11 +2081,17 @@
               //this.logger.debug(`[_handleGroupParticipantsUpdate][getContactDetails] userContact`, userId);
               const userContact = await this.getContactDetails(userId);
 
+              let responsavelNumero = responsibleContact.id?._serialized;
+
+              if(groupDetails){
+                responsavelNumero = this.getPnFromLid(responsavelNumero, groupDetails);
+              }
+              
               const eventData = {
                   group: { id: groupId, name: groupName },
                   //user: { id: userId.split('@')[0]+"@c.us", name: userContact?.name || userId.split('@')[0] },
                   user: { id: userId, name: userContact?.name || userId.split('@')[0] },
-                  responsavel: { id: responsibleContact.id?._serialized, name: responsibleContact.name || 'Sistema' },
+                  responsavel: { id: responsavelNumero, name: responsibleContact.name || 'Sistema' },
                   origin: { 
                       ...groupUpdateData, // Raw data from webhook related to this specific update
                       getChat: async () => await this.getChatDetails(groupId)

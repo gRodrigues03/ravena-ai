@@ -256,6 +256,7 @@ async function main() {
   process.on('unhandledRejection', (reason, p) => {
     logger.warn("---- Rejection não tratada ");
     logger.warn(p);
+    logger.warn(reason.stack);
     logger.warn("---- Fim ");
   })
 
