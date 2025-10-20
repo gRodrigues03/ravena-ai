@@ -911,7 +911,7 @@
       return this;
     }
 
-    async _checkInstanceStatusAndConnect(isRetry = false) {
+    async _checkInstanceStatusAndConnect(isRetry = false, forceConnect = false) {
       this.logger.info(`Checking instance status for ${this.instanceName}...`);
       try {
         /*
@@ -934,26 +934,31 @@
           this._onInstanceConnected();
           extra.ok = true;
         } else if (state === 'CLOSE' || state === 'CONNECTING' || state === 'PAIRING' || !state) {
-          this.logger.info(`Instance ${this.instanceName} is not connected (state: ${state}). Attempting to connect with num ber ${this.phoneNumber}...`);
-          const connectData = await this.apiClient.get(`/instance/connect`, {number: this.phoneNumber});
 
-          this.logger.info(`[${this.id}] Connect Data: ${JSON.stringify(connectData)} `);
+          if(forceConnect){
+            this.logger.info(`Instance ${this.instanceName} is not connected (state: ${state}). Attempting to connect with num ber ${this.phoneNumber}...`);
+            const connectData = await this.apiClient.get(`/instance/connect`, {number: this.phoneNumber});
 
-          extra.connectData = connectData;
-          if (connectData.pairingCode) {
-             this.logger.info(`[${this.id}] Instance ${this.instanceName} PAIRING CODE: ${connectData.pairingCode}. Enter this on your phone in Linked Devices -> Link with phone number.`);
-             const pairingCodeLocation = path.join(this.database.databasePath, `pairingcode_${this.id}.txt`);
-             fs.writeFileSync(pairingCodeLocation, `[${new Date().toUTCString()}] ${connectData.pairingCode}`);
-          } else 
-          if (connectData.code) {
-            this.logger.info(`[${this.id}] QR Code for ${this.instanceName} (Scan with WhatsApp):`);
-            qrcode.generate(connectData.code, { small: true });
+            this.logger.info(`[${this.id}] Connect Data: ${JSON.stringify(connectData)} `);
 
-            const qrCodeLocal = path.join(this.database.databasePath, `qrcode_${this.id}.png`);
-            let qr_png = qrimg.image(connectData.code, { type: 'png' });
-            qr_png.pipe(fs.createWriteStream(qrCodeLocal));
+            extra.connectData = connectData;
+            if (connectData.pairingCode) {
+               this.logger.info(`[${this.id}] Instance ${this.instanceName} PAIRING CODE: ${connectData.pairingCode}. Enter this on your phone in Linked Devices -> Link with phone number.`);
+               const pairingCodeLocation = path.join(this.database.databasePath, `pairingcode_${this.id}.txt`);
+               fs.writeFileSync(pairingCodeLocation, `[${new Date().toUTCString()}] ${connectData.pairingCode}`);
+            } else 
+            if (connectData.code) {
+              this.logger.info(`[${this.id}] QR Code for ${this.instanceName} (Scan with WhatsApp):`);
+              qrcode.generate(connectData.code, { small: true });
+
+              const qrCodeLocal = path.join(this.database.databasePath, `qrcode_${this.id}.png`);
+              let qr_png = qrimg.image(connectData.code, { type: 'png' });
+              qr_png.pipe(fs.createWriteStream(qrCodeLocal));
+            } else {
+              this.logger.warn(`[${this.id}] Received connection response for ${this.instanceName}, but no QR/Pairing code found. State: ${connectData?.state}. Waiting for webhook confirmation.`, connectData);
+            }
           } else {
-            this.logger.warn(`[${this.id}] Received connection response for ${this.instanceName}, but no QR/Pairing code found. State: ${connectData?.state}. Waiting for webhook confirmation.`, connectData);
+            this.logger.info(`Instance ${this.instanceName} is not connected (state: ${state}).`);
           }
         } else if (state === 'TIMEOUT' && !isRetry) {
           this.logger.warn(`Instance ${this.instanceName} timed out. Retrying connection once...`);
@@ -1693,23 +1698,22 @@
 
 
     async updateContact(contactData){
-      // TODO
-      // O evento vem com @g.us... não vem o numero da pessoa, só se for no PV
+      //this.logger.debug(`[updateContact] `, {contactData});
       const contato = {
         isContact: false,
-        id: { _serialized: contactData },
-        name: contactData.name,
-        pushname: contactData.name,
-        number: number,
+        id: { _serialized: contactData.remoteJid },
+        name: contactData.pushName,
+        pushname: contactData.pushName,
+        number: contactData.remoteJid,
+        picture: contactData.profilePicUrl,
         isUser: true,
-        status: contactData.status,
-        isBusiness: contactData.isBusiness,
-        picture: contactData.picture,
+        status: contactData.status, // Não vem no webhook
+        isBusiness: contactData.isBusiness, // Não vem no webhook
         block: async () => {
-          return await this.setCttBlockStatus(number, "block");
+          return await this.setCttBlockStatus(contactData.phoneNumber, "block");
         },
         unblock: async () => {
-          return await this.setCttBlockStatus(number, "unblock");
+          return await this.setCttBlockStatus(contactData.phoneNumber, "unblock");
         }
       };
 
@@ -1919,7 +1923,7 @@
 
     // evo 2.3.5 agora tem o phoneNumber
     getLidFromPn(pn, chat){
-      return (chat?.participants?.find(p => p.phoneNumber.startsWith(pn))?.id?._serialized) ?? pn;
+      return (chat?.participants?.find(p => p.phoneNumber?.startsWith(pn))?.id?._serialized) ?? pn;
     }
     getPnFromLid(lid, chat){
       return (chat?.participants?.find(p => p.id?._serialized.startsWith(lid))?.phoneNumber) ?? lid;
