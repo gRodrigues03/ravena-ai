@@ -723,7 +723,7 @@ class BotAPI {
         hour: '2-digit', minute: '2-digit', second: '2-digit',
       });
 
-      const instanceStatus = await bot._checkInstanceStatusAndConnect(true); // no retry
+      const instanceStatus = await bot._checkInstanceStatusAndConnect(true, true); // no retry
       const version = instanceStatus.instanceDetails.version ?? "?";
       const tipo = instanceStatus.instanceDetails.tipo ?? "?";
       
