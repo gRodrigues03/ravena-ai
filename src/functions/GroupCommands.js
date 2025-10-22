@@ -134,25 +134,32 @@ async function toggleIgnore(bot, message, args, group) {
     if (!group.ignoredUsers) {
       group.ignoredUsers = [];
     }
+
+    const numerosPraIgnorar = [];
+
+    // Rainha dos fallback
+    if(message.author){
+      numerosPraIgnorar.push(message.author.split("@")[0]);
+    }
     
-    const userIndex = group.ignoredUsers.indexOf(message.author);
+    if(message.origin){
+      if(message.origin.key.participant){
+        numerosPraIgnorar.push(message.origin.key.participant.split("@")[0]);
+      }
+      if(message.origin.key.participantAlt){
+       numerosPraIgnorar.push(message.origin.key.participant.split("@")[0]); 
+      }
+
+    }
     
-    if (userIndex === -1) {
-      // Adiciona usuário à lista de ignorados
-      group.ignoredUsers.push(message.author);
-      await database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: message.group,
-        content: 'Você agora será ignorado nas menções de grupo.',
-        options: {
-          quotedMessageId: message.origin.id._serialized,
-          evoReply: message.origin
-        }
-      });
-    } else {
-      // Remove usuário da lista de ignorados
-      group.ignoredUsers.splice(userIndex, 1);
+    const jaIgnorado = numerosPraIgnorar.some(numero => group.ignoredUsers.includes(numero));
+
+    if (jaIgnorado) {
+      logger.debug(`[toggleIgnore][${group.name}] Removendo dos ignorados: '${numerosPraIgnorar.join(",")}'`);
+      // Remove todos os "números" do usuário da lista de ignorados
+      group.ignoredUsers = group.ignoredUsers.filter(ignoredUser => 
+        !numerosPraIgnorar.includes(ignoredUser)
+      );
       await database.saveGroup(group);
       
       return new ReturnMessage({
@@ -163,9 +170,23 @@ async function toggleIgnore(bot, message, args, group) {
           evoReply: message.origin
         }
       });
+    } else {
+      // Adiciona todos os "números" do usuário à lista de ignorados
+      logger.debug(`[toggleIgnore][${group.name}] Adicionado aos ignorados: '${numerosPraIgnorar.join(",")}'`);
+      group.ignoredUsers = [...new Set([...group.ignoredUsers, ...numerosPraIgnorar])]; // Set pra evitar duplicados
+      await database.saveGroup(group);
+      
+      return new ReturnMessage({
+        chatId: message.group,
+        content: 'Você agora será ignorado nas menções de grupo.',
+        options: {
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
+        }
+      });
     }
     
-    logger.info(`Status de ignorar alternado para usuário ${message.author} no grupo ${message.group}`);
+    logger.info(`Status de ignorar alternado para usuário '${numerosPraIgnorar.join("/")}'' no grupo ${message.group}`);
   } catch (error) {
     logger.error('Erro ao alternar status de ignorar:', error);
     return new ReturnMessage({

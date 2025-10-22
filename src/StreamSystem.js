@@ -555,16 +555,22 @@ class StreamSystem {
       const chat = await this.bot.client.getChatById(groupId);
       if (!chat || !chat.isGroup) return [];
       
-      // Obter usuários ignorados para este grupo
-      const ignoredUsers = group.ignoredUsers || [];
+      const ignoredSet = new Set(group.ignoredUsers || []);
+      const participants = chat.participants.filter(participant => {
+          const idsToTest = [
+              participant.id?._serialized, 
+              participant.phoneNumber
+          ];
+          
+          const isIgnored = idsToTest.some(id => ignoredSet.has(id));
+          
+          return !isIgnored;
+      });
       
-      // Filtrar usuários ignorados
-      const participants = chat.participants.filter(
-        participant => !ignoredUsers.includes(participant.id._serialized)
-      );
-      
+      this.logger.debug(`[getAllMembersMentions][${group.name}] Tem '${chat.participants.length}', mas apenas '${participants.length}' serão mencionados.`, {ignoredSet});
+
       // Criar array de menções
-      const mentions = participants.map(p => p.id._serialized);
+      const mentions = participants.map(p => p.id._serialized); // Talvez mencionar phoneNumber tb?
       
       return mentions;
     } catch (error) {
