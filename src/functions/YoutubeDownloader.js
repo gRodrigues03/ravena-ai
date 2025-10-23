@@ -208,7 +208,7 @@ async function baixarVideoYoutube(idVideo, dadosSolicitante, videoHD=false, call
         videoCacheManager.downloadVideoWithCache(urlSafe, 
           { 
             o: destinoVideo,
-            f: "(bv*[vcodec~='^((he|a)vc|h264)'][filesize<50M]+ba) / (bv*+ba/b)",
+            f: "(bv*[vcodec~='^((he|a)vc|h264)'][filesize<60M]+ba) / (bv*+ba/b)",
             remuxVideo: "mp4",
             recodeVideo: "mp4",
             audioFormat: "aac",
@@ -262,7 +262,7 @@ async function baixarMusicaYoutube(idVideo, dadosSolicitante, callback) {
         videoCacheManager.downloadMusicWithCache(urlSafe, 
           { 
             o: destinoVideo,
-            f: "ba[filesize<5M]",
+            f: "ba[filesize<10M]",
             audioFormat: "mp3",
             extractAudio: true,
             ffmpegLocation: process.env.FFMPEG_PATH,
