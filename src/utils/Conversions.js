@@ -45,7 +45,7 @@ async function toOpus(inputFile, opts = { b64: false, url: false, returnAsURL: f
       logger.info('[toOpus] Convertendo de caminho local para Opus...');
     }
 
-    console.log(fileToConvert);
+    //console.log(fileToConvert);
     await new Promise((resolve, reject) => {
       ffmpeg(fileToConvert)
         .audioCodec("libopus")

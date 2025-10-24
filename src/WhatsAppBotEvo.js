@@ -2054,7 +2054,7 @@
     }
 
     async _handleGroupParticipantsUpdate(groupUpdateData) {
-      this.logger.info("[_handleGroupParticipantsUpdate] ", {groupUpdateData});
+      //this.logger.info("[_handleGroupParticipantsUpdate] ", {groupUpdateData});
 
       const groupId = groupUpdateData.id;
       const action = groupUpdateData.action;
