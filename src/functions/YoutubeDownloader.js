@@ -7,6 +7,8 @@ const Database = require('../utils/Database');
 const crypto = require('crypto');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
+const { toMp3 } = require('../utils/Conversions');
+const fs = require('fs').promises;
 
 const logger = new Logger('youtube-downloader');
 const database = Database.getInstance();
@@ -213,7 +215,7 @@ async function baixarVideoYoutube(idVideo, dadosSolicitante, videoHD=false, call
             recodeVideo: "mp4",
             audioFormat: "aac",
             ffmpegLocation: process.env.FFMPEG_PATH,
-            cookies: path.join(database.databasePath,"smd_cookies.txt")
+            cookies: path.join(database.databasePath,"www.youtube.com_cookies.txt")
           }
         ).then(output => {
           if(output.fromCache){
@@ -240,55 +242,81 @@ async function baixarVideoYoutube(idVideo, dadosSolicitante, videoHD=false, call
 }
 
 async function baixarMusicaYoutube(idVideo, dadosSolicitante, callback) {
+  const hash = crypto.randomBytes(2).toString('hex');
+  const nomeVideoTemp = `ytdlp-${hash}`;
+  const tempVideoPath = path.join(process.env.DL_FOLDER, `${nomeVideoTemp}_v.mp4`);
+
   try {
     idVideo = idVideo.replace(/[^a-z0-9_-]/gi, '');
-    let urlSafe = `https://www.youtube.com/watch?v=${idVideo}`;
+    const urlSafe = `https://www.youtube.com/watch?v=${idVideo}`;
 
-    
-    // Baixa video
-    const hash = crypto.randomBytes(2).toString('hex');
-    let nomeVideoTemp = `ytdlp-${hash}`; // ${dadosSolicitante}
-    let destinoVideo = path.join(process.env.DL_FOLDER,`${nomeVideoTemp}_a.mp3`);
     logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Buscando info do video '${urlSafe}'`);
-    
-    // Pega dados primeiro
-    videoCacheManager.getVideoInfoWithCache(urlSafe, {dumpSingleJson: true}).then(videoInfo => {
+
+    videoCacheManager.getVideoInfoWithCache(urlSafe, { dumpSingleJson: true }).then(videoInfo => {
       const autorVideo = videoInfo.uploader;
       const tituloVideo = videoInfo.title;
-      logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Info do video '${videoInfo.id}': ${tituloVideo}, ${autorVideo}, ${videoInfo.duration}s.\nFazendo download para ${destinoVideo}`);
-      if(videoInfo.duration > 480){
-        callback(new Error(`Atualmente, só consigo baixar vídeos/músicas de até 8 minutos.`), null);
-      } else {      
-        videoCacheManager.downloadMusicWithCache(urlSafe, 
-          { 
-            o: destinoVideo,
-            f: "ba[filesize<10M]",
-            audioFormat: "mp3",
-            extractAudio: true,
-            ffmpegLocation: process.env.FFMPEG_PATH,
-            cookies: path.join(database.databasePath,"www.youtube.com_cookies.txt")
-          }
-        ).then(output => {
-          if(output.fromCache){
-            logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Estava em cache!`);
-            destinoVideo = output.lastDownloadLocation;
+      logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Info do video '${videoInfo.id}': ${tituloVideo}, ${autorVideo}, ${videoInfo.duration}s.`);
+
+      if (videoInfo.duration > 480) {
+        return callback(new Error(`Atualmente, só consigo baixar músicas de até 8 minutos.`), null);
+      }
+
+      logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Fazendo download do vídeo para conversão...`);
+      const downloadOptions = {
+        o: tempVideoPath,
+        f: "(bv*[vcodec~='^((he|a)vc|h264)'][filesize<60M]+ba) / (bv*+ba/b)",
+        remuxVideo: "mp4",
+        recodeVideo: "mp4",
+        audioFormat: "aac",
+        ffmpegLocation: process.env.FFMPEG_PATH,
+        cookies: path.join(database.databasePath, "www.youtube.com_cookies.txt")
+      };
+
+      videoCacheManager.downloadVideoWithCache(urlSafe, downloadOptions)
+        .then(output => {
+          let videoToConvertPath;
+          let shouldCleanup = false;
+
+          if (output.fromCache) {
+            logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Vídeo estava em cache: ${output.lastDownloadLocation}`);
+            videoToConvertPath = output.lastDownloadLocation;
           } else {
-            logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Não tinha cache, setando...`);
-            videoCacheManager.setLastDownloadLocation(urlSafe, destinoVideo, "audio");
+            logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Vídeo baixado para: ${tempVideoPath}`);
+            videoToConvertPath = tempVideoPath;
+            shouldCleanup = true;
+            videoCacheManager.setLastDownloadLocation(urlSafe, videoToConvertPath, "video");
           }
-          const resultado = {"legenda": `[${autorVideo}] ${tituloVideo}`, "arquivo": destinoVideo};
+
+          logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Convertendo '${videoToConvertPath}' para MP3...`);
+          return toMp3(videoToConvertPath).then(audioFilePath => ({
+            audioFilePath,
+            shouldCleanup,
+            videoToConvertPath
+          }));
+        })
+        .then(({ audioFilePath, shouldCleanup, videoToConvertPath }) => {
+          logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Conversão para MP3 concluída: ${audioFilePath}`);
+
+          if (shouldCleanup) {
+            fs.unlink(videoToConvertPath)
+              .then(() => logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Arquivo de vídeo temporário removido: ${videoToConvertPath}`))
+              .catch(err => logger.warn(`[baixarMusicaYoutube][${nomeVideoTemp}] Falha ao remover arquivo de vídeo temporário: ${err}`));
+          }
+
+          const resultado = { "legenda": `[${autorVideo}] ${tituloVideo}`, "arquivo": audioFilePath };
           logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Resultado: ${JSON.stringify(resultado)}`);
           callback(null, resultado);
-        }).catch(error => {
+        })
+        .catch(error => {
           console.log(error);
-          callback(new Error(`Não consegui baixar este vídeo 😭`), null);
+          callback(new Error(`Não consegui baixar este áudio 😭`), null);
         });
-      }
+
     }).catch(error => {
       console.log(error);
       callback(new Error(`Não consegui pegar informações sobre este vídeo 😭`), null);
-    }); 
-  } catch(e) {
+    });
+  } catch (e) {
     callback(e, null);
   }
 }

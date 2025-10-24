@@ -118,12 +118,11 @@ async function cleanupTempFiles(filePaths) {
  */
 async function handleGetAudio(bot, message, args, group) {
   const chatId = message.group || message.author;
-  const returnMessages = [];
-  
+
   try {
     // Obtém mensagem citada
     const quotedMsg = await message.origin.getQuotedMessage();
-    
+
     // Verifica se a mensagem citada tem mídia
     if (!quotedMsg.hasMedia) {
       return new ReturnMessage({
@@ -131,61 +130,37 @@ async function handleGetAudio(bot, message, args, group) {
         content: 'A mensagem citada não contém mídia.'
       });
     }
-    
+
     // Verifica tipo de mídia
     const quotedMedia = await quotedMsg.downloadMedia();
     const supportedTypes = ['audio', 'voice', 'video'];
     const mediaType = quotedMedia.mimetype.split('/')[0];
-    
+
     if (!supportedTypes.includes(mediaType)) {
       return new ReturnMessage({
         chatId: chatId,
         content: `Tipo de mídia não suportado: ${mediaType}. Use em áudio, voz ou vídeo.`
       });
     }
-    
-    // Envia indicador de processamento
-    returnMessages.push(
-      new ReturnMessage({
-        chatId: chatId,
-        content: '🌀 Processando áudio...'
-      })
+
+    const outputBase64 = await toMp3(quotedMedia.data, { b64: true });
+
+    const outputMedia = new MessageMedia(
+      'audio/mp3',
+      outputBase64,
+      'audio.mp3'
     );
-    
-    // Salva mídia em arquivo temporário
-    let tempFiles = [];
-    
-    const inputExt = quotedMedia.mimetype.split('/')[1].split(';')[0];
-    const inputPath = await saveMediaToTemp(quotedMedia, inputExt);
-    tempFiles.push(inputPath);
-    
-    // Converte para MP3
-    const outputPath = await toMp3(inputPath);
-    tempFiles.push(outputPath);
-    
-    // Cria objeto de mídia
-    const outputMedia = await createMediaFromFile(outputPath, 'audio/mp3');
-    
-    // Limpa arquivos temporários
-    cleanupTempFiles(tempFiles).catch(error => {
-      logger.error('Erro ao limpar arquivos temporários:', error);
+
+    return new ReturnMessage({
+      chatId: chatId,
+      content: outputMedia,
+      options: {
+        sendAudioAsVoice: false,
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
+      }
     });
-    
-    // Adiciona a mensagem de mídia ao retorno
-    returnMessages.push(
-      new ReturnMessage({
-        chatId: chatId,
-        content: outputMedia,
-        options: {
-          sendAudioAsVoice: false,
-          quotedMessageId: message.origin.id._serialized,
-          evoReply: message.origin
-        }
-      })
-    );
-    
-    // Se só tiver uma mensagem, retorna só ela ao invés do array
-    return returnMessages.length === 1 ? returnMessages[0] : returnMessages;
+
   } catch (error) {
     logger.error('Erro ao processar comando getaudio:', error);
     return new ReturnMessage({
@@ -205,12 +180,11 @@ async function handleGetAudio(bot, message, args, group) {
  */
 async function handleGetVoice(bot, message, args, group) {
   const chatId = message.group || message.author;
-  const returnMessages = [];
-  
+
   try {
     // Obtém mensagem citada
     const quotedMsg = await message.origin.getQuotedMessage();
-    
+
     // Verifica se a mensagem citada tem mídia
     if (!quotedMsg.hasMedia) {
       return new ReturnMessage({
@@ -218,61 +192,37 @@ async function handleGetVoice(bot, message, args, group) {
         content: 'A mensagem citada não contém mídia.'
       });
     }
-    
+
     // Verifica tipo de mídia
     const quotedMedia = await quotedMsg.downloadMedia();
     const supportedTypes = ['audio', 'voice', 'video'];
     const mediaType = quotedMedia.mimetype.split('/')[0];
-    
+
     if (!supportedTypes.includes(mediaType)) {
       return new ReturnMessage({
         chatId: chatId,
         content: `Tipo de mídia não suportado: ${mediaType}. Use em áudio, voz ou vídeo.`
       });
     }
-    
-    // Envia indicador de processamento
-    returnMessages.push(
-      new ReturnMessage({
-        chatId: chatId,
-        content: '🌀 Processando áudio...'
-      })
+
+    const outputBase64 = await toOpus(quotedMedia.data, { b64: true });
+
+    const outputMedia = new MessageMedia(
+      'audio/ogg; codecs=opus',
+      outputBase64,
+      'voice.ogg'
     );
-    
-    // Salva mídia em arquivo temporário
-    let tempFiles = [];
-    
-    const inputExt = quotedMedia.mimetype.split('/')[1].split(';')[0];
-    const inputPath = await saveMediaToTemp(quotedMedia, inputExt);
-    tempFiles.push(inputPath);
-    
-    // Converte para OGG (formato de voz)
-    const outputPath = await toOpus(inputPath);
-    tempFiles.push(outputPath);
-    
-    // Cria objeto de mídia
-    const outputMedia = await createMediaFromFile(outputPath, 'audio/ogg; codecs=opus');
-    
-    // Limpa arquivos temporários
-    cleanupTempFiles(tempFiles).catch(error => {
-      logger.error('Erro ao limpar arquivos temporários:', error);
+
+    return new ReturnMessage({
+      chatId: chatId,
+      content: outputMedia,
+      options: {
+        sendAudioAsVoice: true,
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
+      }
     });
-    
-    // Adiciona a mensagem de mídia ao retorno
-    returnMessages.push(
-      new ReturnMessage({
-        chatId: chatId,
-        content: outputMedia,
-        options: {
-          sendAudioAsVoice: true,
-          quotedMessageId: message.origin.id._serialized,
-          evoReply: message.origin
-        }
-      })
-    );
-    
-    // Se só tiver uma mensagem, retorna só ela ao invés do array
-    return returnMessages.length === 1 ? returnMessages[0] : returnMessages;
+
   } catch (error) {
     logger.error('Erro ao processar comando getvoice:', error);
     return new ReturnMessage({

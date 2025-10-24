@@ -76,7 +76,7 @@ class InviteSystem {
         return false;
       }
       
-      this.logger.info(`Recebido convite de grupo de ${message.author}: ${inviteLink}`);
+      this.logger.info(`Recebido convite de grupo de ${message.author}: ${inviteLink}`, {message});
       
       // Verifica se o usuário já tem uma solicitação pendente
       if (this.pendingRequests.has(message.author)) {

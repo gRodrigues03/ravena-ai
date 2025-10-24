@@ -26,6 +26,7 @@ class MockClient extends EventEmitter {
         _serialized: '1234567890@c.us' 
       } 
     };
+    this.getBlockedContacts = () => ([]);
   }
 
   async initialize() {
@@ -337,7 +338,12 @@ async function runTests() {
       id: 'test-bot',
       phoneNumber: '1234567890',
       eventHandler,
-      prefix: '!'
+      prefix: '!',
+      evolutionApiUrl: "http://localhost",
+      evolutionApiKey: "12345",
+      evoInstanceName: "mockup",
+      instanceName: "mockup",
+      webhookHost: "http://localhost"
     });
     
     // Initialize bot and database
@@ -355,7 +361,7 @@ async function runTests() {
     
     // Run example tests
     const testUser = '55123456789@c.us';
-    const testGroup = '120363401355514899@g.us';
+    const testGroup = '120363404335114899@g.us';
     
     // First, we need to ensure the database has the test group
     logger.info('Setting up test environment...');
@@ -390,7 +396,7 @@ async function runTests() {
     await new Promise(resolve => setTimeout(resolve, 5000));
     logger.info('sending');
 
-    await simulator.simulateTextMessage(testUser, testGroup, '!cantada');
+    await simulator.simulateTextMessage(testUser, testGroup, '!sr pudim');
 
     //logger.info('joining');    
     //await simulator.simulateGroupJoin(testGroup, testUser);
