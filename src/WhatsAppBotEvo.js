@@ -2213,7 +2213,7 @@
 
     async restartBot(reason = 'Restart requested') {
       this.logger.info(`[restartBot] EvoAPI restart instance ${this.instanceName}`);
-      return await this.apiClient.put('/instance/restart');
+      return await this.apiClient.post('/instance/restart');
     }
 
     async createContact(phoneNumber, name, surname) {
@@ -2227,3 +2227,4 @@
   }
 
   module.exports = WhatsAppBotEvo;
+

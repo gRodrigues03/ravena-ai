@@ -208,7 +208,7 @@ class BotAPI {
     };
     
     // Novo endpoint para reiniciar um bot específico (requer autenticação)
-    this.app.post('/restart/:botId', authenticateBasic, async (req, res) => {
+    this.app.get('/restart/:botId', authenticateBasic, async (req, res) => {
       try {
         // Obter parâmetros
         const { botId } = req.params;
@@ -242,23 +242,24 @@ class BotAPI {
         // Iniciar reinicialização em modo assíncrono
         const restartReason = reason || `Reinicialização via API em ${new Date().toLocaleString("pt-BR")}`;
         
-        // Responder imediatamente ao cliente
-        res.json({
-          status: 'ok',
-          message: `Reiniciando bot '${botId}'`,
-          timestamp: Date.now()
-        });
-        
-        // Executar reinicialização em segundo plano
-        setTimeout(async () => {
-          try {
-            this.logger.info(`Reiniciando bot ${botId} via endpoint API`);
-            await bot.restartBot(restartReason);
-            this.logger.info(`Bot ${botId} reiniciado com sucesso via API`);
-          } catch (error) {
-            this.logger.error(`Erro ao reiniciar bot ${botId} via API:`, error);
-          }
-        }, 500);
+
+        try {
+          this.logger.info(`Reiniciando bot ${botId} via endpoint API`);
+          const resp = await bot.restartBot(restartReason);
+          res.json({
+            status: 'ok',
+            message: resp,
+            timestamp: Date.now()
+          });
+          this.logger.info(`Bot ${botId} reiniciado com sucesso via API`);
+        } catch (error) {
+          this.logger.error(`Erro ao reiniciar bot ${botId} via API:`, error);
+          res.json({
+            status: 'error',
+            message: error,
+            timestamp: Date.now()
+          });
+        }
       } catch (error) {
         this.logger.error('Erro no endpoint de reinicialização:', error);
         res.status(500).json({
@@ -730,6 +731,7 @@ class BotAPI {
       const buttons = `
         <div style="margin: 1rem 0; display: flex; justify-content: center; gap: 10px;">
           <button onclick="window.location.reload()">Atualizar</button>
+          <button onclick="fetchAndShow('/restart/${botId}', 'restart')">Reiniciar</button> <br>
           <button onclick="fetchAndShow('/logout/${botId}', 'reload')">Logout</button>
           <button onclick="fetchAndShow('/recreate/${botId}', 'recriar')">Recriar</button>
         </div>
