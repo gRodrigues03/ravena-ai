@@ -2212,39 +2212,8 @@
     }
 
     async restartBot(reason = 'Restart requested') {
-      this.logger.info(`[${this.id}] Restarting Evo bot ${this.id}. Reason: ${reason}`);
-      if (this.grupoAvisos && this.isConnected) {
-          try {
-              await this.sendMessage(this.grupoAvisos, `🔄 Bot ${this.id} (Evo) reiniciando. Motivo: ${reason}`);
-              await sleep(2000);
-          } catch (e) { this.logger.warn(`[${this.id}] Could not send restart notification during restart:`, e.message); }
-      }
-      
-      if (this.webhookServer) {
-        this.webhookServer.close();
-        this.webhookServer = null;
-      }
-      this._onInstanceDisconnected('RESTARTING');
-      if (this.loadReport) this.loadReport.destroy();
-
-      this.logger.info(`[${this.id}] Bot resources partially cleared, attempting re-initialization...`);
-      await sleep(2000);
-      
-      try {
-        await this.initialize(); // Re-run the initialization process
-        this.logger.info(`[${this.id}] Bot ${this.id} (Evo) re-initialization process started.`);
-      } catch (error) {
-        this.logger.error(`[${this.id}] CRITICAL ERROR during bot restart:`, error);
-        if (this.grupoLogs) {
-          try {
-            // Attempt to send error even if disconnected (might fail)
-            await this.apiClient.post(`/message/sendText`, {
-              number: this.grupoLogs,
-              text: `❌ Falha CRÍTICA ao reiniciar bot ${this.id} (Evo). Erro: ${error.message}`
-            }).catch(e => this.logger.error("Failed to send critical restart error to logs:", e.message));
-          } catch (e) { /* ignore */ }
-        }
-      }
+      this.logger.info(`[restartBot] EvoAPI restart instance ${this.instanceName}`);
+      return await this.apiClient.put('/instance/restart');
     }
 
     async createContact(phoneNumber, name, surname) {
