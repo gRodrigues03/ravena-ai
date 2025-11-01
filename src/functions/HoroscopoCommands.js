@@ -9,6 +9,55 @@ const Database = require('../utils/Database');
 const database = Database.getInstance();
 const logger = new Logger('horoscopo-commands');
 
+let horoscopoWriteQueue = {};
+let writeTimeout = null;
+const WRITE_DEBOUNCE_MS = 2000; // 2 segundos
+
+/**
+ * Escreve a fila de horóscopos em disco de forma assíncrona.
+ * Agrupa múltiplas escritas rápidas em uma única operação.
+ */
+async function flushHoroscopoToFile() {
+    const dates = Object.keys(horoscopoWriteQueue);
+    if (dates.length === 0) return;
+
+    logger.info(`Iniciando escrita de horóscopos em disco para as datas: ${dates.join(', ')}`);
+
+    // Copia e limpa a fila imediatamente para não perder dados que cheguem durante a escrita
+    const queueToProcess = horoscopoWriteQueue;
+    horoscopoWriteQueue = {};
+    clearTimeout(writeTimeout);
+    writeTimeout = null;
+
+    for (const date of dates) {
+        const dataToWrite = queueToProcess[date];
+        if (!dataToWrite || Object.keys(dataToWrite).length === 0) continue;
+
+        const filePath = path.join(horoscopoDir, `${date}.json`);
+
+        try {
+            await fs.mkdir(horoscopoDir, { recursive: true });
+            let existingData = {};
+            try {
+                const currentContent = await fs.readFile(filePath, 'utf8');
+                existingData = JSON.parse(currentContent);
+            } catch (error) {
+                // Arquivo não existe ou é inválido, será sobrescrito
+            }
+
+            const mergedData = { ...existingData, ...dataToWrite };
+
+            await fs.writeFile(filePath, JSON.stringify(mergedData, null, 2));
+            logger.info(`Sucesso ao escrever ${Object.keys(dataToWrite).length} horóscopo(s) para ${date}`);
+
+        } catch (error) {
+            logger.error(`Falha ao escrever horóscopos para a data ${date}:`, error);
+            // Opcional: Adicionar lógica para tentar novamente depois
+        }
+    }
+}
+
+
 const horoscopoDir = path.join(database.databasePath, 'horoscopo');
 
 const signos = {
@@ -58,8 +107,8 @@ function normalizeSigno(signo) {
 async function detectHoroscopo(msgBody, groupId) {
   try {
     const gruposHoroscopo = (process.env.GRUPOS_HOROSCOPOS || '').split(',');
-    if (!gruposHoroscopo.includes(groupId)) {
-      logger.info(`MuNews detectada em grupo oficial`);
+    if (gruposHoroscopo.includes(groupId) && gruposHoroscopo.length > 0) {
+      logger.info(`Horoscopo detectado em grupo oficial`);
     }
 
     const horoscopoRegex = /\*.*?\s(?:♈|♉|♊|♋|♌|♍|♎|♏|♐|♑|♒|♓)\s+(Áries|Touro|Gêmeos|Câncer|Leão|Virgem|Libra|Escorpião|Sagitário|Capricórnio|Aquário|Peixes):\*\s+([\s\S]*?)(?:\n\n|$)/i;
@@ -71,24 +120,23 @@ async function detectHoroscopo(msgBody, groupId) {
       const signoNormalizado = normalizeSigno(signoNome);
 
       if (signoNormalizado) {
-        await fs.mkdir(horoscopoDir, { recursive: true });
-
         const today = new Date();
-        const date = today.toISOString().split('T')[0]; // YYYY-MM-DD
-        const filePath = path.join(horoscopoDir, `${date}.json`);
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const date = `${year}-${month}-${day}`;
 
-        let horoscoposDoDia = {};
-        try {
-          const data = await fs.readFile(filePath, 'utf8');
-          horoscoposDoDia = JSON.parse(data);
-        } catch (error) {
-          // Arquivo não existe ou está corrompido, será criado um novo
+        // Adiciona na fila de escrita
+        if (!horoscopoWriteQueue[date]) {
+          horoscopoWriteQueue[date] = {};
         }
+        horoscopoWriteQueue[date][signoNormalizado] = texto;
 
-        horoscoposDoDia[signoNormalizado] = texto;
+        // Agenda a escrita em disco
+        if (writeTimeout) clearTimeout(writeTimeout);
+        writeTimeout = setTimeout(flushHoroscopoToFile, WRITE_DEBOUNCE_MS);
 
-        await fs.writeFile(filePath, JSON.stringify(horoscoposDoDia, null, 2));
-        logger.info(`Horóscopo de ${signoNormalizado} salvo para ${date}, recebido de grupo '${groupId}'`);
+        logger.info(`Horóscopo de ${signoNormalizado} para ${date} adicionado à fila de escrita.`);
         return true;
       }
     }

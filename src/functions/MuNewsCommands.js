@@ -87,7 +87,7 @@ async function detectNews(msgBody, groupId) {
           logger.info(`MuNews salva com sucesso para data ${data}, detectado em grupo '${groupId}'`);
           
           // Se a MuNews for detectada de um grupo específico definido em .env, informa o grupo
-          if (process.env.GRUPO_MUNEWS && process.env.GRUPO_MUNEWS === groupId) {
+          if (process.env.GRUPO_MUNEWS && process.env.GRUPO_MUNEWS.length > 0 && process.env.GRUPO_MUNEWS === groupId) {
             logger.info(`MuNews detectada do grupo oficial`);
           }
           
