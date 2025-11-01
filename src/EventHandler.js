@@ -10,6 +10,7 @@ const { aiCommand } = require('./functions/AICommands');
 const SummaryCommands = require('./functions/SummaryCommands');
 const NSFWPredict = require('./utils/NSFWPredict');
 const MuNewsCommands = require('./functions/MuNewsCommands');
+const HoroscopoCommands = require('./functions/HoroscopoCommands');
 const RankingMessages = require('./functions/RankingMessages');
 const fs = require('fs').promises;
 const path = require('path');
@@ -358,7 +359,7 @@ class EventHandler {
 
     if (message.type === 'text') {
       if(group){
-        // Vê se a mensagem não é um MuNews
+        // Vê se a mensagem não é um MuNews ou horóscopo
         try {
           const isNewsDetected = await MuNewsCommands.detectNews(message.content, group.id);
           if (isNewsDetected) {
@@ -368,8 +369,18 @@ class EventHandler {
             });
             return;
           }
+
+          const isHoroscopoDetected = await HoroscopoCommands.detectHoroscopo(message.content, group.id);
+          if (isHoroscopoDetected) {
+            // Opcionalmente, envia uma confirmação de que um Horoscopo foi detectado e salvo
+            // bot.sendMessage(process.env.GRUPO_LOGS, "🔮 *Horoscopo detectado e salvo!*").catch(error => {
+            //   this.logger.error('Erro ao enviar confirmação de Horoscopo:', error);
+            // });
+            return;
+          }
+
         } catch (error) {
-          this.logger.error('Erro ao verificar MuNews:', error);
+          this.logger.error('Erro ao verificar MuNews ou horóscopo:', error);
         }
       } else {
         // Msg no PV, responder usando IA

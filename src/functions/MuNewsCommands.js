@@ -84,7 +84,7 @@ async function detectNews(msgBody, groupId) {
           
           // Salva o conteúdo da mensagem no arquivo
           await fs.writeFile(filePath, msgBody);
-          logger.info(`MuNews salva com sucesso para data ${data}`);
+          logger.info(`MuNews salva com sucesso para data ${data}, detectado em grupo '${groupId}'`);
           
           // Se a MuNews for detectada de um grupo específico definido em .env, informa o grupo
           if (process.env.GRUPO_MUNEWS && process.env.GRUPO_MUNEWS === groupId) {
