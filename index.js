@@ -4,6 +4,7 @@ require('dotenv').config();
 const evolutionAPI = process.env.USE_EVOLUTION ?? false;
 
 const WhatsAppBotEvo = require('./src/WhatsAppBotEvo');
+const WhatsAppBotDiscord = require('./src/WhatsAppBotDiscord');
 const WhatsAppBot = require('./src/WhatsAppBot');
 
 const EventHandler = require('./src/EventHandler');
@@ -51,7 +52,33 @@ async function main() {
       if(!rBot.enabled) continue;
       
       let newRBot;
-      if(rBot.useEvo){
+      if (rBot.useDiscord) {
+        logger.info(`Inicializando '${rBot.nome}' como Discord Bot`);
+        newRBot = new WhatsAppBotDiscord({
+          id: rBot.nome,
+          useDiscord: true,
+          discordToken: rBot.discordToken,
+          eventHandler: eventHandler,
+          prefix: rBot.customPrefix || process.env.DEFAULT_PREFIX || '!',
+          ignorePV: rBot.ignorePV ?? false,
+          pvAI: rBot.pvAI ?? false,
+          managementUser: rBot.managementUser ?? process.env.BOTAPI_USER,
+          managementPW: rBot.managementPW ?? process.env.BOTAPI_PASSWORD,
+
+          // IDs dos canais para notificações - do .env
+          grupoLogs: process.env.GRUPO_LOGS_DISCORD,
+          grupoAvisos: process.env.GRUPO_AVISOS_DISCORD,
+          notificarDonate: rBot.notificarDonate ?? false,
+
+          // Configs de cache
+          redisURL: process.env.CACHE_REDIS_URI,
+          redisTTL: process.env.CACHE_REDIS_TTL,
+          redisDB: redisDbAtual,
+        });
+
+        redisDbAtual++;
+        newRBot.initialize();
+      } else if(rBot.useEvo){
         logger.info(`Inicializando '${rBot.nome}' como evolutionAPI`);
         newRBot = new WhatsAppBotEvo({
           id: rBot.nome,

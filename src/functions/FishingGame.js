@@ -878,7 +878,7 @@ async function fishCommand(bot, message, args, group) {
     //logger.debug(`[fishCommand] Debug`, message);
     const chatId = message.group || message.author;
     const userId = message.author;
-    const userName = message.pushName ?? message.origin.pushName ?? message.evoMessageData.pushName ?? message.authorName ?? "Pescador";
+    const userName = message.pushName ?? message.origin?.pushName ?? message.evoMessageData?.pushName ?? message.authorName ?? "Pescador";
     const groupId = message.group; // ID do grupo, se for uma mensagem de grupo
     const mentionPessoa = [];
     

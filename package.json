@@ -9,10 +9,11 @@
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",
-    "axios": "^1.8.4",
+    "axios": "^1.13.1",
     "canvas": "^3.1.2",
     "cheerio": "^1.0.0",
     "chrono-node": "^2.8.0",
+    "discord.js": "^14.24.2",
     "dotenv": "^16.3.1",
     "express": "^5.1.0",
     "ignore": "^7.0.4",

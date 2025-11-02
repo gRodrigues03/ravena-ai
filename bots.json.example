@@ -1,18 +1,33 @@
 [
    {
     "enabled": true,
-    "nome": "ravena-exemplo",
+    "nome": "ravena-whatsapp-exemplo",
     "managementUser": "ravuser",
     "managementPW": "ravpw",
 
     "privado": false,
     "comunitario": false,
     "useEvo": true,
+    "useDiscord": false,
     "webhookPort": 3601,
     "useWebsocket": false,
     "numero": "559911223344",
     "ignorePV": false,
     "ignoreInvites": true,
+    "customPrefix": "!"
+   },
+   {
+    "enabled": false,
+    "nome": "ravena-discord-exemplo",
+    "managementUser": "ravuser_discord",
+    "managementPW": "ravpw_discord",
+    
+    "useEvo": false,
+    "useDiscord": true,
+    "discordToken": "SEU_TOKEN_DE_BOT_DO_DISCORD_VEM_AQUI",
+
+    "privado": false,
+    "ignorePV": false,
     "customPrefix": "!"
    }
 ]
