@@ -59,6 +59,7 @@ async function main() {
           comunitario: rBot.comunitario ?? false,
           numeroResponsavel: rBot.numeroResponsavel ?? false,
           phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
+          supportMsg: rBot.msgSuporte ?? false,
           privado: rBot.privado, // Número de telefone para solicitar código de pareamento
           eventHandler: eventHandler,
           //stabilityMonitor: stabilityMonitor,
@@ -105,6 +106,7 @@ async function main() {
         newRBot = new WhatsAppBot({
           id: rBot.nome,
           phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
+          supportMsg: rBot.msgSuporte ?? false,
           vip: rBot.vip ?? false,
           comunitario: rBot.comunitario ?? false,
           numeroResponsavel: rBot.numeroResponsavel ?? false,

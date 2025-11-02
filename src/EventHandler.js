@@ -667,7 +667,11 @@ class EventHandler {
         }
 
         if(bot.comunitario){
-          botInfoMessage += `\n\n⭕ Este é um número da ☭ *ravena comunitária* ☭, onde a pessoa que fornece o chip pode ter acesso às suas mensagens (assim como qualquer outro bot ilegal do whats). Se você não concorda com isto, fique lire para removê-la do grupo.⭕\n_Saiba mais enviando !comunitaria ou acessando o site oficial! Ou no !grupao_`;
+          if(bot.supportMsg && bot.supportMsg.length > 0){
+            botInfoMessage += `\n---☭---☭---☭---☭---☭---☭---☭---☭---\n${bot.supportMsg}`;
+          } else {
+            botInfoMessage += `\n\n⭕ Este é um número da ☭ *ravena comunitária* ☭, onde a pessoa que fornece o chip pode ter acesso às suas mensagens (assim como qualquer outro bot ilegal do whats). Se você não concorda com isto, fique lire para removê-la do grupo.⭕\n_Saiba mais enviando !comunitaria ou acessando o site oficial! Ou no !grupao_`;
+          }
         }
         
         this.logger.debug(`[groupJoin] botInfoMessage: ${botInfoMessage}`);

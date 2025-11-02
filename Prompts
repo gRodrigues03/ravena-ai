@@ -2834,3 +2834,103 @@ Este endpoint deve chamar o bot.deleteInstance() e logo em seguida o bot.createI
 
 
 Usar a mesma autenticação anterior.
+-----
+]Analise os arquivos, a partir da pasta atual:
+
+- @src/WhatsAppBotEvo.js (src/WhatsAppBotEvo.js)
+- @src/services/EvolutionApiClient.js (src/services/EvolutionApiClient.js)
+
+Este são arquivos de wrappers para meu bot, que fazem a interface com o WhatsApp utilizando a EvolutionAPI
+
+Seu objetivo é implementar um novo wrapper para meu bot, desta vez para discord
+- src/WhatsAppBotDiscord.js
+- src/services/DiscordApiClient.js (se necessário)
+
+A ideia é deixar o uso transparente.
+Meu servidor possui URL pública caso seja necessário configurar webhooks ao invés de polling.
+
+# Necessário implementar/substituir
+
+## .env
+Definir IDs de grupos do discord, tokens, URLs, etc.
+
+## Options do constructor
+Novos:
+options.useDiscord
+options.discordToken: E outros dados necessários para inicializar o bot no discord
+
+Utilizar existentes:
+options.id
+options.eventHandler
+options.prefix
+options.pvAI: Padrão true
+options.ignorePV: Padrão false
+options.grupoLogs
+options.grupoAvisos
+options.notificarDonate: Irá notificar no grupoAvisos
+
+Ignorar, não utilizados:
+options.vip
+options.comunitario
+options.numeroResponsavel
+options.supportMsg
+options.phoneNumber
+options.useWebsocket
+options.evolutionWS
+options.evolutionApiUrl
+options.evolutionApiKey
+options.evoInstanceName
+options.webhookHost
+options.webhookPort
+options.privado
+options.managementUser
+options.managementPW
+options.redisURL
+options.redisDB
+options.redisTTL
+options.safeMode
+options.otherBots
+options.whitelistPV
+options.ignoreInvites
+options.grupoInvites
+options.userAgent
+options.stabilityMonitor
+
+
+## Endpoints
+O código que utilizar estes endpoints deve ser editado para utilizar os métodos corretos do discord
+
+- /chat/getBase64FromMediaMessage: Baixa dados do arquivo recebido na mensagem
+
+Envio de mídia:
+- /message/sendText
+- /message/sendMedia: Imagem, vídeo, gif
+- /message/sendSticker: Caso não exista sticker, enviar como imagem (pode ser gif animado)
+- /message/sendWhatsAppAudio
+- /message/sendLocation: se possível
+
+
+# Algumas funções ((NÃO)) serão necessárias no discord
+O código que utilizar estes endpoints deve ser comentado, retornado, true, etc. IGNORAR
+
+Mensagens:
+- /message/sendContact
+- /message/sendPoll
+
+Controle de instancia: Não existem
+- /instance/logout
+- /instance/delete
+- /instance/create
+- /instance/connectionState
+- /instance/connect
+- /instance/logout
+- /instance/restart
+- /chat/updateProfilePicture
+
+Controle de Grupo
+- /group/updateGroupSubject: Não há necessidade de alterar titulo de grupo no discord
+- /group/leaveGroup: O bot será removido manualmente dos grupos pelos usuários
+- /group/acceptInviteCode e inviteInfo: O bot será adicionado manualmente dos grupos pelos usuários
+- /chat/updatePrivacySettings: Não existe no discord
+- /group/updateSetting: Não existe no discord
+

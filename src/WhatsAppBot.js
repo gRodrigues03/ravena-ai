@@ -32,6 +32,7 @@ class WhatsAppBot {
     this.vip = options.vip;
     this.comunitario = options.comunitario;
     this.numeroResponsavel = options.numeroResponsavel;
+    this.supportMsg = options.supportMsg;
     this.phoneNumber = options.phoneNumber;
     this.eventHandler = options.eventHandler;
     this.prefix = options.prefix || process.env.DEFAULT_PREFIX || '!';

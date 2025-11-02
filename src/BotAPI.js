@@ -117,6 +117,7 @@ class BotAPI {
             return {
               id: bot.id,
               phoneNumber: bot.phoneNumber,
+              supportNumber: bot.supportNumber,
               connected: bot.isConnected,
               lastMessageReceived: bot.lastMessageReceived || null,
               msgsHr: messagesPerHour,
@@ -129,6 +130,7 @@ class BotAPI {
               banido: bot.banido || false,
               comunitario: bot.comunitario || false,
               numeroResponsavel: bot.numeroResponsavel || false,
+              supportMsg: bot.supportMsg || false,
               vip: bot.vip || false
             };
           })
@@ -154,6 +156,7 @@ class BotAPI {
             banido: bot.banido || false,
             comunitario: bot.comunitario || false,
             numeroResponsavel: bot.numeroResponsavel || false,
+            supportMsg: bot.supportMsg || false,
             vip: bot.vip || false
           }))
         });
