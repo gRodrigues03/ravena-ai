@@ -150,7 +150,7 @@ class WhatsAppBotDiscord {
   async _handleMessage(message) {
     if (message.author.bot) return; // Ignorar mensagens de outros bots (e de si mesmo)
 
-    this.logger.debug(`_handleMessage`, message);
+    //this.logger.debug(`_handleMessage`, message);
     this.lastMessageReceived = Date.now();
 
     // Filtro de grupos do sistema (se configurado)
