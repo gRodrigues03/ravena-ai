@@ -351,11 +351,11 @@ async function handleTranslation(bot, message, args, group) {
     }
     
     // Obter código do idioma de destino
-    const languageArgSource = args[0].toLowerCase();
-    const languageArgDest = args[1].toLowerCase();
+    const languageArgSource = args[0]?.toLowerCase();
+    const languageArgDest = args[1]?.toLowerCase();
 
-    const sourceLanguage = getLanguageCode(languageArgSource);
-    const targetLanguage = getLanguageCode(languageArgDest);
+    const sourceLanguage = getLanguageCode(languageArgSource ?? "en");
+    const targetLanguage = getLanguageCode(languageArgDest ?? "pt");
     
 
     if (!sourceLanguage) {

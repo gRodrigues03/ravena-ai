@@ -270,6 +270,32 @@ const commands = [
       error: "❌"
     },
     method: horoscopoCommand
+  }),
+  new Command({
+    name: 'horóscopo',
+    hidden: true,
+    description: 'Exibe o horóscopo para um signo e/ou data específica.',
+    usage: '!horoscopo [signo] [data]',
+    category: "utilidades",
+    reactions: {
+      before: process.env.LOADING_EMOJI ?? "🌀",
+      after: "✨",
+      error: "❌"
+    },
+    method: horoscopoCommand
+  }),
+  new Command({
+    name: 'signo',
+    hidden: true,
+    description: 'Exibe o horóscopo para um signo e/ou data específica.',
+    usage: '!horoscopo [signo] [data]',
+    category: "utilidades",
+    reactions: {
+      before: process.env.LOADING_EMOJI ?? "🌀",
+      after: "✨",
+      error: "❌"
+    },
+    method: horoscopoCommand
   })
 ];
 
