@@ -78,19 +78,12 @@ Para funções bastante utilizadas do bot
 
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/moothz/ravenabot-ai.git
-   cd ravenabot-ai
+   git clone https://github.com/moothz/ravena-ai.git
+   cd ravena-ai
    ```
+2. Copie o arquivo `.env.example` para `.env`
 
-2. Instale as dependências:
-   ```bash
-   npm install
-   python -m pip install backgroundremover
-   ```
-
-3. Copie o arquivo `.env.example` para `.env`
-
-4. Configure o arquivo `.env` (veja a seção [Configuração](#-configuração))
+3. Configure o arquivo `.env` (veja a seção [Configuração](#-configuração))
 
 4. Copie o arquivo `bots.json.example` para `bots.json`
 
@@ -120,7 +113,11 @@ Edite o arquivo `bots.json` conforme instruções abaixo:
     // Não recomendo configurar nele, é muito trabalho pra ter mais erros
     "useEvo": false,            // Uso avançado usando a EvolutionAPI. O nome do bot deve ser o mesmo no painel da evo
     "webhookPort": 3457,        // Apenas para EvolutionAPI, ignore 99% dos casos
-    "useWebsocket": true       // Apenas para EvolutionAPI, ignore 99% dos casos
+    "useWebsocket": true,       // Apenas para EvolutionAPI, ignore 99% dos casos
+
+    // Também é possível ativar no discord (SUPER EM TESTES, NADA GARANTIDO)
+    "useDiscord": false,
+    "discordToken": "MTQzN...",
    }
 ]
 ```
@@ -144,6 +141,7 @@ CMD_WHITELIST=sa-,anoni     # Comandos pra considerar mesmo que o bot esteja com
 # Completamente opcional, ainda mais pra quem vai rodar o bot particular
 # Eu uso cloudflare pra domínio externo ravena.moothz.win
 BOT_DOMAIN=https://seuhost.com/rv # URL da API 
+BOT_DOMAIN_LOCAL=http://192.168.1.100 # URL LOCAL da API, pra uso com o Evolution e evitar problemas de HTTPS
 API_PORT=5000           # Porta da API
 BOTAPI_USER=admin         # Usuário para comandos remotos
 BOTAPI_PASSWORD=senhaCecreta    # Senha para comandos Remotos
@@ -171,11 +169,13 @@ API_PLACAS_PREMIUM=         # https://apiplacas.com.br/
 TIPA_TOKEN=             # https://tipa.ai/settings/apps (WEBHOOKS)
 #API_PLACAS_USAR_PREMIUM=TRUE   # Caso tenha comprad uma chave premium
 GRUPOS_PLACA_PREMIUM=grupo1,grupo2  # Nomes de grupos que podem usar a API placa premium
+SOUNDCLOUD_CLIENT_ID=       # Pegar do network no navegador
+SOUNDCLOUD_OAUTH_TOKEN=       # Pegar do network no navegador
 
 # URL de APIs Locais
 API_TIMEOUT=10000           # 
 SDWEBUI_URL=http://192.168.3.200:7860     # Porta padrão SDWebui
-SDWEBUI_TOKEN=                # base64 de 'user:password' informada no --api-auth
+SDWEBUI_TOKEN=                # base64 de user:password de --api-auth
 LOCAL_LLM_ENDPOINT=http://localhost:9666  # Porta padrão LMStudio
 LOCAL_LLM_MODEL=google/gemma-3-12b      # Pegar nome do /v1/models
 OLLAMA_ENDPOINT=http://localhost:11434
@@ -198,6 +198,9 @@ GRUPO_INVITES=1234678901234567890@g.us        # 2. Abra o arquivo data/groups.js
 GRUPO_AVISOS=1234678901234567890@g.us         # 3. Pegueo o ID de lá! (pra facilitar, use !g-setName)
 GRUPO_INTERACAO=1234678901234567890@g.us      # 
 
+# Grupos de captura de conteúdo
+GRUPOS_HOROSCOPOS=
+GRUPO_MUNEWS=
 
 # Programas
 # Vou deixar aqui os exemplos como seria em uma máquina Windows
