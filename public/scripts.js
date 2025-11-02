@@ -337,7 +337,7 @@ function renderBotCard(botContainer, data, bot){
     let divResponsavel = "";
 
     if(bot.numeroResponsavel){
-        const phoneNumberResponsavel = formatPhoneNumber(extractPhoneFromBotId(bot.numeroResponsavel)).replace("+55","").trim();
+        const phoneNumberResponsavel = formatPhoneNumber(extractPhoneFromBotId(bot.numeroResponsavel, [])).replace("+55","").trim();
         divResponsavel = `             <div class="detail-item">
                 <span class="detail-label">Responsável:</span>
                 <span class="detail-value">${phoneNumberResponsavel}</span>
