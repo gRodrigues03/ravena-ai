@@ -172,7 +172,7 @@ class EventHandler {
         // Armazena mensagem para histórico de conversação
         SummaryCommands.storeMessage(message, message.group);
 
-        group = await this.getOrCreateGroup(message.group);
+        group = await this.getOrCreateGroup(message.guildId ?? message.group);
         if(!group.botNotInGroup){
           group.botNotInGroup = [];
         } else {

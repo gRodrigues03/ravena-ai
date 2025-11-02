@@ -1,4 +1,4 @@
-const { AttachmentBuilder } = require('discord.js');
+const { AttachmentBuilder, PermissionsBitField } = require('discord.js');
 const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
@@ -119,7 +119,9 @@ class WhatsAppBotDiscord {
 
     this.discordClient.on('ready', () => {
       this.isConnected = true;
-      this.logger.info(`>>> SUCESSO! Bot ${this.id} (${this.discordClient.user.tag}) está conectado ao Discord! <<<`);
+      this.discordBotId = this.discordClient.user.id;
+
+      this.logger.info(`>>> SUCESSO! Bot ${this.id} (${this.discordClient.user.tag}) está conectado ao Discord! (ID: ${this.discordBotId}) <<<`);
       if (this.eventHandler && typeof this.eventHandler.onConnected === 'function') {
         this.eventHandler.onConnected(this);
       }
@@ -150,7 +152,7 @@ class WhatsAppBotDiscord {
   async _handleMessage(message) {
     if (message.author.bot) return; // Ignorar mensagens de outros bots (e de si mesmo)
 
-    //this.logger.debug(`_handleMessage`, message);
+    this.logger.debug(`_handleMessage`, message);
     this.lastMessageReceived = Date.now();
 
     // Filtro de grupos do sistema (se configurado)
@@ -170,6 +172,7 @@ class WhatsAppBotDiscord {
   }
 
   async _handleGroupJoin(guild) {
+    this.logger.debug(`_handleGroupJoin`, guild);
     this.logger.info(`Bot foi adicionado a um novo servidor: ${guild.name} (${guild.id})`);
     // Simula o evento de entrada em grupo
     if (this.eventHandler && typeof this.eventHandler.onGroupJoin === 'function') {
@@ -190,6 +193,7 @@ class WhatsAppBotDiscord {
   }
 
   async _handleParticipantUpdate(member) {
+    this.logger.debug(`_handleParticipantUpdate`, member);
     this.logger.info(`Novo membro '${member.user.tag}' entrou no servidor '${member.guild.name}'`);
     // Simula a atualização de participantes
     if (this.eventHandler && typeof this.eventHandler.onParticipantsUpdate === 'function') {
@@ -219,6 +223,7 @@ class WhatsAppBotDiscord {
       const isGroup = message.inGuild();
       const authorId = message.author.id;
       const channelId = message.channel.id;
+      const guildId = message.guild.id;
       const timestamp = Math.floor(message.createdTimestamp / 1000);
       const responseTime = Math.max(0, this.getCurrentTimestamp() - timestamp);
 
@@ -255,6 +260,7 @@ class WhatsAppBotDiscord {
         fromMe: message.author.id === this.discordClient.user.id,
         group: isGroup ? channelId : null,
         from: channelId, // No Discord, 'from' é o canal
+        guildId: guildId, // Necessário pro discord
         author: authorId,
         name: message.member ? message.member.displayName : message.author.username,
         authorName: message.member ? message.member.displayName : message.author.username,
@@ -395,12 +401,95 @@ https://www.google.com/maps/search/?api=1&query=${content.latitude},${content.lo
     }
   }
 
+  splitContent(text, maxLength = 4000) {
+    const chunks = [];
+    let remainingText = text.trim(); // Start with trimmed text
+
+    while (remainingText.length > 0) {
+      // If the remainder fits, add it as the last chunk and stop
+      if (remainingText.length <= maxLength) {
+        chunks.push(remainingText);
+        break;
+      }
+
+      let splitIndex = -1;
+      let charsToSkip = 0;
+      
+      // Get the part of the string we're allowed to search in
+      const searchChunk = remainingText.substring(0, maxLength);
+
+      // 1. Try to split by double line break
+      let idx = searchChunk.lastIndexOf('\n\n');
+      if (idx > -1) {
+        splitIndex = idx;
+        charsToSkip = 2; // Length of '\n\n'
+      }
+
+      // 2. Try to split by single line break (if no double found)
+      if (splitIndex === -1) {
+        idx = searchChunk.lastIndexOf('\n');
+        if (idx > -1) {
+          splitIndex = idx;
+          charsToSkip = 1; // Length of '\n'
+        }
+      }
+
+      // 3. Try to split by space (if no newlines found)
+      if (splitIndex === -1) {
+        idx = searchChunk.lastIndexOf(' ');
+        if (idx > -1) {
+          splitIndex = idx;
+          charsToSkip = 1; // Length of ' '
+        }
+      }
+
+      // 4. Handle the split
+      if (splitIndex !== -1) {
+        // Found a preferred delimiter. Split before it.
+        const chunk = remainingText.substring(0, splitIndex);
+        if (chunk.length > 0) {
+          chunks.push(chunk);
+        }
+        // The new "remaining" text starts AFTER the delimiter
+        remainingText = remainingText.substring(splitIndex + charsToSkip).trimStart();
+      } else {
+        // Priority 4: No delimiters found. Hard cut at maxLength.
+        chunks.push(remainingText.substring(0, maxLength));
+        remainingText = remainingText.substring(maxLength).trimStart();
+      }
+    }
+
+    // Final filter to ensure no empty strings (e.g., from consecutive delimiters)
+    return chunks.filter(chunk => chunk.length > 0);
+  }
+
   async sendReturnMessages(returnMessages) {
     if (!Array.isArray(returnMessages)) {
       returnMessages = [returnMessages];
     }
-    const validMessages = returnMessages.filter(msg => msg && msg.isValid && msg.isValid());
-    if (validMessages.length === 0) return [];
+    const okMessages = returnMessages.filter(msg => msg && msg.isValid && msg.isValid());
+    if (okMessages.length === 0) return [];
+
+    // Use flatMap to process the array
+    const MAX_LENGTH = 4000;
+
+    const validMessages = okMessages.flatMap(msg => {
+      // If content is short, return the message as-is (in an array)
+      if (msg.content.length <= MAX_LENGTH) {
+        return [msg];
+      }
+
+      // If content is long, split it
+      const contentChunks = this.splitContent(msg.content, MAX_LENGTH);
+
+      // Map each string chunk back into a new message object
+      return contentChunks.map(chunk => {
+        return {
+          ...msg,       // Copy all original message properties
+          content: chunk // Overwrite the content with the new chunk
+        };
+      });
+    });
     
     const results = [];
     for (const message of validMessages) {
@@ -465,14 +554,24 @@ https://www.google.com/maps/search/?api=1&query=${content.latitude},${content.lo
           isGroup: false,
         };
       }
+
       return {
         id: { _serialized: channel.id },
         name: channel.name,
         isGroup: true,
-        participants: channel.guild.members.cache.map(m => ({
-          id: { _serialized: m.id },
-          isAdmin: m.permissions.has('Administrator'),
-        })),
+        participants: channel.guild.members.cache.map(m => {
+          // Check 1: Has Administrator permission
+          const hasAdminPerm = m.permissions.has(PermissionsBitField.Flags.Administrator);
+          
+          // Check 2: Has the specific role by name
+          const hasSpecificRole = m.roles.cache.some(role => role.name === "ravenadmin");
+
+          return {
+            id: { _serialized: m.id },
+            // isAdmin is true if they have EITHER the perm OR the role
+            isAdmin: hasAdminPerm || hasSpecificRole,
+          };
+        }),
       };
     } catch (error) {
       this.logger.warn(`[getChatDetails] Não foi possível encontrar o canal ${channelId}.`);
@@ -521,17 +620,53 @@ https://www.google.com/maps/search/?api=1&query=${content.latitude},${content.lo
   async deleteInstance() { return this._unimplemented('deleteInstance'); }
   async createInstance() { return this._unimplemented('createInstance'); }
   async recreateInstance() { return this._unimplemented('recreateInstance'); }
+
   async sendReaction(chatId, messageId, emoji) {
     try {
         const channel = await this.discordClient.channels.fetch(chatId);
         const msg = await channel.messages.fetch(messageId);
+        
+        this.removeReaction(chatId, messageId, process.env.LOADING_EMOJI);
+
         await msg.react(emoji);
+
         return true;
     } catch (e) {
         this.logger.error(`[sendReaction] Falha ao reagir à mensagem ${messageId} em ${chatId}`, e);
         return false;
     }
   }
+  async removeReaction(chatId, messageId, emojiString) {
+    try {
+      // 1. Parse the emoji string to get its 'identifier'
+      // For '👍', identifier is '👍'
+      // For '<:myemoji:12345>', identifier is '12345'
+      const customEmojiMatch = emojiString.match(/<a?:.*?:(\d+)>/);
+      const emojiIdentifier = customEmojiMatch ? customEmojiMatch[1] : emojiString;
+
+      // 2. Fetch the message
+      const channel = await this.discordClient.channels.fetch(chatId);
+      const msg = await channel.messages.fetch(messageId);
+
+      // 3. Find the specific reaction from the cache
+      const reaction = msg.reactions.cache.get(emojiIdentifier);
+
+      // 4. If the reaction exists AND the bot is one of the users ('me'), remove it.
+      if (reaction && reaction.me) {
+        await reaction.users.remove(this.discordClient.user.id);
+      }
+      
+      // Return true because the operation succeeded (even if no removal was needed)
+      return true;
+
+    } catch (e) {
+      // This will catch permissions errors, or if the channel/message is deleted
+      this.logger.error(`[removeReaction] Falha ao tentar remover reação ${emojiString} de ${messageId}`, e);
+      return false;
+    }
+  }
+
+
   async updateProfileStatus(status) {
     try {
         this.discordClient.user.setActivity(status);
