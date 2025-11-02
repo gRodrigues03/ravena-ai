@@ -2835,7 +2835,7 @@ Este endpoint deve chamar o bot.deleteInstance() e logo em seguida o bot.createI
 
 Usar a mesma autenticação anterior.
 -----
-]Analise os arquivos, a partir da pasta atual:
+Analise os arquivos, a partir da pasta atual:
 
 - @src/WhatsAppBotEvo.js (src/WhatsAppBotEvo.js)
 - @src/services/EvolutionApiClient.js (src/services/EvolutionApiClient.js)
@@ -2846,8 +2846,10 @@ Seu objetivo é implementar um novo wrapper para meu bot, desta vez para discord
 - src/WhatsAppBotDiscord.js
 - src/services/DiscordApiClient.js (se necessário)
 
-A ideia é deixar o uso transparente.
+A ideia é deixar o uso transparente. Adapte os objetos de dados que vem do discord para pegar os mesmos dos eventos da evolution
 Meu servidor possui URL pública caso seja necessário configurar webhooks ao invés de polling.
+Tudo que não for utilizado deve ficar como placeholder no final do arquivo.
+Emita um relatório de dúvidas e coisas que faltaram implementar ao final. A ideia é que a soluçaõ do discord fique bastante mais simplificada.
 
 # Necessário implementar/substituir
 
@@ -2896,6 +2898,17 @@ options.grupoInvites
 options.userAgent
 options.stabilityMonitor
 
+## Eventos (webhook/websocket)
+
+Utilizar:
+MESSAGES_UPSERT: Ponto de entrada de quando chega nova mensagem. Deve informar principalmente se a mensagem é no PV ou em grupo, com o ID do chat
+GROUPS_UPSERT: Quando o bot é inserido no grupo ele manda mensagens de boas vindas, tentar algo como um canal publico do servidor/entrada
+GROUP_PARTICIPANTS_UPDATE: Para dar boas vindas aos novos membros. Talvez seja necessário criar um id deste grupo nas propriedades 
+
+Ignorar:
+CONNECTION_UPDATE
+CONTACTS_UPDATE
+SEND_MESSAGE
 
 ## Endpoints
 O código que utilizar estes endpoints deve ser editado para utilizar os métodos corretos do discord
@@ -2934,3 +2947,157 @@ Controle de Grupo
 - /chat/updatePrivacySettings: Não existe no discord
 - /group/updateSetting: Não existe no discord
 
+---
+Pronto! Criei os dois arquivos conforme solicitado:
+
+   1. D:/ravena-ai/src/services/DiscordApiClient.js
+   2. D:/ravena-ai/src/WhatsAppBotDiscord.js
+
+
+  O WhatsAppBotDiscord.js foi projetado para funcionar como uma camada de compatibilidade. Ele "traduz" os eventos e as estruturas de dados do Discord para
+  um formato muito similar ao que o WhatsAppBotEvo.js produz, permitindo que seu EventHandler e seus comandos existentes funcionem com o mínimo de
+  alterações.
+
+
+  Abaixo está o relatório com os detalhes da implementação, dúvidas e próximos passos.
+
+  ---
+
+  Relatório de Implementação e Dúvidas
+
+  1. Configuração e Dependências
+
+  Para ativar o bot do Discord, você precisará atualizar sua configuração (.env ou config.json) e instalar novas dependências.
+
+
+  Novas Dependências:
+  Execute o comando abaixo para instalar as bibliotecas necessárias:
+
+   1 npm install discord.js axios
+
+
+  Novas Opções de Configuração:
+
+
+   1 # Adicione ao seu .env ou config.json
+   2 USE_DISCORD=true
+   3 DISCORD_TOKEN="O_TOKEN_DO_SEU_BOT_DO_DISCORD_AQUI"
+   4
+   5 # IMPORTANTE: Os IDs de grupo/canal devem ser os IDs do Discord
+   6 GRUPO_LOGS="ID_DO_CANAL_DE_LOGS"
+   7 GRUPO_AVISOS="ID_DO_CANAL_DE_AVISOS"
+   8 # ... e assim por diante para outros canais que você usa.
+
+
+  2. Dúvidas e Pontos de Atenção
+
+
+   * Mapeamento de IDs: IDs do WhatsApp (JIDs como 12345@c.us) foram mapeados para IDs do Discord (User IDs, Channel IDs, Guild IDs). A estrutura interna do
+     seu bot precisa ser capaz de lidar com esses diferentes formatos de ID.
+   * Stickers: O Discord não possui um sistema de stickers nativo como o do WhatsApp. Conforme solicitado, ao tentar enviar um sticker, o bot o enviará como
+     uma imagem ou GIF no canal. As funções de conversão de mídia (para WebP, etc.) foram mantidas, mas elas simplesmente retornam o conteúdo original, pois o
+     Discord gerencia a exibição de imagens de forma eficiente.
+   * Envio de Localização: O Discord não suporta o compartilhamento nativo de localização. A implementação envia um link do Google Maps com as coordenadas
+     fornecidas.
+   * Classe `MessageMedia`: Esta classe é específica da biblioteca whatsapp-web.js. O novo código não a utiliza, mas espera um objeto com estrutura similar
+     (conhecido como duck typing) para manter a compatibilidade: { mimetype, data, filename, isMessageMedia: true }.
+
+  3. Funcionalidades Simplificadas ou Não Implementadas
+
+
+  Seguindo suas instruções, várias funcionalidades que não se aplicam ao Discord foram simplificadas ou desativadas:
+
+
+   * Controle de Instância: Funções como logout(), recreateInstance(), deleteInstance() são placeholders e não executam ações, pois o ciclo de vida da conexão
+     do Discord é diferente.
+   * Controle de Grupo: A maioria das funções de gerenciamento de grupo (updateGroupSubject, acceptInviteCode, leaveGroup) também são placeholders. A adição e
+     remoção de bots em servidores Discord é um processo manual feito pelos administradores do servidor.
+   * Tipos de Mensagem Ignorados: O envio de Contatos (sendContact) e Enquetes (sendPoll) não foi implementado, conforme solicitado.
+   * Download de Mídia: O método downloadMedia em uma mensagem recebida funciona, mas envolve baixar o arquivo do CDN do Discord e convertê-lo para base64, o
+     que pode ser um pouco mais lento do que o acesso direto da API da Evolution.
+
+  Próximos Passos
+
+
+   1. Instale as dependências: npm install discord.js axios.
+   2. Atualize sua configuração: Adicione o token do Discord e os IDs dos canais.
+   3. Integre o `WhatsAppBotDiscord`: No seu arquivo principal (index.js, provavelmente), você precisará adicionar a lógica para instanciar WhatsAppBotDiscord
+      ao invés de WhatsAppBotEvo quando a opção useDiscord estiver ativa.
+
+
+  Estou à disposição para continuar a implementação, ajustar o código ou tirar qualquer outra dúvida
+  ---
+
+Excelente. Aqui vão as próximas modificações:
+
+1.
+# Adicione ao seu .env ou config.json
+USE_DISCORD=true
+DISCORD_TOKEN="O_TOKEN_DO_SEU_BOT_DO_DISCORD_AQUI"
+
+Nota: Não utilizar o .env para estes 2 parâmetros
+Estes dois devem estar no arquivo @bots.json.example (bots.json.example)
+Pois podem ser criados vários bots
+O arquivo index.js carrega este JSON e inicializa o bot. Edite o atual index.js para suportar isto, no mesmo formato atual
+
+Adicione no .env.example específicos par ao discord
+GRUPO_LOGS_DISCORD="ID_DO_CANAL_DE_LOGS"
+GRUPO_AVISOS_DISCORD="ID_DO_CANAL_DE_AVISOS"
+
+--------
+2. Dúvidas e Pontos de Atenção
+Mapeamento de IDs: Está ótimo
+Stickers: Excelente. As funções de conversão podem ser removida se não utilizadas, para limpar o código
+Envio de Localização: Ótimo
+MessageMedia: Excelente. A EvolutionAPI também não utiliza nativamente, apenas como fallback para a biblioteca principal utilizada no bot (duck typing)
+
+
+--------------------------------------------------
+ Concluí todas as alterações solicitadas.
+
+
+  Resumo do que foi feito:
+   1. `bots.json.example`: Atualizado para incluir um exemplo de configuração para um bot de Discord, contendo os novos campos useDiscord e discordToken.
+   2. `.env.example`: Atualizado para incluir as novas variáveis de ambiente para os IDs de canais do Discord (GRUPO_LOGS_DISCORD, GRUPO_AVISOS_DISCORD).
+   3. `index.js`: Modificado para identificar a flag useDiscord no bots.json. Agora, ele instancia a classe WhatsAppBotDiscord para bots do Discord e a
+      WhatsAppBotEvo para bots de WhatsApp, permitindo que ambos os tipos funcionem simultaneamente.
+   4. `src/WhatsAppBotDiscord.js`: O código foi limpo com a remoção das funções de conversão de mídia que não eram utilizadas, simplificando a classe.
+
+
+  As modificações de configuração e a limpeza do código foram concluídas com sucesso.Todas as modificações solicitadas foram concluídas. As configurações
+  para suportar múltiplos bots (incluindo Discord) foram ajustadas nos arquivos bots.json.example, .env.example e index.js, e o código do
+  WhatsAppBotDiscord.js foi limpo.
+
+
+  Estou pronto para a próxima etapa. O que você gostaria de fazer a seguir?
+
+---
+ Marque as seguintes caixas:
+
+
+   * `View Channels` (Ver Canais)
+   * `Send Messages` (Enviar Mensagens)
+   * `Embed Links` (Embarcar Links - útil para o envio de localizações/mapas)
+   * `Attach Files` (Anexar Arquivos - para enviar imagens, áudios, etc.)
+   * `Read Message History` (Ler Histórico de Mensagens - necessário para responder a mensagens)
+   * `Add Reactions` (Adicionar Reações - para que o bot possa reagir com emojis)
+
+
+  Passo Extra e Muito Importante: Intents
+
+  Além das permissões, você precisa habilitar duas "Privileged Gateway Intents". Na mesma aba "Bot", um pouco mais abaixo, você encontrará essa seção.
+
+  Por favor, habilite as duas opções a seguir:
+
+
+   1. `SERVER MEMBERS INTENT`: Necessário para o bot ser notificado quando um novo membro entrar no servidor (para as boas-vindas).
+   2. `MESSAGE CONTENT INTENT`: Essencial para que o bot possa ler o conteúdo das mensagens enviadas pelos usuários e, assim, responder a comandos.
+
+
+  Sem essas duas intents habilitadas, o bot não conseguirá ler as mensagens nem saber quando alguém entra no servidor.
+
+
+  Depois de configurar tudo isso, você pode ir na aba "OAuth2" -> "URL Generator", selecionar o escopo bot e as permissões que você marcou para gerar o link
+  de convite e adicionar o bot ao seu servidor.
+
+  
