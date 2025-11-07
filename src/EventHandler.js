@@ -58,7 +58,7 @@ class EventHandler {
    * @param {string} name - O nome do grupo (opcional)
    * @returns {Promise<Group>} - O objeto do grupo
    */
-  async getOrCreateGroup(groupId, name = null) {
+  async getOrCreateGroup(groupId, name = null, prefix = "?") {
     try {
       if (!this.groups[groupId]) {
         this.logger.info(`Criando novo grupo: ${groupId} com nome: ${name || 'desconhecido'}`);
@@ -89,6 +89,7 @@ class EventHandler {
           const group = new Group({
             id: groupId,
             name: displayName,
+            prefix: prefix,
             addedBy: "test@c.us" // Para teste
           });
           
@@ -148,7 +149,7 @@ class EventHandler {
       // Verifica links de convite em chats privados
       if (!message.group && !ignorePV) {
         // Verifica se é uma mensagem de link de convite
-        if(!bot.ignoreInvites){
+        if(!bot.ignoreInvites && bot.inviteSystem){
           const isInviteHandled = await bot.inviteSystem.processMessage(message);
           if (isInviteHandled) return;
           
@@ -172,7 +173,7 @@ class EventHandler {
         // Armazena mensagem para histórico de conversação
         SummaryCommands.storeMessage(message, message.group);
 
-        group = await this.getOrCreateGroup(message.guildId ?? message.group);
+        group = await this.getOrCreateGroup(message.guildId ?? message.group, null, bot.prefix);
         if(!group.botNotInGroup){
           group.botNotInGroup = [];
         } else {
@@ -578,7 +579,7 @@ class EventHandler {
       
       // Obtém ou cria grupo
       const nomeGrupo = data.group?.name?.replace(/[^a-zA-Z0-9 ]/g, '').replace(/(?:^\w|[A-Z]|\b\w)/g, (w, i) => i === 0 ? w.toLowerCase() : w.toUpperCase()).replace(/\s+/g, '') ?? null;
-      const group = await this.getOrCreateGroup(data.group.id, nomeGrupo);
+      const group = await this.getOrCreateGroup(data.group.id, nomeGrupo, bot.prefix);
       this.logger.debug(`Informações do grupo: ${JSON.stringify(group)}`);
       
       // Envia notificação para o grupo de logs

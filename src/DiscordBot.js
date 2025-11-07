@@ -1,3 +1,6 @@
+/*
+  90% VIBE CODED!!! Apenas pela zuera, tem muita coisa que não faz sentido algum
+*/
 const { AttachmentBuilder, PermissionsBitField } = require('discord.js');
 const axios = require('axios');
 const path = require('path');
@@ -27,9 +30,6 @@ const unlinkAsync = promisify(fs.unlink);
 
 class WhatsAppBotDiscord {
   constructor(options) {
-    if (!options.useDiscord) {
-      throw new Error("WhatsAppBotDiscord: 'useDiscord' option must be true.");
-    }
     if (!options.discordToken) {
       throw new Error("WhatsAppBotDiscord: 'discordToken' is required.");
     }
@@ -403,7 +403,8 @@ https://www.google.com/maps/search/?api=1&query=${content.latitude},${content.lo
 
   splitContent(text, maxLength = 4000) {
     const chunks = [];
-    let remainingText = text.trim(); // Start with trimmed text
+    if(!(typeof text === 'string' || text instanceof String)) return;
+    let remainingText = text?.trim() ?? ""; // Start with trimmed text
 
     while (remainingText.length > 0) {
       // If the remainder fits, add it as the last chunk and stop

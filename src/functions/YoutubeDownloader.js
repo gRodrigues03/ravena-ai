@@ -331,7 +331,7 @@ async function baixarMusicaYoutube(idVideo, dadosSolicitante, callback) {
  */
 async function ytCommand(bot, message, args, group) {
 
-  if (!message.group) {
+  if (!message.group  && !bot.useTelegram) {
     try {
       await message.origin.react('🤷‍♂️');
     } catch (reactError) {
@@ -457,7 +457,7 @@ async function ytCommand(bot, message, args, group) {
  * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
 async function srCommand(bot, message, args, group) {
-  if (!message.group) {
+  if (!message.group && !bot.useTelegram) {
     try {
       await message.origin.react('🤷‍♂️');
     } catch (reactError) {

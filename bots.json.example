@@ -29,5 +29,22 @@
     "privado": false,
     "ignorePV": false,
     "customPrefix": "!"
+   },
+   {
+    "enabled": false,
+    "nome": "ravena-telegram-exemplo",
+
+    "useTelegram": true,
+    "useEvo": false,
+    "useDiscord": false,
+    "webhookHost": "seu-dominio.com",
+    "webhookPort": 3602,
+    "telegramBotName": "NOME_DEFINIDO_NO_BOTFATHER",
+    "telegramBotId": "8123456789",
+    "telegramBotToken": "SEU_TOKEN_DE_BOT_DO_TELEGRAM_VEM_AQUI",
+
+    "privado": false,
+    "ignorePV": false,
+    "customPrefix": "/"
    }
 ]

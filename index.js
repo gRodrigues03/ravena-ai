@@ -3,9 +3,10 @@ require('dotenv').config();
 
 const evolutionAPI = process.env.USE_EVOLUTION ?? false;
 
-const WhatsAppBotEvo = require('./src/WhatsAppBotEvo');
-const WhatsAppBotDiscord = require('./src/WhatsAppBotDiscord');
+const TelegramBot = require('./src/TelegramBot');
 const WhatsAppBot = require('./src/WhatsAppBot');
+const WhatsAppBotEvo = require('./src/WhatsAppBotEvo');
+const DiscordBot = require('./src/DiscordBot');
 
 const EventHandler = require('./src/EventHandler');
 const Logger = require('./src/utils/Logger');
@@ -54,7 +55,7 @@ async function main() {
       let newRBot;
       if (rBot.useDiscord) {
         logger.info(`Inicializando '${rBot.nome}' como Discord Bot`);
-        newRBot = new WhatsAppBotDiscord({
+        newRBot = new DiscordBot({
           id: rBot.nome,
           useDiscord: true,
           discordToken: rBot.discordToken,
@@ -68,6 +69,36 @@ async function main() {
           // IDs dos canais para notificações - do .env
           grupoLogs: process.env.GRUPO_LOGS_DISCORD,
           grupoAvisos: process.env.GRUPO_AVISOS_DISCORD,
+          notificarDonate: rBot.notificarDonate ?? false,
+
+          // Configs de cache
+          redisURL: process.env.CACHE_REDIS_URI,
+          redisTTL: process.env.CACHE_REDIS_TTL,
+          redisDB: redisDbAtual,
+        });
+
+        redisDbAtual++;
+        newRBot.initialize();
+      } else if(rBot.useTelegram){
+        logger.info(`Inicializando '${rBot.nome}' como Telegram Bot`);
+        newRBot = new TelegramBot({
+          id: rBot.nome,
+          telegramBotName: rBot.telegramBotName,
+          telegramBotToken: rBot.telegramBotToken,
+          telegramBotId: rBot.telegramBotId,
+          eventHandler: eventHandler,
+          prefix: rBot.customPrefix || process.env.DEFAULT_PREFIX || '/',
+          ignorePV: rBot.ignorePV ?? false,
+          pvAI: rBot.pvAI ?? false,
+          managementUser: rBot.managementUser ?? process.env.BOTAPI_USER,
+          managementPW: rBot.managementPW ?? process.env.BOTAPI_PASSWORD,
+
+          webhookHost: rBot.webhookHost ?? false,
+          webhookPort: rBot.webhookPort ?? 9001,
+          
+          // IDs dos canais para notificações - do .env
+          grupoLogs: process.env.TELEGRAM_GRUPO_LOGS,
+          grupoAvisos: process.env.TELEGRAM_GRUPO_AVISOS,
           notificarDonate: rBot.notificarDonate ?? false,
 
           // Configs de cache

@@ -379,9 +379,7 @@ class CommandHandler {
 
   delayedReaction(msg, emoji, delay){
     setTimeout((m,e) => {
-      m.react(e).catch(reactError => {
-        this.logger.error('Erro ao aplicar reação "antes":', reactError.message ?? "xxx");;
-      });
+      m.react(e);
     }, delay, msg, emoji);
   }
               
