@@ -190,7 +190,7 @@ class WhatsAppBotTelegram {
       await this.registerCommands();
 
     } catch (error) {
-      this.logger.error(`Error during Telegram bot initialization:`, error);
+      this.logger.error(`Error during Telegram bot initialization:`, error.stack);
       this._onInstanceDisconnected('INITIALIZATION_FAILURE');
     }
 
@@ -228,7 +228,7 @@ class WhatsAppBotTelegram {
   }
 
   async _processUpdate(update) {
-    this.logger.info('Received update:', update);
+    //this.logger.info('Received update:', update);
 
     if (update.my_chat_member) {
       // Handles the bot's own status changes in a group (joined, left, promoted, etc.)
@@ -251,7 +251,7 @@ class WhatsAppBotTelegram {
       // If it's a regular message, process it
       this.lastMessageReceived = Date.now();
       this.formatMessageFromTelegram(message).then(formattedMessage => {
-        this.logger.debug(`[message] `, { upt: update, fm: formattedMessage });
+        //this.logger.debug(`[message] `, { upt: update, fm: formattedMessage });
         if (formattedMessage) { // IMPORTANT: Check if formatting was successful
           this.eventHandler.onMessage(this, formattedMessage);
         }
@@ -554,6 +554,18 @@ class WhatsAppBotTelegram {
     return chunks.filter(chunk => chunk.length > 0);
   }
 
+  whatsappToTelegram(text) {
+    if (typeof text !== 'string') return text;
+
+    return text
+      // Bold: *text* -> **text**
+      .replace(/\*(.+?)\*/g, '**$1**')
+      // Italic: _text_ -> __text__
+      .replace(/_(.+?)_/g, '__$1__')
+      // Strikethrough: ~text~ -> ~~text~~
+      .replace(/~(.+?)~/g, '~~$1~~');
+  }
+
   async sendReturnMessages(returnMessages) {
     if (!Array.isArray(returnMessages)) {
       returnMessages = [returnMessages];
@@ -566,6 +578,10 @@ class WhatsAppBotTelegram {
 
     const validMessages = okMessages.flatMap(msg => {
       if((typeof msg.content === 'string' || msg.content instanceof String)){
+
+        // Converte markup
+        msg.content = this.whatsappToTelegram(msg.content);
+
         // Se for texto, divide pra não ficar longo
         if (msg.content.length <= MAX_LENGTH) {
           return [msg];
