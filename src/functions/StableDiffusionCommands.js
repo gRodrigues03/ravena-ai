@@ -31,11 +31,11 @@ const DEFAULT_PARAMS = {
 };
 */
 const DEFAULT_PARAMS = {
-  width: 832,
-  height: 1216,
-  steps: 40,
-  cfg_scale: 2,
-  sampler_name: 'k_dpmpp_2m_sde',
+  width: process.env.SD_width ?? 1200,
+  height: process.env.SD_height ?? 1200,
+  steps: process.env.SD_steps ?? 40,
+  cfg_scale: process.env.SD_cfg_scale ?? 2,
+  sampler_name: process.env.SD_sampler_name ?? 'k_dpmpp_2m_sde',
   batch_size: 1,
   n_iter: 1,
   negative_prompt: "low quality pixelated blurry bad missing fingers ass bum poop woman dick nsfw porn boobs tits vagina child kid gore infant"
@@ -220,7 +220,7 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
     // Se só tiver um item no array, retorna ele diretamente
     return returnMessages.length === 1 ? returnMessages[0] : returnMessages;
   } catch (error) {
-    logger.error('Erro ao gerar imagem:', error);
+    //logger.error('Erro ao gerar imagem:', error);
     
     let errorMessage = 'Erro ao gerar imagem.';
     
@@ -229,7 +229,7 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
       errorMessage = 'Não foi possível conectar ao servidor Stable Diffusion. Verifique se ele está rodando e acessível.';
     } else if (error.response) {
       // Erro da API
-      errorMessage = `Erro da API Stable Diffusion: ${error.response.status} - ${error.response.statusText}`;
+      errorMessage = `Erro da API Stable Diffusion: ${API_URL}/sdapi/v1/txt2img (${sdWebUIToken})\n${error.response.status} - ${error.response.statusText}`;
     }
     
     return new ReturnMessage({

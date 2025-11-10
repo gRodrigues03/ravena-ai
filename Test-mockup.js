@@ -396,7 +396,7 @@ async function runTests() {
     await new Promise(resolve => setTimeout(resolve, 5000));
     logger.info('sending');
 
-    await simulator.simulateTextMessage(testUser, testGroup, '!sr pudim');
+    await simulator.simulateTextMessage(testUser, testGroup, '!imagine batata frita');
 
     //logger.info('joining');    
     //await simulator.simulateGroupJoin(testGroup, testUser);
