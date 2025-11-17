@@ -102,7 +102,7 @@ class BotAPI {
         res.json({
           status: 'ok',
           timestamp: Date.now(),
-          bots: this.bots.filter(bot => !bot.privado).map(bot => {
+          bots: this.bots.filter(bot => !bot.privado && !bot.useTelegram && !bot.useDiscord).map(bot => {
             // Busca relatório mais recente para este bot
             const report = botReports[bot.id] || null;
             const messagesPerHour = report && report.messages ? 
@@ -130,6 +130,7 @@ class BotAPI {
               banido: bot.banido || false,
               comunitario: bot.comunitario || false,
               numeroResponsavel: bot.numeroResponsavel || false,
+              banido: bot.banido || false,
               supportMsg: bot.supportMsg || false,
               vip: bot.vip || false
             };
@@ -156,6 +157,7 @@ class BotAPI {
             banido: bot.banido || false,
             comunitario: bot.comunitario || false,
             numeroResponsavel: bot.numeroResponsavel || false,
+            banido: bot.banido || false,
             supportMsg: bot.supportMsg || false,
             vip: bot.vip || false
           }))

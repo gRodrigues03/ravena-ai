@@ -40,6 +40,7 @@ class WhatsAppBotDiscord {
     this.logger = new Logger(`bot-discord-${this.id}`);
 
     // Opções específicas do Discord
+    this.useDiscord = true;
     this.discordToken = options.discordToken;
     this.apiClient = new DiscordApiClient(this.discordToken);
     this.discordClient = this.apiClient.getClient();

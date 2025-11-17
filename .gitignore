@@ -218,3 +218,10 @@ data/noqr.png
 data/placas-cache.json
 /public/audios
 data/soundcloud-cache.json
+/data/horoscopo
+data/donations.json.bck
+data/youtube-cache-old.json
+data/yt-channelsID-cache.json
+/old
+*.swp
+data/cooldowns.js

@@ -28,7 +28,7 @@ class WhatsAppBotTelegram {
     this.logger = new Logger(`bot-telegram-${this.id}`);
 
     // Opções específicas do Telegram
-    this.useTelegram = options.useTelegram;
+    this.useTelegram = true;
     this.telegramBotToken = options.telegramBotToken;
     this.telegramSecretToken = options.telegramSecretToken || ''
 

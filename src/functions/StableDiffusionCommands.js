@@ -229,7 +229,7 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
       errorMessage = 'Não foi possível conectar ao servidor Stable Diffusion. Verifique se ele está rodando e acessível.';
     } else if (error.response) {
       // Erro da API
-      errorMessage = `Erro da API Stable Diffusion: ${API_URL}/sdapi/v1/txt2img (${sdWebUIToken})\n${error.response.status} - ${error.response.statusText}`;
+      errorMessage = `Erro da API Stable Diffusion: ${error.response.status} - ${error.response.statusText}`;
     }
     
     return new ReturnMessage({
