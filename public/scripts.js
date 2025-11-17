@@ -21,7 +21,8 @@ function getTimeSinceLastMessage(timestamp) {
 }
 
 // Função para determinar status baseado no tempo
-function getStatusEmoji(minutes, connected) {
+function getStatusEmoji(minutes, connected, banned) {
+    if (banned) return '🚨'; // banida
     if (!connected) return '⚫'; // Desconectado
     
     if (minutes < 2) return '🟢';
@@ -290,7 +291,7 @@ function renderBots(data) {
 
 function renderBotCard(botContainer, data, bot){
     const minutesSinceLastMessage = getTimeSinceLastMessage(bot.lastMessageReceived);
-    const statusEmoji = getStatusEmoji(minutesSinceLastMessage, bot.connected);
+    const statusEmoji = getStatusEmoji(minutesSinceLastMessage, bot.connected, bot.banido);
     const statusDesc = getStatusDescription(minutesSinceLastMessage, bot.connected);
     const phoneNumber = formatPhoneNumber(extractPhoneFromBotId(bot.id, data.bots)).replace("+55","").trim();
     const whatsappUrl = formatWhatsAppUrl(phoneNumber);
@@ -345,7 +346,10 @@ function renderBotCard(botContainer, data, bot){
     }
     
     let divMsgs = `<div class="detail-item"><span class="detail-label label-desconectado">Desconectado</span></div>`;
-    if(bot.connected){
+    if(bot.banido){
+        divMsgs = `<div class="detail-item"><span class="detail-label label-banida">BANIDA</span></div>`;
+    }
+    if(bot.connected && !bot.banido){
         divMsgs = `<div class="detail-item">
                 <span class="detail-label">Última mensagem:</span>
                 <span class="detail-value tooltip-container">

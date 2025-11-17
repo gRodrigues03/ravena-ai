@@ -57,6 +57,7 @@
       this.pvAI = options.pvAI;
       this.version = "Evolution";
       this.wwebversion = "0";
+      this.banido = options.banido;
 
       // Acesso pelo painel por terceiros
       this.privado = options.privado ?? false;

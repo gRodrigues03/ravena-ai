@@ -113,6 +113,7 @@ async function main() {
         logger.info(`Inicializando '${rBot.nome}' como evolutionAPI`);
         newRBot = new WhatsAppBotEvo({
           id: rBot.nome,
+          banido: rBot.banido ?? false,
           vip: rBot.vip ?? false,
           comunitario: rBot.comunitario ?? false,
           numeroResponsavel: rBot.numeroResponsavel ?? false,
@@ -163,6 +164,7 @@ async function main() {
         logger.info(`Inicializando '${rBot.nome}' como whatsapp-web.js`);
         newRBot = new WhatsAppBot({
           id: rBot.nome,
+          banido: rBot.banido ?? false,
           phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
           supportMsg: rBot.msgSuporte ?? false,
           vip: rBot.vip ?? false,
