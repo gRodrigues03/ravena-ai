@@ -25,7 +25,7 @@ class SuperAdmin {
     
     // Mapeamento de comando para método
     this.commandMap = {
-      'testeMsg': {'method': 'testeMsg', 'description': 'Testar Retorno msg'},
+      //'testeMsg': {'method': 'testeMsg', 'description': 'Testar Retorno msg'},
       'joinGrupo': {'method': 'joinGroup', 'description': 'Entra em um grupo via link de convite'},
       'addDonate': {'method': 'addNewDonate', 'description': 'Adiciona novo donate'},
       'addDonateNumero': {'method': 'addDonorNumber', 'description': 'Adiciona número de um doador'},
@@ -70,11 +70,21 @@ class SuperAdmin {
     return this.adminUtils.isSuperAdmin(userId);
   }
 
+  isComuAdmin(bot, userId) {
+    if(bot.numeroResponsavel){
+      this.logger.info(`[isComuAdmin] ${userId} is ${bot.numeroResponsavel}? ${bot.numeroResponsavel === userId}`);
+      return bot.numeroResponsavel === userId;
+    } else {
+      this.logger.info(`[isComuAdmin] Sem responsavel?`, bot);
+      return false;
+    }
+  }
+
   
   async wakeOnLan(bot, message, args) {
-    
     const chatId = message.group || message.author;
     try{
+      if (!this.isSuperAdmin(message.author)) return;
       if(args[0]){ // Mac tem 17 caracteres
         const macAddress = args[0].trim();
         if(macAddress.length === 17){
@@ -105,6 +115,7 @@ class SuperAdmin {
   async testeMsg(bot, message, args) {
     const chatId = message.group || message.author;
     try{
+      if (!this.isSuperAdmin(message.author)) return;
 
       const resMsgValida = await bot.sendReturnMessages(new ReturnMessage({
         chatId: chatId,
@@ -132,7 +143,7 @@ class SuperAdmin {
       const chatId = message.group || message.author;
       
       // Verifica se o usuário é um super admin
-      if (!this.isSuperAdmin(message.author)) {
+      if (!this.isSuperAdmin(message.author) && !this.isComuAdmin(bot, message.author)) {
         return new ReturnMessage({
           chatId: chatId,
           content: '⛔ Apenas super administradores podem usar este comando.'
@@ -367,6 +378,7 @@ class SuperAdmin {
    */
   async mergeDonors(bot, message, args, group) {
     try {
+      if (!this.isSuperAdmin(message.author)) return;
       const chatId = message.group || message.author;
       
       // Obtém o texto completo do argumento
@@ -475,6 +487,8 @@ class SuperAdmin {
   }
 
   async removeFromSpecialGroups(bot, phoneNumber, specialGroups = []) {
+    if (!this.isSuperAdmin(message.author)) return;
+    
     const results = {
       successes: 0,
       failures: 0,
@@ -530,7 +544,7 @@ class SuperAdmin {
       const chatId = message.group || message.author;
       
       // Verifica se o usuário é um super admin
-      if (!this.isSuperAdmin(message.author)) {
+      if (!this.isSuperAdmin(message.author) && !this.isComuAdmin(bot, message.author)) {
         return new ReturnMessage({
           chatId: chatId,
           content: '⛔ Apenas super administradores podem usar este comando.'
@@ -567,7 +581,7 @@ class SuperAdmin {
       const chatId = message.group || message.author;
       
       // Verifica se o usuário é um super admin
-      if (!this.isSuperAdmin(message.author)) {
+      if (!this.isSuperAdmin(message.author) && !this.isComuAdmin(bot, message.author)) {
         return new ReturnMessage({
           chatId: chatId,
           content: '⛔ Apenas super administradores podem usar este comando.'
@@ -606,7 +620,7 @@ class SuperAdmin {
       const chatId = message.group || message.author;
       
       // Verifica se o usuário é um super admin
-      if (!this.isSuperAdmin(message.author)) {
+      if (!this.isSuperAdmin(message.author) && !this.isComuAdmin(bot, message.author)) {
         return new ReturnMessage({
           chatId: chatId,
           content: '⛔ Apenas super administradores podem usar este comando.'
@@ -683,7 +697,7 @@ class SuperAdmin {
       const chatId = message.group || message.author;
       
       // Verifica se o usuário é um super admin
-      if (!this.isSuperAdmin(message.author)) {
+      if (!this.isSuperAdmin(message.author) && !this.isComuAdmin(bot, message.author)) {
         return new ReturnMessage({
           chatId: chatId,
           content: '⛔ Apenas super administradores podem usar este comando.'
@@ -744,7 +758,7 @@ class SuperAdmin {
       const chatId = message.group || message.author;
       
       // Verifica se o usuário é um super admin
-      if (!this.isSuperAdmin(message.author)) {
+      if (!this.isSuperAdmin(message.author) && !this.isComuAdmin(bot, message.author)) {
         return new ReturnMessage({
           chatId: chatId,
           content: '⛔ Apenas super administradores podem usar este comando.'
@@ -915,7 +929,7 @@ class SuperAdmin {
       const chatId = message.group || message.author;
       
       // Verifica se o usuário é um super admin
-      if (!this.isSuperAdmin(message.author)) {
+      if (!this.isSuperAdmin(message.author) && !this.isComuAdmin(bot, message.author)) {
         return new ReturnMessage({
           chatId: chatId,
           content: '⛔ Apenas super administradores podem usar este comando.'
@@ -968,6 +982,10 @@ class SuperAdmin {
    * @returns {Promise<ReturnMessage>} - Retorna mensagem de sucesso ou erro
    */
   async reagir(bot, message, args) {
+    if (!this.isSuperAdmin(message.author) && !this.isComuAdmin(bot, message.author)) {
+      return;
+    }
+
     try {
       const chatId = message.group || message.author;
       
@@ -1209,7 +1227,7 @@ class SuperAdmin {
       const chatId = message.group || message.author;
       
       // Verifica se o usuário é um super admin
-      if (!this.isSuperAdmin(message.author)) {
+      if (!this.isSuperAdmin(message.author) && !this.isComuAdmin(bot, message.author)) {
         return new ReturnMessage({
           chatId: chatId,
           content: '⛔ Apenas super administradores podem usar este comando.'
@@ -2211,7 +2229,7 @@ class SuperAdmin {
       const chatId = message.group || message.author;
       
       // Verifica se o usuário é um super admin
-      if (!this.isSuperAdmin(message.author)) {
+      if (!this.isSuperAdmin(message.author) && !this.isComuAdmin(bot, message.author)) {
         return new ReturnMessage({
           chatId: chatId,
           content: '⛔ Apenas super administradores podem usar este comando.'

@@ -1160,10 +1160,12 @@
             const isGroup = chatId.endsWith('@g.us');
             let isSentMessage = false;
 
-            let author = this.numeroMaisProvavel([evoMessageData.author, key.participant, key.remoteJid, key.participantAlt, evoMessageData.sender]);
+            let author = this.numeroMaisProvavel([evoMessageData.author, key.remoteJidAlt, key.remoteJid, key.participantAlt]);
             if(author){
               author = author.replace("@s.whatsapp.net", "@c.us");
             }
+
+
 
             const messageTimestamp = typeof evoMessageData.messageTimestamp === 'number' 
                 ? evoMessageData.messageTimestamp 

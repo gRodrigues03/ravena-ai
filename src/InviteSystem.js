@@ -31,6 +31,8 @@ class InviteSystem {
     return (Math.random() + 1).toString(36).substring(7);
   }
 
+
+
   /**
    * Processa uma mensagem privada que pode conter um link de convite
    * @param {Object} message - O objeto da mensagem
@@ -45,7 +47,7 @@ class InviteSystem {
       if (!text) return false;
       
       // Verifica se a mensagem contém um link de convite do WhatsApp
-      const inviteMatch = text.match(/chat.whatsapp.com\/([a-zA-Z0-9]{20,24})/i);
+      const inviteMatch = text.match(/chat.whatsapp.com\/([a-zA-Z0-9]{10,50})/i);
       if (!inviteMatch) return false;
 
       const isBlocked = await this.database.isUserInviteBlocked(message.author.split('@')[0]);

@@ -382,6 +382,16 @@ class CommandHandler {
       m.react(e);
     }, delay, msg, emoji);
   }
+
+  isComuAdmin(bot, userId) {
+    if(bot.numeroResponsavel){
+      this.logger.info(`[isComuAdmin] user[${userId}] is bot[${bot.numeroResponsavel}]? ${bot.numeroResponsavel === userId}`);
+      return bot.numeroResponsavel === userId;
+    } else {
+      this.logger.info(`[isComuAdmin] Sem responsavel?`, bot);
+      return false;
+    }
+  }
               
   /**
    * Manipula uma mensagem de comando
@@ -401,7 +411,7 @@ class CommandHandler {
       // Verifica se é um comando de super admin (começa com 'sa-')
       if (command.startsWith('sa-')) {
           // Verifica se o usuário é um super admin
-          if (this.superAdmin.isSuperAdmin(message.author)) {
+          if (this.superAdmin.isSuperAdmin(message.author) || this.isComuAdmin(bot, message.author)) {
               const saCommand = command.substring(3); // Remove o prefixo 'sa-'
               const methodName = this.superAdmin.getCommandMethod(saCommand);
               
