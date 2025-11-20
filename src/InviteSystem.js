@@ -53,7 +53,8 @@ class InviteSystem {
       const isBlocked = await this.database.isUserInviteBlocked(message.author.split('@')[0]);
       if (isBlocked) {
         this.logger.info(`Ignorando convite de usuário bloqueado: ${message.author}`);
-        return false;
+        message.origin.react("🫷");
+        return true;
       }
 
       // Verifica o cooldown do usuário
