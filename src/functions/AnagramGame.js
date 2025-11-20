@@ -264,6 +264,7 @@ async function startNewRound(bot, message, group, isFirstRound = true) {
     scrambledWord,
     revealedLetters: new Array(word.length).fill(false),
     timer: setTimeout(() => endGame(bot, groupId, 'time_up'), GAME_DURATION_SECONDS * 1000),
+    roundEnded: false,
   });
 
   const groupData = anagramaData.groups[groupId];
@@ -353,6 +354,9 @@ async function guessCommand(bot, message, args, group) {
   }
 
   if (guess === game.word.toLowerCase()) {
+    if (game.roundEnded) return null;
+    game.roundEnded = true;
+
     const userId = message.author;
     const userName = message.authorName || "Jogador";
 
@@ -380,14 +384,9 @@ async function guessCommand(bot, message, args, group) {
       content: `${successMessage}\n\n🔄 Iniciando próxima rodada... 🌟 *Level ${game.round}*`
     }));
 
-    if(!game.roundEnded){
-      setTimeout(() => {
-        startNewRound(bot, message, group, false);
-      }, 2000); // 2 segundos de delay
-    }
-
-    game.roundEnded = true;
-
+    setTimeout(() => {
+      startNewRound(bot, message, group, false);
+    }, 2000); // 2 segundos de delay
   } else {
     // Reage com base na similaridade
     const distance = (s1, s2) => { /* Implementação de Levenshtein */
@@ -436,8 +435,10 @@ async function skipCommand(bot, message, args, group) {
   const groupId = message.group;
   const game = activeGames[groupId];
   if (!game) return new ReturnMessage({ chatId: groupId, content: '> Não há um jogo em andamento para pular.' });
+  if (game.roundEnded) return null;
   if (game.skipsUsed >= SKIPS_PER_ROUND) return new ReturnMessage({ chatId: groupId, content: '> Os pulos para esta rodada já acabaram!' });
 
+  game.roundEnded = true;
   game.skipsUsed++;
   const skipsLeft = SKIPS_PER_ROUND - game.skipsUsed;
   const skippedWord = game.word;

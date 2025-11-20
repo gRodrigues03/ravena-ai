@@ -202,7 +202,9 @@ class EventHandler {
               contact.pushname = nickData.apelido;
               
               // Atualiza também o nome no objeto message para uso em comandos
-              message.authorName = nickData.apelido;
+              // ATENÇÃO: TRIPA DE CÓDIGO ADIANTE
+              message.name = message.pushname = message.pushName = message.authorName = message.origin.name = message.origin.pushname = message.origin.pushName = message.origin.authorName = nickData.apelido;
+
             } catch (error) {
               this.logger.error('Erro ao aplicar apelido:', error);
             }
