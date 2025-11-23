@@ -1576,6 +1576,15 @@ class WhatsAppBotEvoGo {
   getCurrentTimestamp() { return Math.round(Date.now() / 1000); }
   rndString() { return (Math.random() + 1).toString(36).substring(7); }
 
+  async updateProfileStatus(status) {
+    try {
+      this.logger.debug(`[updateProfileStatus][${this.instanceName}] '${status}'`);
+      await this.apiClient.post(`/user/profileStatus`, { status });
+    } catch (e) {
+      this.logger.warn(`[updateProfileStatus] Erro definindo status '${status}'`, e);
+    }
+  }
+
   async destroy() {
     if (this.webhookServer) this.webhookServer.close();
   }
