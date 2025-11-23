@@ -33,7 +33,7 @@ class CacheManager {
 
   async putChatInCache(data) {
     if (!data || !data.id || typeof data.id?._serialized === 'undefined') {
-      this.logger.debug('CacheManager (putChatInCache): Invalid chat data.', {data});
+      this.logger.debug('CacheManager (putChatInCache): Invalid chat data.', { data });
       return;
     }
     const chatId = data.id._serialized;
@@ -113,7 +113,6 @@ class CacheManager {
     }
   }
 
-
   async getMessageFromCache(id) {
     if (typeof id === 'undefined' || id === null) return null;
     const redisKey = `message:${id}`;
@@ -127,6 +126,73 @@ class CacheManager {
       }
     }
     return this.messageCache.find(m => m.key && m.key.id == id) || null;
+  }
+
+  // V3 Methods
+  async putGoMessageInCache(data) {
+    if (!data || !data.id) {
+      this.logger.error('CacheManager (putGoMessageInCache): Invalid message data (missing id).');
+      return;
+    }
+    const messageId = data.id;
+    const redisKey = `message:${messageId}`;
+
+    if (this.redisClient) {
+      try {
+        await this.redisClient.set(redisKey, JSON.stringify(data), 'EX', this.redisTTL);
+        return;
+      } catch (err) {
+        this.logger.error(`CacheManager (putGoMessageInCache): Error caching message ${messageId} in Redis: ${err.message}. Falling back.`);
+      }
+    }
+    this.messageCache.push(data);
+    if (this.messageCache.length > this.maxCacheSize) {
+      this.messageCache.shift();
+    }
+  }
+
+  async putGoSentMessageInCache(message) {
+    if (!message || !message.id) {
+      this.logger.error('CacheManager (putGoSentMessageInCache): Invalid message data.');
+      return;
+    }
+
+    const messageId = typeof message.id === 'object' ? message.id._serialized : message.id;
+
+    if (!messageId) {
+      this.logger.error('CacheManager (putGoSentMessageInCache): Invalid message ID.');
+      return;
+    }
+
+    const redisKey = `message:${messageId}`;
+
+    if (this.redisClient) {
+      try {
+        await this.redisClient.set(redisKey, JSON.stringify(message), 'EX', this.redisTTL);
+        return;
+      } catch (err) {
+        this.logger.error(`CacheManager (putGoSentMessageInCache): Error caching message ${messageId} in Redis: ${err.message}. Falling back.`);
+      }
+    }
+    this.messageCache.push(message);
+    if (this.messageCache.length > this.maxCacheSize) {
+      this.messageCache.shift();
+    }
+  }
+
+  async getGoMessageFromCache(id) {
+    if (typeof id === 'undefined' || id === null) return null;
+    const redisKey = `message:${id}`;
+
+    if (this.redisClient) {
+      try {
+        const cachedData = await this.redisClient.get(redisKey);
+        if (cachedData) return JSON.parse(cachedData);
+      } catch (err) {
+        this.logger.error(`CacheManager (getGoMessageFromCache): Error retrieving message ${id} from Redis: ${err.message}. Falling back.`);
+      }
+    }
+    return this.messageCache.find(m => m.id == id || (m.key && m.key.id == id)) || null;
   }
 
   async putContactInCache(data) {
@@ -166,11 +232,11 @@ class CacheManager {
     return this.contactCache.find(c => c.number == id) || null;
   }
 
-    /**
-   * Retrieves all cooldowns data from Redis.
-   * If Redis is unavailable or data is not found, it returns an empty object.
-   * @returns {Promise<Object>} A promise that resolves to the cooldowns object.
-   */
+  /**
+ * Retrieves all cooldowns data from Redis.
+ * If Redis is unavailable or data is not found, it returns an empty object.
+ * @returns {Promise<Object>} A promise that resolves to the cooldowns object.
+ */
   async getCooldowns() {
     // Using a distinct key for all cooldowns to avoid collision with other cached items.
     // Versioning the key (e.g., '_v1') can be helpful for future data structure changes.
@@ -207,8 +273,8 @@ class CacheManager {
    */
   async saveCooldowns(cooldownsData) {
     if (typeof cooldownsData !== 'object' || cooldownsData === null) {
-        this.logger.error('CacheManager (saveCooldowns): Invalid cooldownsData provided. Must be an object. Not saving.');
-        return;
+      this.logger.error('CacheManager (saveCooldowns): Invalid cooldownsData provided. Must be an object. Not saving.');
+      return;
     }
     const redisKey = 'app_cooldowns_data_v1';
 

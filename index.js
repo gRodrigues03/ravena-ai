@@ -1,11 +1,10 @@
 // Carrega variáveis de ambiente do arquivo .env
 require('dotenv').config();
 
-const evolutionAPI = process.env.USE_EVOLUTION ?? false;
-
 const TelegramBot = require('./src/TelegramBot');
 const WhatsAppBot = require('./src/WhatsAppBot');
 const WhatsAppBotEvo = require('./src/WhatsAppBotEvo');
+const WhatsAppBotEvoGo = require('./src/WhatsAppBotEvoGo');
 const DiscordBot = require('./src/DiscordBot');
 
 const EventHandler = require('./src/EventHandler');
@@ -108,6 +107,58 @@ async function main() {
         });
 
         redisDbAtual++;
+        newRBot.initialize();
+      } else if(rBot.useEvoGo){
+        logger.info(`Inicializando '${rBot.nome}' como EvolutionAPI GO`);
+        newRBot = new WhatsAppBotEvoGo({
+          id: rBot.nome,
+          evolutionInstanceApiKey: rBot.evolutionInstanceApiKey,
+          banido: rBot.banido ?? false,
+          vip: rBot.vip ?? false,
+          comunitario: rBot.comunitario ?? false,
+          numeroResponsavel: rBot.numeroResponsavel ?? false,
+          phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
+          supportMsg: rBot.msgSuporte ?? false,
+          privado: rBot.privado, // Número de telefone para solicitar código de pareamento
+          eventHandler: eventHandler,
+          //stabilityMonitor: stabilityMonitor,
+          prefix: rBot.customPrefix || process.env.DEFAULT_PREFIX || '!',
+          otherBots: rBots.map(rB => rB.numero),
+          userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0",
+          ignorePV: rBot.ignorePV ?? false,
+          pvAI: rBot.pvAI ?? false,
+          ignoreInvites: rBot.ignoreInvites ?? false,
+          managementUser: rBot.managementUser ?? process.env.BOTAPI_USER,
+          managementPW: rBot.managementPW ?? process.env.BOTAPI_PASSWORD,
+
+          // IDs dos grupos para notificações da comunidade
+          grupoEstabilidade: rBot.grupoEstabilidade ?? process.env.GRUPO_ESTABILIDADE,
+          grupoLogs: rBot.grupoLogs ?? process.env.GRUPO_LOGS,
+          grupoInvites: rBot.grupoInvites ?? process.env.GRUPO_INVITES,
+          grupoAvisos: rBot.grupoAvisos ?? process.env.GRUPO_AVISOS,
+          grupoInteracao: rBot.grupoInteracao ?? process.env.GRUPO_INTERACAO,
+          linkGrupao: rBot.linkGrupao ?? process.env.LINK_GRUPO_INTERACAO,
+          linkAvisos: rBot.linkAvisos ?? process.env.LINK_GRUPO_AVISOS,
+          notificarDonate: rBot.notificarDonate ?? false, // Apenas um dos bots deve notificar donate
+          
+          // EvolutionAPI
+          evoInstanceName: rBot.evoID ?? rBot.nome,
+          evolutionWS: process.env.EVOLUTION_GO_WS,
+          evolutionApiUrl: process.env.EVOLUTION_GO_API_URL,
+          evolutionApiKey: process.env.EVOLUTION_GO_API_KEY,
+          redisURL: process.env.CACHE_REDIS_URI,
+          redisTTL: process.env.CACHE_REDIS_TTL,
+          redisDB: redisDbAtual,
+          useWebsocket: rBot.useWebsocket ?? process.env.EVOGO_USE_WEBSOCKET,
+          webhookHost: process.env.EVOGO_WEBHOOK_HOST,
+          webhookPort: rBot.webhookPort ?? process.env.EVOGO_WEBHOOK_PORT
+        });
+
+        redisDbAtual++;
+        if(redisDbAtual === 6){ // Skip 6 usado no Evo
+          redisDbAtual = 7;
+        }
+
         newRBot.initialize();
       } else if(rBot.useEvo){
         logger.info(`Inicializando '${rBot.nome}' como evolutionAPI`);

@@ -225,3 +225,4 @@ data/yt-channelsID-cache.json
 /old
 *.swp
 data/cooldowns.js
+/dev

@@ -547,16 +547,13 @@ async function processAutoSticker(bot, message, group) {
       return false;
     }
     
-    const logger = require('../utils/Logger');
-    const stickerLogger = new logger('auto-sticker');
-    
-    stickerLogger.debug(`[processAutoSticker] Processando mídia automática para sticker no chat ${message.author}`);
+
+    logger.debug(`[processAutoSticker] Processando mídia automática para sticker no chat ${message.author}`);
     
     // Criar um nome para o sticker (pode ser o nome de quem enviou ou um padrão)
     const stickerName = message.authorName || 'sticker';
     
     // Usar ReturnMessage para enviar o sticker
-    const ReturnMessage = require('../models/ReturnMessage');
     const returnMessage = new ReturnMessage({
       chatId: message.author,
       content: message.content,
@@ -572,13 +569,11 @@ async function processAutoSticker(bot, message, group) {
     // Envia o sticker
     await bot.sendReturnMessages(returnMessage);
     
-    stickerLogger.info(`[processAutoSticker] Sticker automático enviado para ${message.author}`);
+    logger.info(`[processAutoSticker] Sticker automático enviado para ${message.author}`);
     
     return true;
   } catch (error) {
-    const logger = require('../utils/Logger');
-    const stickerLogger = new logger('auto-sticker');
-    stickerLogger.error('Erro no processamento automático de sticker:', error);
+    logger.error('Erro no processamento automático de sticker:', error);
     return false;
   }
 }
