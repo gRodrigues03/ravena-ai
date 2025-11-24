@@ -123,7 +123,7 @@ class WhatsAppBotEvoGo {
     this.inviteSystem = new InviteSystem(this);
     this.reactionHandler = new ReactionsHandler();
 
-    this.streamSystem = true;
+    this.streamSystem = null;
     this.streamMonitor = null;
     this.stabilityMonitor = options.stabilityMonitor ?? false;
 
@@ -1108,12 +1108,12 @@ class WhatsAppBotEvoGo {
         case 'JoinedGroup':
           // Bot joined a group
           // Payload: { event: "JoinedGroup", data: { JID: "...", Participants: [...] } }
-          this.logger.info(`[JoinedGroup] `, { payload });
+          //this.logger.info(`[JoinedGroup] `, { payload });
           const joinedData = payload.data;
           if (joinedData) {
             this._handleGroupParticipantsUpdate({
               JID: joinedData.JID,
-              Join: joinedData.Participants ? joinedData.Participants.map(p => p.JID) : [],
+              Join: [this.phoneNumber],
               isBotJoining: true,
               _raw: joinedData
             });
