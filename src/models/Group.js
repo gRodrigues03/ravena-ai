@@ -19,7 +19,6 @@ class Group {
     
     // Filtros
     this.filters = data.filters || {
-      nsfw: false,
       links: false,
       words: [],
       people: []

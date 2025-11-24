@@ -2,13 +2,12 @@
 const axios = require('axios');
 const fs = require('fs').promises;
 const Logger = require('../utils/Logger');
-const NSFWPredict = require('../utils/NSFWPredict');
+
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
 const { translateText } = require('./TranslationCommands');
 
 const logger = new Logger('stable-diffusion-commands');
-const nsfwPredict = NSFWPredict.getInstance();
 
 const LLMService = require('../services/LLMService');
 const llmService = new LLMService({});
@@ -85,14 +84,6 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
         reaction: process.env.LOADING_EMOJI ?? "🌀"
       }));
     }
-
-    const safetyQuestion = `Check if this image generation prompt is generating concering porn or nude content: "${prompt}". 
-    Adult themes and sexually suggestive is acceptable ok, filter only very explicit requests, implicit is fine. NSFW is not a problem, as long as it does not include: child, necro, gore, racism.
-    Your answer ((must)) include "SAFE" or "UNSAFE" followed by a brief reason. If it's related to child related content, include warning emojis in your reponse.`;
-    
-    const safetyResponse = await llmService.getCompletion({
-      prompt: safetyQuestion
-    });
     
     let safetyMsg = "";
     // Check if the response indicates unsafe content
@@ -155,16 +146,6 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
     await fs.writeFile(tempImagePath, imageBuffer);
     
     logger.info(`Recebida resposta, savaldno imagem em: ${tempImagePath}`);
-
-    // Verificar NSFW
-    let isNSFW = false;
-    try {
-      const nsfwResult = await nsfwPredict.detectNSFW(imageBase64);
-      isNSFW = nsfwResult.isNSFW;
-      logger.info(`Imagem analisada: NSFW = ${isNSFW}, Reason: ${JSON.stringify(nsfwResult.reason)}`);
-    } catch (nsfwError) {
-      logger.error('Erro ao verificar NSFW:', nsfwError);
-    }
     
     // Limpar arquivo temporário após alguns minutos
     setTimeout((tempImg) => {
@@ -180,42 +161,16 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
     
     const media = await bot.createMedia(tempImagePath);
     logger.info(media);
-    
-    const filterNSFW = group?.filters?.nsfw ?? false;
 
-    // Se a imagem for NSFW, envia um aviso antes
-    if (isNSFW) {
-      if(filterNSFW){
-        returnMessages.push(new ReturnMessage({
-          chatId: chatId,
-          content: '🔞 A imagem gerada pode conter conteúdo potencialmente inadequado e este grupo está filtrando conteúdo NSFW, por isso o resultado não foi enviado.'
-        }));
-      } else {    
-        returnMessages.push(new ReturnMessage({
-          chatId: chatId,
-          content: '🔞 A imagem gerada pode conter conteúdo potencialmente inadequado, abra com cautela.'
-        }));
-        
-        // Envia a imagem como viewOnly
-        returnMessages.push(new ReturnMessage({
-          chatId: chatId,
-          content: media,
-          options: {
-            caption: caption,
-            isViewOnce: true
-          }
-        }));
+    // Envia a imagem normalmente se não for NSFW
+    returnMessages.push(new ReturnMessage({
+      chatId: chatId,
+      content: media,
+      options: {
+        caption: caption
       }
-    } else {
-      // Envia a imagem normalmente se não for NSFW
-      returnMessages.push(new ReturnMessage({
-        chatId: chatId,
-        content: media,
-        options: {
-          caption: caption
-        }
-      }));
-    }
+    }));
+
     
     // Se só tiver um item no array, retorna ele diretamente
     return returnMessages.length === 1 ? returnMessages[0] : returnMessages;

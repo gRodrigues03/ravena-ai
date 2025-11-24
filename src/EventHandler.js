@@ -8,7 +8,6 @@ const LLMService = require('./services/LLMService');
 const SpeechCommands = require('./functions/SpeechCommands');
 const { aiCommand } = require('./functions/AICommands');
 const SummaryCommands = require('./functions/SummaryCommands');
-const NSFWPredict = require('./utils/NSFWPredict');
 const MuNewsCommands = require('./functions/MuNewsCommands');
 const HoroscopoCommands = require('./functions/HoroscopoCommands');
 const RankingMessages = require('./functions/RankingMessages');
@@ -24,7 +23,6 @@ class EventHandler {
     this.commandHandler = new CommandHandler();
     this.llmService = new LLMService({});
     this.variableProcessor = new CustomVariableProcessor();
-    this.nsfwPredict = NSFWPredict.getInstance();
     this.adminUtils = AdminUtils.getInstance();
     this.rankingMessages = RankingMessages;
     this.userGreetingManager = require('./utils/UserGreetingManager').getInstance();
@@ -475,61 +473,7 @@ class EventHandler {
       
       return true;
     }
-    
-    // Verifica filtro NSFW para imagens e vídeos
-    if (filters.nsfw && (message.type === 'image' || message.type === 'sticker')) { //  || message.type === 'video' removido video por enquanto
-      this.logger.info(`Filtros: ${message.type}`);
-      // Processa a imagem/vídeo para detecção NSFW
-      try {
-        // Primeiro salvamos a mídia temporariamente
-        const tempDir = path.join(__dirname, '../temp');
-        
-        // Garante que o diretório temporário exista
-        try {
-          await fs.access(tempDir);
-        } catch (error) {
-          await fs.mkdir(tempDir, { recursive: true });
-        }
-        
-        // Gera nome de arquivo temporário único
-        const fileExt = (message.type === 'image' || message.type === 'sticker') ? 'jpg' : 'mp4';
-        const tempFilePath = path.join(tempDir, `nsfw-check-${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`);
-        
-        // Salva a mídia
-        const mediaBuffer = Buffer.from(message.content.data, 'base64');
-        await fs.writeFile(tempFilePath, mediaBuffer);
-        
-        // Apenas imagens são verificadas para NSFW
-        if (message.type === 'image' || message.type === 'sticker') {
-          // Verifica NSFW
-          const result = await this.nsfwPredict.detectNSFW(message.content.data);
-          
-          // Limpa o arquivo temporário
-          fs.unlink(tempFilePath).catch(error => {
-            this.logger.error(`Erro ao excluir arquivo temporário ${tempFilePath}:`, error);
-          });
-          
-          if (result.isNSFW) {
-            this.logger.info(`Mensagem filtrada no grupo ${group.id} - conteúdo NSFW detectado, motivo: ${result.reason}`);
-            
-            // Deleta a mensagem
-            message.origin.delete(true).catch(error => {
-              this.logger.error('Erro ao deletar mensagem NSFW:', error);
-            });
-            
-            return true;
-          }
-        } else {
-          // Para vídeos, apenas limpamos o arquivo temporário
-          fs.unlink(tempFilePath).catch(error => {
-            this.logger.error(`Erro ao excluir arquivo temporário ${tempFilePath}:`, error);
-          });
-        }
-      } catch (nsfwError) {
-        this.logger.error('Erro ao verificar conteúdo NSFW:', nsfwError);
-      }
-    }
-    
+
     return false;
   }
 

@@ -95,8 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('group-farewell-message').value = '';
         }
         
-        // Checkboxes  
-        document.getElementById('group-isNSFW').checked = data.filters && data.filters.nsfw === true;
+        // Checkboxes
         document.getElementById('group-deleteLinks').checked = data.filters && data.filters.links === true;
         document.getElementById('group-isActive').checked = data.isActive !== false; // Default to true  
         document.getElementById('group-autoTranscribe').checked = data.autoStt === true;  
@@ -1079,8 +1078,7 @@ document.addEventListener('DOMContentLoaded', () => {
             groupData.filters = {};
         }
         
-        // Checkboxes  
-        groupData.filters.nsfw = document.getElementById('group-isNSFW').checked;  
+        // Checkboxes
         groupData.filters.links = document.getElementById('group-deleteLinks').checked;
         groupData.isActive = document.getElementById('group-isActive').checked;  
         groupData.autoStt = document.getElementById('group-autoTranscribe').checked;  
@@ -1281,7 +1279,6 @@ document.addEventListener('DOMContentLoaded', () => {
             'kick': 'Kick',
             'words': 'Palavras',
             'people': 'Pessoas',
-            'nsfw': 'Filtro NSFW',
             'links': 'Filtro de Links',
             'text': 'Texto',
             'channel': 'Canal',

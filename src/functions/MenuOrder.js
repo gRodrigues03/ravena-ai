@@ -141,7 +141,6 @@ const COMMAND_ORDER = [
 	"autoStt",
 	"filtro-palavra",
 	"filtro-links",
-	"filtro-nsfw",
 	"filtro-pessoa",
 	"interagir",
 	"interagir-cd",

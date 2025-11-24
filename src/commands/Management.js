@@ -3,7 +3,6 @@ const path = require('path');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
 const AdminUtils = require('../utils/AdminUtils');
-const NSFWPredict = require('../utils/NSFWPredict');
 const ReturnMessage = require('../models/ReturnMessage');
 
 /**
@@ -13,7 +12,6 @@ class Management {
   constructor() {
     this.logger = new Logger('management');
     this.database = Database.getInstance();
-    this.nsfwPredict = NSFWPredict.getInstance();
     this.dataPath = this.database.databasePath;
     this.adminUtils = AdminUtils.getInstance();
     
@@ -111,10 +109,6 @@ class Management {
       'filtro-pessoa': {
         method: 'filterPerson',
         description: 'Detecta e Apaga mensagens desta pessoa'
-      },
-      'filtro-nsfw': {
-        method: 'filterNSFW',
-        description: 'Detecta e Apaga mensagens NSFW'
       },
       'apelido': {
         method: 'setUserNickname',
@@ -1082,7 +1076,6 @@ async setWelcomeMessage(bot, message, args, group) {
   *!g-filtro-palavra* <palavra> - Adiciona/remove palavra do filtro
   *!g-filtro-links* - Ativa/desativa filtro de links
   *!g-filtro-pessoa* <número> - Adiciona/remove número do filtro
-  *!g-filtro-nsfw* - Ativa/desativa filtro de conteúdo NSFW
 
   *Variáveis em mensagens:*
   {pessoa} - Nome da pessoa que entrou/saiu do grupo
@@ -1140,10 +1133,6 @@ async setWelcomeMessage(bot, message, args, group) {
       const personFilters = group.filters && group.filters.people && group.filters.people.length > 0
         ? group.filters.people.join(', ')
         : 'Nenhuma pessoa filtrada';
-      
-      const nsfwFiltering = group.filters && group.filters.nsfw 
-        ? 'Sim' 
-        : 'Não';
       
       // Formata data de criação
       const creationDate = new Date(group.createdAt).toLocaleString("pt-BR");
@@ -1245,7 +1234,6 @@ async setWelcomeMessage(bot, message, args, group) {
       infoMessage += `- *Palavras:* ${wordFilters}\n`;
       infoMessage += `- *Links:* ${linkFiltering}\n`;
       infoMessage += `- *Pessoas:* ${personFilters}\n`;
-      infoMessage += `- *NSFW:* ${nsfwFiltering}\n\n`;
       
       
        // Números e strings ignorados
@@ -1688,50 +1676,6 @@ async setWelcomeMessage(bot, message, args, group) {
       return new ReturnMessage({
         chatId: group.id,
         content: `✅ Pessoa adicionada ao filtro: ${numero}\n\n*Pessoas filtradas atualmente:*\n${personFilters}`
-      });
-    }
-  }
-  
-  /**
-   * Ativa ou desativa filtro de conteúdo NSFW
-   * @param {WhatsAppBot} bot - Instância do bot
-   * @param {Object} message - Dados da mensagem
-   * @param {Array} args - Argumentos do comando
-   * @param {Object} group - Dados do grupo
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async filterNSFW(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    // Verifica se o bot é admin para filtros efetivos
-    const isAdmin = await this.isBotAdmin(bot, group);
-    if (!isAdmin) {
-      await bot.sendMessage(group.id, '⚠️ Atenção: O bot não é administrador do grupo. Ele não poderá apagar mensagens filtradas. Para usar filtros efetivamente, adicione o bot como administrador.');
-    }
-    
-    // Inicializa filtros se não existirem
-    if (!group.filters) {
-      group.filters = {};
-    }
-    
-    // Alterna estado do filtro
-    group.filters.nsfw = !group.filters.nsfw;
-    await this.database.saveGroup(group);
-    
-    if (group.filters.nsfw) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: '✅ Filtro de conteúdo NSFW ativado. Imagens e vídeos detectados como conteúdo adulto serão automaticamente removidos.'
-      });
-    } else {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: '❌ Filtro de conteúdo NSFW desativado. Imagens e vídeos não serão filtrados para conteúdo adulto.'
       });
     }
   }

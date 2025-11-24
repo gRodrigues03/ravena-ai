@@ -2309,7 +2309,6 @@ class SuperAdmin {
       // Informações sobre filtros
       if (group.filters) {
         responseMessage += `\n*Filtros:*\n`;
-        responseMessage += `- *NSFW:* ${group.filters.nsfw ? 'Ativado' : 'Desativado'}\n`;
         responseMessage += `- *Links:* ${group.filters.links ? 'Ativado' : 'Desativado'}\n`;
 
         if (group.filters.words && group.filters.words.length > 0) {
