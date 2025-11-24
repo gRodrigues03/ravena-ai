@@ -14,6 +14,7 @@ class LLMService {
 	constructor(config = {}) {
 		this.logger = new Logger('llm-service');
 		this.openRouterKey = config.openRouterKey || process.env.OPENROUTER_API_KEY;
+		this.openRouterKey_dois = config.openRouterKey_dois || process.env.OPENROUTER_API_KEY_DOIS;
 		this.apiTimeout = config.apiTimeout || parseInt(process.env.API_TIMEOUT) || 60000;
 
 		this.providerDefinitions = [
@@ -21,6 +22,13 @@ class LLMService {
         name: 'openrouter',
         method: async (options) => {
           const response = await this.openRouterCompletion(options);
+          return response.choices[0].message.content;
+        }
+      },
+      {
+        name: 'openrouter_2',
+        method: async (options) => {
+          const response = await this.openRouterCompletion_dois(options);
           return response.choices[0].message.content;
         }
       }
@@ -67,18 +75,45 @@ class LLMService {
 				}
 			);
 
-			// this.logger.debug('Resposta recebida da API OpenRouter', {
-			//	 status: response.status,
-			//	 data: response.data,
-			//	 contentLength: JSON.stringify(response.data).length
-			// });
-
 			return response.data;
 		} catch (error) {
 			this.logger.error('Erro ao chamar API OpenRouter:', error.message);
 			throw error;
 		}
 	}
+  async openRouterCompletion_dois(options) {
+    try {
+      if (!this.openRouterKey_dois) {
+        this.logger.error('Chave da API OpenRouter não configurada');
+        throw new Error('Chave da API OpenRouter não configurada');
+      }
+
+      const response = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          // model: "x-ai/grok-4.1-fast:free",
+          model: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+          messages: [
+            { role: 'user', content: options.prompt }
+          ],
+          max_tokens: options.maxTokens || 5000,
+          temperature: options.temperature || 0.7
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${this.openRouterKey_dois}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: options.timeout || this.apiTimeout
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      this.logger.error('Erro ao chamar API OpenRouter Dois:', error.message);
+      throw error;
+    }
+  }
 
 	/**
 	 * Obtém completação de texto de qualquer LLM configurado
