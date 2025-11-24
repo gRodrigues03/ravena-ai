@@ -51,7 +51,7 @@ class WhatsAppBotEvoGo {
     this.evolutionApiUrl = options.evolutionApiUrl;
     this.evolutionApiKey = options.evolutionApiKey; // Global Key
     this.evolutionInstanceApiKey = options.evolutionInstanceApiKey; // Instance Token
-    this.instanceName = options.evoInstanceName;
+    this.instanceName = options.evoInstanceName ?? options.id;
     this.webhookHost = options.webhookHost;
     this.webhookPort = options.webhookPort || process.env.WEBHOOK_PORT_EVO || 3000;
     this.notificarDonate = options.notificarDonate;
@@ -1058,6 +1058,7 @@ class WhatsAppBotEvoGo {
 
         case 'Message':
         case 'SendMessage': // V3 separa enviadas?
+          this.lastMessageReceived = Date.now();
           // V3 payload examples mostram "Message" com "IsFromMe": true/false dentro de Info
           const msgData = payload.data;
 
@@ -1356,6 +1357,7 @@ class WhatsAppBotEvoGo {
   async sendMessage(chatId, content, options = {}) {
     try {
       if (!this.isConnected) throw new Error('Not connected');
+      let isGroup = false;
 
       const payload = {
         number: chatId,
@@ -1370,6 +1372,7 @@ class WhatsAppBotEvoGo {
         let participant = null;
 
         if (chatId.includes('@g.us')) {
+          isGroup = true;
           // Try to find message in cache to get participant
           const quotedMsg = await this.recoverMsgFromCache(msgIdToQuote);
           if (quotedMsg) participant = quotedMsg.author || quotedMsg.from;
@@ -1435,6 +1438,7 @@ class WhatsAppBotEvoGo {
       this.logger.debug(`[sendMessage] '${endpoint}'`, { content, payload });
 
       const response = await this.apiClient.post(endpoint, payload);
+      this.loadReport.trackSentMessage(isGroup);
 
       return {
         id: { _serialized: response.data?.Info?.ID || 'unknown' },
@@ -1445,6 +1449,7 @@ class WhatsAppBotEvoGo {
     } catch (error) {
       this.logger.error(`[${this.id}] Error sending message:`, error);
       throw error;
+      return false;
     }
   }
 
@@ -1625,6 +1630,7 @@ class WhatsAppBotEvoGo {
 
   async destroy() {
     if (this.webhookServer) this.webhookServer.close();
+    if (this.loadReport) this.loadReport.destroy();
   }
 }
 
