@@ -1120,12 +1120,14 @@ class WhatsAppBotEvoGo {
         case 'JoinedGroup':
           // Bot joined a group
           // Payload: { event: "JoinedGroup", data: { JID: "...", Participants: [...] } }
-          //this.logger.info(`[JoinedGroup] `, { payload });
+          this.logger.info(`[JoinedGroup] `, { payload });
           const joinedData = payload.data;
           if (joinedData) {
             this._handleGroupParticipantsUpdate({
               JID: joinedData.JID,
               Join: [this.phoneNumber],
+              Sender: joinedData.Sender,
+              SenderPN: joinedData.SenderPN,
               isBotJoining: true,
               _raw: joinedData
             });
@@ -1467,29 +1469,16 @@ class WhatsAppBotEvoGo {
 
   async _handleGroupParticipantsUpdate(groupData) {
     // groupData: { JID, Join: [], Leave: [], Promote: [], Demote: [] }
+    this.logger.debug(`[_handleGroupParticipantsUpdate] `, groupData);
     const groupId = groupData.JID;
 
     // Helper to process actions
     const processAction = async (groupData, participants, action) => {
       if (!participants || !participants.length) return;
 
+
       let groupDetails = await this.getChatDetails(groupId);
       let groupName = groupDetails?.name || groupId;
-
-      // Check if bot was removed
-      if (action === 'remove') {
-        const myJid = this.phoneNumber + '@s.whatsapp.net'; // Or fetch from status
-        // Check if any of the removed participants is the bot (using JID or LID)
-        // We need to know our LID.
-        const myLid = this.myLid; // Assuming we stored it
-
-        for (const p of participants) {
-          if (p === myJid || (myLid && p === myLid)) {
-            this.logger.info(`[${this.id}] Bot removed from group ${groupId}`);
-            // Handle bot removal logic if needed
-          }
-        }
-      }
 
       for (const participant of participants) {
         // participant is JID string
@@ -1497,9 +1486,9 @@ class WhatsAppBotEvoGo {
         const contactResp = await this.getContactDetails(groupData.Sender) ?? await this.getContactDetails(groupData.SenderPN);
 
         const eventData = {
-          group: { id: groupId, name: groupName },
+          group: { id: groupId, name: groupName, notInGroup: groupDetails.notInGroup, isBotJoining: groupData.isBotJoining },
           user: { id: participant, name: contact?.name || participant.split('@')[0] },
-          responsavel: { id: groupData.SenderPN, name: contactResp?.name || groupData.SenderPN.split('@')[0] },
+          responsavel: { id: groupData.SenderPN, name: contactResp?.name || groupData.SenderPN?.split('@')[0] },
           action: action,
           origin: { getChat: async () => await this.getChatDetails(groupId) }
         };
@@ -1522,10 +1511,30 @@ class WhatsAppBotEvoGo {
     await processAction(groupData, groupData.Demote, 'demote');
   }
 
+  // NÃO TEM NA EVOGO
+  // Fazer?
+  inviteInfo(inviteCode) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        this.logger.debug(`[inviteInfo][${this.instanceName}] '${inviteCode}'`);
+        //const inviteInfo = await this.apiClient.get(`/group/inviteInfo`, { inviteCode });
+        const inviteInfo = { code: inviteCode };
+        this.logger.info(`[inviteInfo] '${inviteCode}': ${JSON.stringify(inviteInfo)}`);
+
+        resolve(inviteInfo);
+      } catch (e) {
+        this.logger.warn(`[inviteInfo] Erro pegando invite info para '${inviteCode}'`);
+        reject(e);
+      }
+
+    });
+  }
+
   async getChatDetails(chatId) {
     if (!chatId) return null;
     try {
       if (chatId.includes('@g.us')) {
+
         const groupInfoResponse = await this.apiClient.post('/group/info', { groupJid: chatId });
         const groupInfo = groupInfoResponse.data;
 
@@ -1545,6 +1554,7 @@ class WhatsAppBotEvoGo {
             id: { _serialized: chatId },
             name: groupInfo.GroupName?.Name || chatId,
             isGroup: true,
+            notInGroup: false,
             participants: groupInfo.Participants.map(p => ({
               id: { _serialized: p.JID },
               isAdmin: p.IsAdmin,
@@ -1563,13 +1573,35 @@ class WhatsAppBotEvoGo {
         };
       }
     } catch (e) {
-      this.logger.error(`[getChatDetails] Error fetching ${chatId}`, e);
+      if (e.data?.error?.includes("not participating")) {
+        this.logger.info(`[getChatDetails] Error fetching ${chatId}, bot não está no grupo`);
+        return {
+          id: { _serialized: chatId },
+          name: chatId,
+          isGroup: true,
+          notInGroup: true,
+          participants: []
+        };
+      } else {
+        this.logger.error(`[getChatDetails] Error fetching ${chatId}`, e);
+      }
     }
     return { id: { _serialized: chatId }, isGroup: chatId.includes('@g.us') };
   }
 
   async getContactDetails(id, prefetchedName) {
     if (!id) return null;
+
+    if (id === this.phoneNumber) {
+      return {
+        id: { _serialized: id },
+        name: this.instanceName,
+        number: this.phoneNumber,
+        lid: this.phoneNumber,
+        picture: ""
+      };
+    }
+
     try {
       // Check cache first (including LID)
       // ...
