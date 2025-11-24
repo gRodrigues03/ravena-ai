@@ -47,16 +47,11 @@ class LLMService {
 				throw new Error('Chave da API OpenRouter não configurada');
 			}
 
-			this.logger.debug('Enviando solicitação para API OpenRouter:', {
-				model: "x-ai/grok-4.1-fast:free",
-				promptLength: options.prompt.length,
-				maxTokens: options.maxTokens || 5000
-			});
-
 			const response = await axios.post(
 				'https://openrouter.ai/api/v1/chat/completions',
 				{
-					model: "x-ai/grok-4.1-fast:free",
+					// model: "x-ai/grok-4.1-fast:free",
+					model: "google/gemma-3n-e4b-it:free",
 					messages: [
 						{ role: 'user', content: options.prompt }
 					],
