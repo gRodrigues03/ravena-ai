@@ -16,12 +16,12 @@ const adminUtils = AdminUtils.getInstance();
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // --- CONSTANTES DO JOGO ---
-const MAX_FISH_PER_USER = 10;
-const MIN_FISH_WEIGHT = 1;
+const MAX_FISH_PER_USER = 8;
+const MIN_FISH_WEIGHT = 20;
 const MAX_FISH_WEIGHT = 180; // Aumentado para 180kg
 const DIFFICULTY_THRESHOLD = 80; 
-const FISHING_COOLDOWN = 5;
-const MAX_BAITS = 7; // Aumentado para 7 iscas
+const FISHING_COOLDOWN = 3;
+const MAX_BAITS = 3; // Diminuído para 3 iscas
 const BAIT_REGEN_TIME = 60 * 60; // Reduzido para 1 hora (60 min * 60 seg)
 const SAVE_CHECK_INTERVAL = 5000; // Verifica se precisa salvar a cada 5s
 
