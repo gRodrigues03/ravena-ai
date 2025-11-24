@@ -178,9 +178,6 @@ class LLMService {
 				const [failedProvider] = this.providerQueue.splice(i, 1);
 				this.providerQueue.push(failedProvider);
 				this.lastQueueChangeTimestamp = Date.now();
-
-				// Decrementa i para tentar o novo provedor no índice atual.
-				i--;
 			}
 		}
 
