@@ -123,7 +123,7 @@ class WhatsAppBotEvoGo {
     this.inviteSystem = new InviteSystem(this);
     this.reactionHandler = new ReactionsHandler();
 
-    this.streamSystem = null;
+    this.streamSystem = true;
     this.streamMonitor = null;
     this.stabilityMonitor = options.stabilityMonitor ?? false;
 
@@ -184,6 +184,11 @@ class WhatsAppBotEvoGo {
     setInterval(this.updateVersions, 3600000);
   }
 
+  async getEvoGoInstance(token, name) {
+    const allInstances = await this.apiClient.get(`/instance/all`, {}, true);
+    return allInstances.data?.find(aI => aI.token === token && aI.name === name);
+  }
+
   async logout() {
     this.logger.info(`[logout] Logging out instance ${this.instanceName}`);
     return await this.apiClient.delete('/instance/logout', {}, false);
@@ -191,11 +196,10 @@ class WhatsAppBotEvoGo {
 
   async deleteInstance() {
 
-    // Precisa pegar O ID da instancia, que só vem no /all
     this.logger.info(`[deleteInstance] Deleting instance ${this.instanceName}`);
 
-    const allInstances = await this.apiClient.get(`/instance/all`, {}, true);
-    const instanceToDelete = allInstances.data?.find(aI => aI.token === this.evolutionInstanceApiKey && aI.name === this.instanceName);
+    // Precisa pegar O ID da instancia, que só vem no /all
+    const instanceToDelete = await this.getEvoGoInstance(this.evolutionInstanceApiKey, this.instanceName)
 
     if (instanceToDelete) {
       this.logger.debug(`[deleteInstance] Instances`, { allInstances, instanceToDelete })
@@ -889,11 +893,16 @@ class WhatsAppBotEvoGo {
   }
 
   async initialize() {
-    const wsUrl = `${this.evolutionWS}?token=${this.evolutionInstanceApiKey}&instanceId=${this.instanceName}`;
+
+    const instanceInfo = await this.getEvoGoInstance(this.evolutionInstanceApiKey, this.instanceName);
+    const wsUrl = `${this.evolutionWS}/ws?token=${this.evolutionApiKey}&instanceId=${instanceInfo.id}`;
+    //const wsUrl = `${this.evolutionWS}/ws?token=${this.evolutionApiKey}&instanceId=${this.instanceName}`;
     const instanceDesc = this.websocket ? `Websocket to ${wsUrl}` : `Webhook on ${this.instanceName}:${this.webhookPort}`;
-    this.logger.info(`[${this.id}] Initializing EvolutionGO API bot instance ${this.instanceName} (Evo Instance: ${instanceDesc})`);
+
     this.database.registerBotInstance(this);
     this.startupTime = Date.now();
+
+    this.logger.info(`[${this.startupTime}][${this.id}] Initializing EvolutionGO API bot instance ${this.instanceName} (Evo Instance: ${instanceDesc})`); // , { instanceInfo }
 
     try {
       if (this.websocket) {
@@ -905,11 +914,14 @@ class WhatsAppBotEvoGo {
           this._onInstanceConnected();
         });
 
-        ws.on('message', (data) => {
+        ws.on('message', (rawData) => {
           try {
-            const message = JSON.parse(data);
-            // Adaptar estrutura do evento se necessário. V3 envia { event: "...", data: ... }
-            this._handleWebhook({ body: message }, { sendStatus: () => { }, status: () => ({ send: () => { } }) });
+            const data = JSON.parse(rawData);
+            const payload = JSON.parse(data.payload);
+
+            //this.logger.info(`[WebSocket] `, { payload });
+
+            return this._handleWebhook({ websocket: true, body: payload }, { sendStatus: () => 0 }, true);
           } catch (err) {
             this.logger.error(`[${this.id}] Error parsing WebSocket message:`, err);
           }
@@ -923,27 +935,26 @@ class WhatsAppBotEvoGo {
           this.logger.warn(`[${this.id}] WebSocket disconnected.`);
           this._onInstanceDisconnected('WEBSOCKET_CLOSE');
         });
-      }
+      } else {
+        // Webhook Setup
+        this.webhookApp = express();
+        this.webhookApp.use(express.json({ limit: '500mb' }));
+        this.webhookApp.use(express.urlencoded({ extended: true, limit: '500mb' }));
 
-      // Webhook Setup
-      this.webhookApp = express();
-      this.webhookApp.use(express.json({ limit: '500mb' }));
-      this.webhookApp.use(express.urlencoded({ extended: true, limit: '500mb' }));
+        const webhookPath = `/webhook/evogo/${this.instanceName}`;
+        this.webhookApp.post(webhookPath, this._handleWebhook.bind(this));
+        this.webhookApp.get(webhookPath, this._handleWebhook.bind(this));
 
-      const webhookPath = `/webhook/evogo/${this.instanceName}`;
-      this.webhookApp.post(webhookPath, this._handleWebhook.bind(this));
-      this.webhookApp.get(webhookPath, this._handleWebhook.bind(this));
-
-      await new Promise((resolve, reject) => {
-        this.webhookServer = this.webhookApp.listen(this.webhookPort, () => {
-          this.logger.info(`Webhook listener for bot ${this.instanceName} started on http://${this.webhookHost}:${this.webhookPort}${webhookPath}`);
-          resolve();
-        }).on('error', (err) => {
-          this.logger.error(`Failed to start webhook listener for bot ${this.instanceName}:`, err);
-          reject(err);
+        await new Promise((resolve, reject) => {
+          this.webhookServer = this.webhookApp.listen(this.webhookPort, () => {
+            this.logger.info(`Webhook listener for bot ${this.instanceName} started on http://${this.webhookHost}:${this.webhookPort}${webhookPath}`);
+            resolve();
+          }).on('error', (err) => {
+            this.logger.error(`Failed to start webhook listener for bot ${this.instanceName}:`, err);
+            reject(err);
+          });
         });
-      });
-
+      }
     } catch (error) {
       this.logger.error(`Error during webhook setup for instance ${this.instanceName}:`, error);
     }
@@ -1273,6 +1284,7 @@ class WhatsAppBotEvoGo {
           body: content,
           caption: caption,
           timestamp: timestamp,
+          responseTime: responseTime,
           hasMedia: !!mediaInfo,
           mentions: mentions,
 
