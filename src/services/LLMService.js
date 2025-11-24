@@ -207,11 +207,6 @@ class LLMService {
 				return result;
 			} catch (error) {
 				this.logger.error(`Erro ao usar provedor ${provider.name}:`, error.message);
-
-				// Move o provedor que falhou para o final da fila.
-				this.logger.warn(`[LLMService] Rebaixando provedor ${provider.name} para o final da fila.`);
-				const [failedProvider] = this.providerQueue.splice(i, 1);
-				this.providerQueue.push(failedProvider);
 				this.lastQueueChangeTimestamp = Date.now();
 			}
 		}
