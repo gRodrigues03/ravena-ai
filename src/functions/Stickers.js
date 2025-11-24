@@ -22,6 +22,7 @@ const TEMP_DIR = path.join(__dirname, '../../temp', 'whatsapp-bot-stickers');
  * @returns {Promise<ReturnMessage>} - ReturnMessage com o sticker
  */
 async function stickerCommand(bot, message, args, group) {
+  logger.info(`Executando comando sticker para ${chatId}`);
   const chatId = message.group || message.author;
   logger.debug(`Executando comando sticker para ${chatId}`);
   
