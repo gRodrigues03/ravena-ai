@@ -196,16 +196,15 @@ class WhatsAppBotEvoGo {
 
   async deleteInstance() {
 
-    this.logger.info(`[deleteInstance] Deleting instance ${this.instanceName}`);
 
     // Precisa pegar O ID da instancia, que só vem no /all
     const instanceToDelete = await this.getEvoGoInstance(this.evolutionInstanceApiKey, this.instanceName)
+    this.logger.info(`[deleteInstance] Deleting instance ${this.instanceName}`, { instanceToDelete });
 
     if (instanceToDelete) {
-      this.logger.debug(`[deleteInstance] Instances`, { allInstances, instanceToDelete })
       return await this.apiClient.delete(`/instance/delete/${instanceToDelete.id}`, {}, true);
     } else {
-      return { "erro": "não encontrei a instancia", allInstances, name: this.instanceName, token: this.evolutionInstanceApiKey };
+      return { "erro": "não encontrei a instancia", name: this.instanceName, token: this.evolutionInstanceApiKey };
     }
   }
 
@@ -752,37 +751,88 @@ class WhatsAppBotEvoGo {
     return null;
   }
 
+  _storeMediaFile(source, extension) {
+    const outputDir = path.join(__dirname, '..', 'public', 'attachments');
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    const tempId = randomBytes(8).toString('hex');
+    const outputFileName = `${tempId}${extension}`;
+    const outputFilePath = path.join(outputDir, outputFileName);
+
+    if (Buffer.isBuffer(source)) {
+      fs.writeFileSync(outputFilePath, source);
+    } else if (typeof source === 'string' && fs.existsSync(source)) {
+      fs.copyFileSync(source, outputFilePath);
+    } else {
+      throw new Error("Invalid source for _storeMediaFile");
+    }
+
+    setTimeout((ofp) => {
+      if (fs.existsSync(ofp)) fs.unlinkSync(ofp);
+    }, 10 * 60 * 1000, outputFilePath);
+
+    return `${process.env.BOT_DOMAIN_LOCAL ?? process.env.BOT_DOMAIN}/attachments/${outputFileName}`;
+  }
+
+  async createMediaFromBase64(base64Data, mimetype, filename) {
+    try {
+      const extension = mime.extension(mimetype) || 'bin';
+      const buffer = Buffer.from(base64Data, 'base64');
+      const url = this._storeMediaFile(buffer, `.${extension}`);
+
+      return {
+        mimetype,
+        data: base64Data,
+        filename: filename || `file.${extension}`,
+        source: 'base64',
+        url,
+        isMessageMedia: true
+      };
+    } catch (error) {
+      this.logger.error(`Error in createMediaFromBase64:`, error);
+      throw error;
+    }
+  }
+
   async createMedia(filePath, customMime = false) {
     try {
       if (!fs.existsSync(filePath)) {
         throw new Error(`File not found: ${filePath}`);
       }
 
-      const outputDir = path.join(__dirname, '..', 'public', 'attachments');
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-      }
-
-      const extension = path.extname(filePath); // e.g., '.mp4'
-      const tempId = randomBytes(8).toString('hex');
-      const outputFileName = `${tempId}${extension}`;
-      const outputFilePath = path.join(outputDir, outputFileName);
-
-      fs.copyFileSync(filePath, outputFilePath);
-
-      setTimeout((ofp, ofn) => {
-        if (fs.existsSync(ofp)) fs.unlinkSync(ofp);
-      }, 10 * 60 * 1000, outputFilePath, outputFileName); // 10 minutes in milliseconds
+      const extension = path.extname(filePath);
+      const fileUrl = this._storeMediaFile(filePath, extension);
 
       const data = fs.readFileSync(filePath, { encoding: 'base64' });
       const filename = path.basename(filePath);
       const mimetype = customMime ? customMime : (mime.lookup(filePath) || 'application/octet-stream');
-      const fileUrl = `${process.env.BOT_DOMAIN_LOCAL ?? process.env.BOT_DOMAIN}/attachments/${outputFileName}`;
 
       this.logger.info(`[createMedia] ${fileUrl}`);
       return { mimetype, data, filename, source: 'file', url: fileUrl, isMessageMedia: true };
     } catch (error) {
       console.error(`Error creating media from ${filePath}:`, error);
+      throw error;
+    }
+  }
+
+
+  async createMediaFromURL(url, options = { unsafeMime: true, customMime: false }) {
+    try {
+      const filename = path.basename(new URL(url).pathname) || 'media_from_url';
+      let mimetype = mime.lookup(url.split("?")[0]) || (options.unsafeMime ? 'application/octet-stream' : null);
+
+      if (!mimetype && options.unsafeMime) {
+        try {
+          const headResponse = await axios.head(url);
+          this.logger.info("mimetype do header? ", headResponse);
+          mimetype = options.customMime ? options.customMime : (headResponse.headers['content-type']?.split(';')[0] || 'application/octet-stream');
+        } catch (e) { /* ignore */ }
+      }
+      return { url, mimetype, filename, source: 'url', url, isMessageMedia: true }; // MessageMedia compatible for URL sending
+    } catch (error) {
+      this.logger.error(`[${this.id}] Evo: Error creating media from URL ${url}:`, error);
       throw error;
     }
   }
@@ -828,25 +878,6 @@ class WhatsAppBotEvoGo {
       }
     }
     return results;
-  }
-
-  async createMediaFromURL(url, options = { unsafeMime: true, customMime: false }) {
-    try {
-      const filename = path.basename(new URL(url).pathname) || 'media_from_url';
-      let mimetype = mime.lookup(url.split("?")[0]) || (options.unsafeMime ? 'application/octet-stream' : null);
-
-      if (!mimetype && options.unsafeMime) {
-        try {
-          const headResponse = await axios.head(url);
-          this.logger.info("mimetype do header? ", headResponse);
-          mimetype = options.customMime ? options.customMime : (headResponse.headers['content-type']?.split(';')[0] || 'application/octet-stream');
-        } catch (e) { /* ignore */ }
-      }
-      return { url, mimetype, filename, source: 'url', url, isMessageMedia: true }; // MessageMedia compatible for URL sending
-    } catch (error) {
-      this.logger.error(`[${this.id}] Evo: Error creating media from URL ${url}:`, error);
-      throw error;
-    }
   }
 
   recoverMsgFromCache(messageId) {
@@ -1491,15 +1522,19 @@ class WhatsAppBotEvoGo {
       } else if (content.isMessageMedia || options.sendMediaAsSticker) {
         if (options.sendMediaAsSticker) {
           endpoint = '/send/sticker';
-          payload.sticker = content.url || content.data; // URL preferred
+          if (!content.url && content.data) {
+            const media = await this.createMediaFromBase64(content.data, content.mimetype, content.filename);
+            payload.sticker = media.url;
+          } else {
+            payload.sticker = content.url || content.data;
+          }
         } else {
           endpoint = '/send/media';
           payload.url = content.url;
           if (!payload.url && content.data) {
-            // If no URL, we might need to upload or use base64 if supported (docs say file or url)
-            // For now assuming URL is available or handled elsewhere. 
-            // If only base64 available, might need to save to file and upload via form-data (not implemented here yet)
-            this.logger.warn("Sending media via base64 not fully supported in this wrapper version without file upload.");
+            const media = await this.createMediaFromBase64(content.data, content.mimetype, content.filename);
+            payload.url = media.url;
+            if (options.sendMediaAsSticker) payload.sticker = media.url;
           }
           payload.type = content.mimetype ? content.mimetype.split('/')[0] : 'image';
           if (options.sendMediaAsDocument) payload.type = 'document';
