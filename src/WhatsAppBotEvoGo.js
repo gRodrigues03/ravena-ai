@@ -116,14 +116,14 @@ class WhatsAppBotEvoGo {
 
     this.mentionHandler = new MentionHandler();
 
-    this.lastMessageReceived = Date.now();
-    this.startupTime = Date.now();
+    this.lastMessageReceived = 0;
+    this.startupTime = 0;
 
     this.loadReport = new LoadReport(this);
     this.inviteSystem = new InviteSystem(this);
     this.reactionHandler = new ReactionsHandler();
 
-    this.streamSystem = true;
+    this.streamSystem = null;
     this.streamMonitor = null;
     this.stabilityMonitor = options.stabilityMonitor ?? false;
 
@@ -818,7 +818,13 @@ class WhatsAppBotEvoGo {
         }
       } catch (sendError) {
         this.logger.error(`[${this.id}] Falha enviando ReturnMessages pra ${message.chatId}:`, sendError);
-        results.push({ error: sendError, messageContent: message.content }); // Push error for this message
+        results.push({
+          error: sendError,
+          messageContent: message.content,
+          getInfo: () => { // Usado no StreamSystem pra saber se foi enviada
+            return { delivery: [], played: [], read: [] };
+          }
+        });
       }
     }
     return results;
@@ -892,6 +898,102 @@ class WhatsAppBotEvoGo {
     });
   }
 
+  startConnectionMonitor() {
+    if (!this.websocket) return;
+
+    if (this.connectionMonitorInterval) {
+      clearInterval(this.connectionMonitorInterval);
+    }
+
+    this.logger.info(`[ConnectionMonitor] Starting monitor...`);
+
+    this.connectionMonitorInterval = setInterval(() => {
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      const currentTimeInMinutes = hours * 60 + minutes;
+
+      let thresholdMinutes = 5; // Default 07:31 - 23:59
+
+      // 00:00 - 05:00 (5 * 60 = 300)
+      if (currentTimeInMinutes >= 0 && currentTimeInMinutes <= 300) {
+        thresholdMinutes = 30;
+      }
+      // 05:01 - 07:30 (7 * 60 + 30 = 450)
+      else if (currentTimeInMinutes > 300 && currentTimeInMinutes <= 450) {
+        thresholdMinutes = 10;
+      }
+
+      const timeSinceLastMessage = Date.now() - this.lastMessageReceived;
+      const thresholdMs = thresholdMinutes * 60 * 1000;
+
+      const isDisconnected = !this.isConnected || (this.ws && this.ws.readyState !== WebSocket.OPEN);
+
+      if (isDisconnected) {
+        this.logger.warn(`[ConnectionMonitor] WebSocket disconnected. Reconnecting...`);
+        this._connectWebSocket();
+      } else if (timeSinceLastMessage > thresholdMs) {
+        this.logger.warn(`[ConnectionMonitor] No messages received for ${Math.floor(timeSinceLastMessage / 60000)} minutes (Threshold: ${thresholdMinutes}m). Restarting WebSocket...`);
+        this._connectWebSocket();
+      }
+
+    }, 60000); // Check every minute
+  }
+
+  async _connectWebSocket() {
+    try {
+      const instanceInfo = await this.getEvoGoInstance(this.evolutionInstanceApiKey, this.instanceName);
+      if (!instanceInfo) {
+        this.logger.error(`[${this.id}] Instance not found for WebSocket connection.`);
+        return;
+      }
+      const wsUrl = `${this.evolutionWS}/ws?token=${this.evolutionApiKey}&instanceId=${instanceInfo?.id}`;
+
+      this.logger.info(`[${this.id}] Connecting to WebSocket: ${wsUrl}`);
+
+      if (this.ws) {
+        try {
+          this.ws.removeAllListeners();
+          this.ws.terminate();
+        } catch (e) {
+          this.logger.error(`[${this.id}] Error closing existing WebSocket:`, e);
+        }
+      }
+
+      this.ws = new WebSocket(wsUrl);
+
+      this.ws.on('open', () => {
+        this.logger.info(`[${this.id}] WebSocket connected.`);
+        this._onInstanceConnected();
+      });
+
+      this.ws.on('message', (rawData) => {
+        try {
+          const data = JSON.parse(rawData);
+          const payload = JSON.parse(data.payload);
+
+          //this.logger.info(`[WebSocket] `, { payload });
+
+          return this._handleWebhook({ websocket: true, body: payload }, { sendStatus: () => 0 }, true);
+        } catch (err) {
+          this.logger.error(`[${this.id}] Error parsing WebSocket message:`, err);
+        }
+      });
+
+      this.ws.on('error', (err) => {
+        this.logger.error(`[${this.id}] WebSocket error:`, err);
+      });
+
+      this.ws.on('close', () => {
+        this.logger.warn(`[${this.id}] WebSocket disconnected.`);
+        this._onInstanceDisconnected('WEBSOCKET_CLOSE');
+      });
+
+    } catch (error) {
+      this.logger.error(`[${this.id}] Error in _connectWebSocket:`, error);
+    }
+  }
+
   async initialize() {
 
     const instanceInfo = await this.getEvoGoInstance(this.evolutionInstanceApiKey, this.instanceName);
@@ -901,40 +1003,14 @@ class WhatsAppBotEvoGo {
 
     this.database.registerBotInstance(this);
     this.startupTime = Date.now();
+    this.lastMessageReceived = Date.now();
 
     this.logger.info(`[${this.startupTime}][${this.id}] Initializing EvolutionGO API bot instance ${this.instanceName} (Evo Instance: ${instanceDesc})`); // , { instanceInfo }
 
     try {
       if (this.websocket) {
-        this.logger.info(`[${this.id}] Connecting to WebSocket: ${wsUrl}`);
-        const ws = new WebSocket(wsUrl);
-
-        ws.on('open', () => {
-          this.logger.info(`[${this.id}] WebSocket connected.`);
-          this._onInstanceConnected();
-        });
-
-        ws.on('message', (rawData) => {
-          try {
-            const data = JSON.parse(rawData);
-            const payload = JSON.parse(data.payload);
-
-            //this.logger.info(`[WebSocket] `, { payload });
-
-            return this._handleWebhook({ websocket: true, body: payload }, { sendStatus: () => 0 }, true);
-          } catch (err) {
-            this.logger.error(`[${this.id}] Error parsing WebSocket message:`, err);
-          }
-        });
-
-        ws.on('error', (err) => {
-          this.logger.error(`[${this.id}] WebSocket error:`, err);
-        });
-
-        ws.on('close', () => {
-          this.logger.warn(`[${this.id}] WebSocket disconnected.`);
-          this._onInstanceDisconnected('WEBSOCKET_CLOSE');
-        });
+        await this._connectWebSocket();
+        this.startConnectionMonitor();
       } else {
         // Webhook Setup
         this.webhookApp = express();
@@ -1111,9 +1187,16 @@ class WhatsAppBotEvoGo {
         case 'GroupInfo':
           // Payload: { event: "GroupInfo", data: { ... } }
           // data has: JID, Join, Leave, Promote, Demote
+          // Aqui vem várias coisas, quando muda titulo, configs, etc.
           const groupInfoData = payload.data;
           if (groupInfoData) {
-            this._handleGroupParticipantsUpdate(groupInfoData);
+
+            // Eventos de mudança de membro
+            if (groupInfoData.Join || groupInfoData.Leave || groupInfoData.Promote || groupInfoData.Demote) {
+              this._handleGroupParticipantsUpdate(groupInfoData);
+            }
+
+            // Se mudou de nome, groupInfoData.Name Name: {Name: 'Novo Titulo',NameSetAt: '2025-11-24T16:57:49-03:00',NameSetBy: '123456@lid',NameSetByPN: '5599123456@s.whatsapp.net'}
           }
           break;
 
@@ -1457,8 +1540,14 @@ class WhatsAppBotEvoGo {
       return {
         id: { _serialized: response.data?.Info?.ID || 'unknown' },
         ack: 1,
-        timestamp: Math.floor(Date.now() / 1000)
+        timestamp: Math.floor(Date.now() / 1000),
+        _data: response,
+        getInfo: () => { // Usado no StreamSystem pra saber se foi enviada
+          return { delivery: [1], played: [1], read: [1] };
+        }
       };
+
+
 
     } catch (error) {
       this.logger.error(`[${this.id}] Error sending message:`, error);
@@ -1551,17 +1640,31 @@ class WhatsAppBotEvoGo {
           }
 
           return {
-            id: { _serialized: chatId },
-            name: groupInfo.GroupName?.Name || chatId,
+            id: { _serialized: groupInfo.JID },
+            name: groupInfo.Name || chatId,
             isGroup: true,
             notInGroup: false,
+            groupMetadata: { desc: groupInfo.Topic },
             participants: groupInfo.Participants.map(p => ({
               id: { _serialized: p.JID },
               isAdmin: p.IsAdmin,
               isSuperAdmin: p.IsSuperAdmin,
+              phoneNumber: p.PhoneNumber,
               lid: p.LID
             })),
-            _raw: groupInfo
+            _raw: groupInfo,
+
+            // Métodos do wwebjs
+            setSubject: async (title) => {
+              return await this.apiClient.post(`/group/name`, { groupJid: chatId, name: title });
+            },
+            fetchMessages: async (limit = 30) => {
+              return false;
+            },
+            setMessagesAdminsOnly: async (adminOnly) => {
+              // TODO evogo
+              return false;
+            }
           };
         }
       } else {
@@ -1670,6 +1773,10 @@ class WhatsAppBotEvoGo {
     } catch (e) {
       this.logger.warn(`[updateProfileStatus][${this.instanceName}] Erro definindo status '${status}'`, { erro: e, token: this.evolutionInstanceApiKey });
     }
+  }
+
+  async getCurrentGroups() {
+    return await this.apiClient.get(`/group/myall`);
   }
 
   async destroy() {

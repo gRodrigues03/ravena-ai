@@ -1695,7 +1695,13 @@ class WhatsAppBotEvo {
         }
       } catch (sendError) {
         this.logger.error(`[${this.id}] Falha enviando ReturnMessages pra ${message.chatId}:`, sendError);
-        results.push({ error: sendError, messageContent: message.content }); // Push error for this message
+        results.push({
+          error: sendError,
+          messageContent: message.content,
+          getInfo: () => { // Usado no StreamSystem pra saber se foi enviada
+            return { delivery: [], played: [], read: [] };
+          }
+        });
       }
     }
     return results;
