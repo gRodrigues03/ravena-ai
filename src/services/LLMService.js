@@ -51,7 +51,7 @@ class LLMService {
 				'https://openrouter.ai/api/v1/chat/completions',
 				{
 					// model: "x-ai/grok-4.1-fast:free",
-					model: "google/gemma-3n-e4b-it:free",
+					model: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
 					messages: [
 						{ role: 'user', content: options.prompt }
 					],
