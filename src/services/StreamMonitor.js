@@ -365,8 +365,7 @@ class StreamMonitor extends EventEmitter {
             return null;
         }
     } catch (error) {
-        const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
-        this.logger.error(`Error refreshing Kick token (${this.kickClientId}): ${errorMessage}`);
+        this.logger.error(`Error refreshing Kick token (${this.kickClientId}): ${error.message}`);
         return null;
     }
   }
@@ -736,8 +735,7 @@ class StreamMonitor extends EventEmitter {
                 this.kickToken = null; 
                 await this._refreshKickToken();
             } else {
-                const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
-                this.logger.error(`[_pollKickChannels] Error polling Kick channels: ${errorMessage}`);
+                this.logger.error(`[_pollKickChannels] Error polling Kick channels: ${error.message}`);
             }
         }
         // Add a small delay between batches to avoid rate limiting
@@ -1213,8 +1211,7 @@ class StreamMonitor extends EventEmitter {
                 }
             }
         } catch (error) {
-            const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
-            this.logger.error(`Error getting Kick status for batch ${batch.join(', ')}: ${errorMessage}`);
+            this.logger.error(`Error getting Kick status for batch ${batch.join(', ')}: ${error.message}`);
             
             if (error.response && error.response.status === 401) {
                 this.logger.warn('Kick token was unauthorized. It will be refreshed on the next call.');

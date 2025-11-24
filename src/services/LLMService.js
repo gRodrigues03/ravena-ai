@@ -26,10 +26,10 @@ class LLMService {
 
 		this.providerDefinitions = [
 			{
-				name: 'gemini',
+				name: 'lmstudio',
 				method: async (options) => {
-					const response = await this.geminiCompletion(options);
-					return response.candidates[0].content.parts[0].text;
+					const response = await this.lmstudioCompletion(options);
+					return response.choices[0].message.content;
 				}
 			},
 			{
@@ -46,10 +46,10 @@ class LLMService {
 				}
 			},
 			{
-				name: 'lmstudio',
+				name: 'gemini',
 				method: async (options) => {
-					const response = await this.lmstudioCompletion(options);
-					return response.choices[0].message.content;
+					const response = await this.geminiCompletion(options);
+					return response.candidates[0].content.parts[0].text;
 				}
 			}
 		];
@@ -491,7 +491,7 @@ class LLMService {
 				//this.logger.error('Ollama API Response Error Data:', error.response.data);
 				this.logger.error('[LLMService] Ollama API Response Error:', error.response.status);
 			} else if (error.request) {
-				this.logger.error('[LLMService] Ollama API No Response Received. Request details:', error.request);
+				this.logger.error('[LLMService] Ollama API No Response Received.');
 			}
 			throw error;
 		}

@@ -653,19 +653,12 @@ async function getStreamInformation(bot, chatId, platform, channelName) {
       // Se o canal tem thumbnail, tenta baixá-la e enviar como imagem
       if (status.thumbnail) {
         try {
-          // Tenta baixar a thumbnail
-          const { default: axios } = require('axios');
-          const response = await axios.get(status.thumbnail, { responseType: 'arraybuffer' });
-          const thumbnailBuffer = Buffer.from(response.data);
-          
-          // Cria o objeto MessageMedia
-          const { MessageMedia } = require('whatsapp-web.js');
-          const media = new MessageMedia('image/jpeg', thumbnailBuffer.toString('base64'));
+         const thumbMedia = await bot.createMediaFromURL(status.thumbnail);
           
           // Retorna uma mensagem com mídia
           return new ReturnMessage({
             chatId: chatId,
-            content: media,
+            content: thumbMedia,
             options: {
               caption: content
             }
