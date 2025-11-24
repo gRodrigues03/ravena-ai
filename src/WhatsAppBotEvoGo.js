@@ -1635,6 +1635,21 @@ class WhatsAppBotEvoGo {
     await processAction(groupData, groupData.Demote, 'demote');
   }
 
+  acceptInviteCode(inviteCode) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        this.logger.debug(`[acceptInviteCode][${this.instanceName}] '${inviteCode}'`);
+        const resp = await this.apiClient.post(`/group/join`, { code: inviteCode });
+
+        resolve({ accepted: true });
+      } catch (e) {
+        this.logger.warn(`[acceptInviteCode][${this.instanceName}] Erro aceitando invite para '${inviteCode}'`, { e });
+        resolve({ accepted: false, error: e.data?.error ?? "Erro aceitando invite" });
+      }
+
+    });
+  }
+
   // NÃO TEM NA EVOGO
   // Fazer?
   inviteInfo(inviteCode) {

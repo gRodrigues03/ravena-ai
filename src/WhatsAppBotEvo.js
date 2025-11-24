@@ -1861,10 +1861,10 @@ class WhatsAppBotEvo {
         this.logger.debug(`[acceptInviteCode][${this.instanceName}] '${inviteCode}'`);
         const resp = await this.apiClient.get(`/group/acceptInviteCode`, { inviteCode });
 
-        resolve(resp.accepted);
+        resolve({ accepted: resp.accepted });
       } catch (e) {
-        this.logger.warn(`[acceptInviteCode] Erro pegando invite info para '${inviteCode}'`);
-        reject(e);
+        this.logger.warn(`[acceptInviteCode][${this.instanceName}] Erro aceitando invite para '${inviteCode}'`, { e });
+        resolve({ accepted: false, error: "Não foi possível aceitar" });
       }
 
     });

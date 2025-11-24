@@ -177,7 +177,7 @@ class SuperAdmin {
         // Aceita o convite
         const joinResult = await bot.client.acceptInvite(inviteCode);
 
-        if (joinResult) {
+        if (joinResult.accepted) {
           // Salva os dados do autor que enviou o convite para uso posterior
           if (authorId) {
             await this.database.savePendingJoin(inviteCode, { authorId, authorName });
@@ -191,9 +191,10 @@ class SuperAdmin {
             content: `✅ Entrou com sucesso no grupo com código de convite ${inviteCode}`
           });
         } else {
+          const msgErro = joinResult.error ? `\n> ${joinResult.error}`: "";
           return new ReturnMessage({
             chatId: chatId,
-            content: `❌ Falha ao entrar no grupo com código de convite ${inviteCode}`
+            content: `❌ Falha ao entrar no grupo com código de convite ${inviteCode}${msgErro}`
           });
         }
       } catch (error) {
