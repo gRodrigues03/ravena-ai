@@ -197,7 +197,7 @@ class CacheManager {
 
   async putContactInCache(data) {
     if (!data || typeof data.number === 'undefined') {
-      this.logger.error('CacheManager (putContactInCache): Invalid contact data.');
+      //this.logger.error('CacheManager (putContactInCache): Invalid contact data.');
       return;
     }
     const contactNumber = data.number;

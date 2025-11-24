@@ -186,12 +186,23 @@ class WhatsAppBotEvoGo {
 
   async logout() {
     this.logger.info(`[logout] Logging out instance ${this.instanceName}`);
-    return await this.apiClient.post('/instance/logout');
+    return await this.apiClient.delete('/instance/logout', {}, false);
   }
 
   async deleteInstance() {
+
+    // Precisa pegar O ID da instancia, que só vem no /all
     this.logger.info(`[deleteInstance] Deleting instance ${this.instanceName}`);
-    return await this.apiClient.delete(`/instance/delete/${this.instanceName}`, {}, true);
+
+    const allInstances = await this.apiClient.get(`/instance/all`, {}, true);
+    const instanceToDelete = allInstances.data?.find(aI => aI.token === this.evolutionInstanceApiKey && aI.name === this.instanceName);
+
+    if (instanceToDelete) {
+      this.logger.debug(`[deleteInstance] Instances`, { allInstances, instanceToDelete })
+      return await this.apiClient.delete(`/instance/delete/${instanceToDelete.id}`, {}, true);
+    } else {
+      return { "erro": "não encontrei a instancia", allInstances, name: this.instanceName, token: this.evolutionInstanceApiKey };
+    }
   }
 
   async createInstance() {
@@ -200,7 +211,7 @@ class WhatsAppBotEvoGo {
       "name": this.instanceName,
       "token": this.evolutionInstanceApiKey,
       "webhookUrl": `${process.env.EVOGO_WEBHOOK_HOST}:${this.webhookPort}/webhook/evogo/${this.instanceName}`,
-      "webhookEvents": ["MESSAGE", "GROUP", "CONNECTION", "CALL"] // Ajustar conforme necessidade da V3
+      "webhookEvents": ["MESSAGE", "PRESENCE", "CALL", "CONNECTION", "QRCODE", "CONNECTION", "CONTACT", "GROUP", "NEWSLETTER"] // Ajustar conforme necessidade da V3
     };
 
     this.logger.info(`[createInstance] Creating instance ${this.instanceName}`, payload);
@@ -702,7 +713,7 @@ class WhatsAppBotEvoGo {
 
   async _downloadMediaFromEvo(messageContent) {
     try {
-      this.logger.debug(`[_downloadMediaFromEvo] POST /message/downloadmedia`, { message: messageContent });
+      //this.logger.debug(`[_downloadMediaFromEvo] POST /message/downloadmedia`, { message: messageContent });
       const response = await this.apiClient.post('/message/downloadmedia', { message: messageContent });
       if (response?.data?.base64) {
         const base64Data = response.data.base64.replace(/^data:.*?;base64,/, '');
@@ -728,7 +739,7 @@ class WhatsAppBotEvoGo {
         await writeFileAsync(filePath, base64Data, 'base64');
 
         const fileUrl = `${process.env.BOT_DOMAIN_LOCAL ?? process.env.BOT_DOMAIN}/attachments/${fileName}`;
-        this.logger.debug(`[_downloadMediaFromEvo] Res: ${fileUrl}`);
+        //this.logger.debug(`[_downloadMediaFromEvo] Res: ${fileUrl}`);
         return { url: fileUrl, mimetype, filename: fileName, filePath, base64: base64Data };
       }
     } catch (error) {
@@ -947,12 +958,16 @@ class WhatsAppBotEvoGo {
     this.logger.info(`Checking instance status for ${this.instanceName}...`);
     try {
       const response = await this.apiClient.get(`/instance/status`);
-      // V3 response: { message: "success", data: { connected: true, loggedIn: true, ... } }
 
       const statusData = response?.data;
-      const isConnected = statusData?.connected && statusData?.loggedIn;
+      const isConnected = statusData?.Connected && statusData?.LoggedIn;
       const state = isConnected ? 'CONNECTED' : 'DISCONNECTED';
-      let extra = {};
+      const extra = {};
+
+      const instanceDetails = {
+        version: this.version,
+        tipo: "evogo"
+      }
 
       if (isConnected) {
         this._onInstanceConnected();
@@ -960,37 +975,42 @@ class WhatsAppBotEvoGo {
       } else {
         if (forceConnect) {
           this.logger.info(`Instance ${this.instanceName} is not connected. Attempting to connect...`);
-          // /instance/connect returns { message: "success", data: { ... } } or QR/Pairing code info
-          // Note: V3 might return QR in response or separate endpoint. 
-          // Checking api-instances.md for connect response:
-          // If pairing code requested: { ... pairingCode: "..." }
-          // If QR: { ... code: "base64..." } ?? 
 
           const connectResponse = await this.apiClient.post(`/instance/connect`, {
-            webhookUrl: `http://${this.webhookHost}:${this.webhookPort}/webhook/evogo/${this.instanceName}`
-          });
+            webhookUrl: `${this.webhookHost}:${this.webhookPort}/webhook/evogo/${this.instanceName}`,
+            subscribe: ["MESSAGE", "PRESENCE", "CALL", "CONNECTION", "QRCODE", "CONTACT", "GROUP", "NEWSLETTER"],
+            websocketEnable: this.websocket ? "enabled" : ""
+          }, false);
 
-          const connectData = connectResponse?.data || connectResponse; // Fallback if data is top level
-          extra.connectData = connectData;
+          extra.connectData = {};
 
-          if (connectData.pairingCode) {
-            this.logger.info(`[${this.id}] PAIRING CODE: ${connectData.pairingCode}`);
+          if (connectResponse.message === "success") {
+            const pairingCodeResponse = await this.apiClient.post(`/instance/pair`, { phone: this.phoneNumber }, false);
+            const qrCodeResponse = await this.apiClient.get(`/instance/qr`, {}, false);
+
+            this.logger.debug(`ConnectResponses:`, { phone: this.phoneNumber, pairingCodeResponse, qrCodeResponse });
+
+            extra.connectData.pairingCode = pairingCodeResponse?.data?.PairingCode;
+            extra.connectData.qrCode = qrCodeResponse?.data?.Qrcode; // code é base64, qrcode é a string
+            extra.connectData.code = qrCodeResponse?.data?.Code; // code é base64, qrcode é a string
+          }
+
+          if (extra.connectData.pairingCode) {
+            this.logger.info(`[${this.id}] PAIRING CODE: ${extra.connectData.pairingCode}`);
             const pairingCodeLocation = path.join(this.database.databasePath, `pairingcode_${this.id}.txt`);
-            fs.writeFileSync(pairingCodeLocation, `[${new Date().toUTCString()}] ${connectData.pairingCode}`);
-          } else if (connectData.code || connectData.qrcode) {
-            // Assuming 'code' is the base64 string for QR
-            const qrBase64 = connectData.code || connectData.qrcode;
+            fs.writeFileSync(pairingCodeLocation, `[${new Date().toUTCString()}] ${extra.connectData.pairingCode}`);
+          } else if (extra.connectData.code || extra.connectData.qrcode) {
+            const qrBase64 = extra.connectData.code || extra.connectData.qrcode;
             if (qrBase64) {
               this.logger.info(`[${this.id}] QR Code received.`);
               const qrCodeLocal = path.join(this.database.databasePath, `qrcode_${this.id}.png`);
-              // Remove prefix if present
               const base64Data = qrBase64.replace(/^data:image\/png;base64,/, "");
               fs.writeFileSync(qrCodeLocal, base64Data, 'base64');
             }
           }
         }
       }
-      return { instanceDetails: response, extra };
+      return { instanceDetails, extra };
     } catch (error) {
       this.logger.error(`Error checking/connecting instance ${this.instanceName}:`, error);
       return { instanceDetails: {}, error };
@@ -1088,6 +1108,7 @@ class WhatsAppBotEvoGo {
         case 'JoinedGroup':
           // Bot joined a group
           // Payload: { event: "JoinedGroup", data: { JID: "...", Participants: [...] } }
+          this.logger.info(`[JoinedGroup] `, { payload });
           const joinedData = payload.data;
           if (joinedData) {
             this._handleGroupParticipantsUpdate({
@@ -1098,8 +1119,6 @@ class WhatsAppBotEvoGo {
             });
           }
           break;
-
-        // Outros eventos...
       }
     } catch (error) {
       this.logger.error(`[${this.id}] Error processing webhook for event ${payload.event}:`, error);
@@ -1356,9 +1375,12 @@ class WhatsAppBotEvoGo {
           if (quotedMsg) participant = quotedMsg.author || quotedMsg.from;
         }
 
+        const target = participant || chatId; // Fallback
+        const participantFmt = target.endsWith('@s.whatsapp.net') ? target : `${target}@s.whatsapp.net`;
+
         payload.quoted = {
           messageId: msgIdToQuote,
-          participant: participant || chatId // Fallback
+          participant: participantFmt
         };
       }
 
@@ -1403,8 +1425,11 @@ class WhatsAppBotEvoGo {
         payload.maxAnswer = content.options.allowMultipleAnswers ? content.pollOptions.length : 1;
       }
 
-      if (options.mentions) {
-        payload.mentionedJid = options.mentions[0]; // Array of JIDs. TODO: no momento a EvoGO só aceita 1 mention
+      if (options.mentionAll) {
+        payload.mentionAll = true;
+      }
+      else if (options.mentions) {
+        payload.mentionedJid = options.mentions.join(",");
       }
 
       this.logger.debug(`[sendMessage] '${endpoint}'`, { content, payload });
@@ -1428,7 +1453,7 @@ class WhatsAppBotEvoGo {
     const groupId = groupData.JID;
 
     // Helper to process actions
-    const processAction = async (participants, action) => {
+    const processAction = async (groupData, participants, action) => {
       if (!participants || !participants.length) return;
 
       let groupDetails = await this.getChatDetails(groupId);
@@ -1452,10 +1477,12 @@ class WhatsAppBotEvoGo {
       for (const participant of participants) {
         // participant is JID string
         const contact = await this.getContactDetails(participant);
+        const contactResp = await this.getContactDetails(groupData.Sender) ?? await this.getContactDetails(groupData.SenderPN);
 
         const eventData = {
           group: { id: groupId, name: groupName },
           user: { id: participant, name: contact?.name || participant.split('@')[0] },
+          responsavel: { id: groupData.SenderPN, name: contactResp?.name || groupData.SenderPN.split('@')[0] },
           action: action,
           origin: { getChat: async () => await this.getChatDetails(groupId) }
         };
@@ -1472,10 +1499,10 @@ class WhatsAppBotEvoGo {
       }
     };
 
-    await processAction(groupData.Join, 'add');
-    await processAction(groupData.Leave, 'remove');
-    await processAction(groupData.Promote, 'promote');
-    await processAction(groupData.Demote, 'demote');
+    await processAction(groupData, groupData.Join, 'add');
+    await processAction(groupData, groupData.Leave, 'remove');
+    await processAction(groupData, groupData.Promote, 'promote');
+    await processAction(groupData, groupData.Demote, 'demote');
   }
 
   async getChatDetails(chatId) {
@@ -1570,6 +1597,17 @@ class WhatsAppBotEvoGo {
     });
   }
 
+  getLidFromPn(pn, chat) {
+    // A princípio não vem o pn no chat
+    //this.logger.debug(`[getLidFromPn] `, {pn, chat});
+    return (chat?.participants?.find(p => p.phoneNumber?.startsWith(pn))?.id?._serialized) ?? pn;
+  }
+
+  getPnFromLid(lid, chat) {
+    //this.logger.debug(`[getPnFromLid] `, {lid, chat});
+    return (chat?.participants?.find(p => p.id?._serialized.startsWith(lid))?.phoneNumber) ?? lid;
+  }
+
   _loadDonationsToWhitelist() { }
   _sendStartupNotifications() { }
   shouldDiscardMessage() { return false; }
@@ -1581,7 +1619,7 @@ class WhatsAppBotEvoGo {
       this.logger.debug(`[updateProfileStatus][${this.instanceName}] '${status}'`);
       await this.apiClient.post(`/user/profileStatus`, { status });
     } catch (e) {
-      this.logger.warn(`[updateProfileStatus] Erro definindo status '${status}'`, e);
+      this.logger.warn(`[updateProfileStatus][${this.instanceName}] Erro definindo status '${status}'`, { erro: e, token: this.evolutionInstanceApiKey });
     }
   }
 

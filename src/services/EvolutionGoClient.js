@@ -48,6 +48,16 @@ class EvolutionGoClient {
     };
   }
 
+  get _instanceConfig() {
+    return {
+      headers: {
+        "apikey": this.instanceToken,
+        "Content-Type": "application/json"
+      }
+    };
+  }
+
+
   _handleError(error, context) {
     const status = error.response?.status;
     const data = error.response?.data;
@@ -72,6 +82,8 @@ class EvolutionGoClient {
       // Se precisar da chave global, sobrescreve os headers
       if (useGlobalKey) {
         Object.assign(config, this._adminConfig);
+      } else {
+        Object.assign(config, this._instanceConfig);
       }
 
       const response = await this.client.get(endpoint, config);
@@ -87,7 +99,7 @@ class EvolutionGoClient {
    */
   async post(endpoint, body = {}, useGlobalKey = false) {
     try {
-      const config = useGlobalKey ? this._adminConfig : {};
+      const config = useGlobalKey ? this._adminConfig : this._instanceConfig;
       const response = await this.client.post(endpoint, body, config);
       return response.data;
     } catch (error) {
@@ -100,7 +112,7 @@ class EvolutionGoClient {
    */
   async put(endpoint, body = {}, useGlobalKey = false) {
     try {
-      const config = useGlobalKey ? this._adminConfig : {};
+      const config = useGlobalKey ? this._adminConfig : this._instanceConfig;
       const response = await this.client.put(endpoint, body, config);
       return response.data;
     } catch (error) {
@@ -114,7 +126,7 @@ class EvolutionGoClient {
    */
   async delete(endpoint, body = {}, useGlobalKey = false) {
     try {
-      const config = useGlobalKey ? this._adminConfig : {};
+      const config = useGlobalKey ? this._adminConfig : this._instanceConfig;
       config.data = body; // Axios passa body no delete via config.data
 
       const response = await this.client.delete(endpoint, config);

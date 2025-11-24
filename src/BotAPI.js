@@ -30,7 +30,7 @@ class BotAPI {
     // Credenciais de autenticação para endpoints protegidos
     this.apiUser = process.env.BOTAPI_USER || 'admin';
     this.apiPassword = process.env.BOTAPI_PASSWORD || 'senha12345';
-    
+
     // Cache para os dados analíticos processados
     this.analyticsCache = {
       lastUpdate: 0,         // Timestamp da última atualização
@@ -40,19 +40,19 @@ class BotAPI {
       monthly: {},           // Dados mensais por bot
       yearly: {}             // Dados anuais por bot
     };
-    
+
     // Configura middlewares
     this.app.use(bodyParser.json());
     this.app.use(bodyParser.urlencoded({ extended: true }));
-    
+
     // Configura rotas
     this.setupRoutes();
 
     this.app.use(express.static(path.join(__dirname, '../public')));
-    
+
     // Carrega dados analíticos em cache ao iniciar
     this.updateAnalyticsCache();
-    
+
     // Configura atualização periódica do cache (a cada 10 minutos)
     this.cacheUpdateInterval = setInterval(() => this.updateAnalyticsCache(), this.analyticsCache.cacheTime);
   }
@@ -60,17 +60,17 @@ class BotAPI {
 
   // Helper function to read tokens
   async readWebManagementToken(token) {
-      const dbPath = path.join(this.database.databasePath, 'webmanagement.json');
-      
-      try {
-          const data = await fs.readFile(dbPath, 'utf8');
-          const webManagement = JSON.parse(data);
-          
-          return webManagement.find(item => item.token === token);
-      } catch (error) {
-          this.logger.error('Error reading webmanagement.json:', error);
-          return null;
-      }
+    const dbPath = path.join(this.database.databasePath, 'webmanagement.json');
+
+    try {
+      const data = await fs.readFile(dbPath, 'utf8');
+      const webManagement = JSON.parse(data);
+
+      return webManagement.find(item => item.token === token);
+    } catch (error) {
+      this.logger.error('Error reading webmanagement.json:', error);
+      return null;
+    }
   }
 
   /**
@@ -82,22 +82,22 @@ class BotAPI {
       try {
         // Obtém timestamp de 30 minutos atrás
         const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
-        
+
         // Obtém relatórios de carga mais recentes
         const recentReports = await this.database.getLoadReports(thirtyMinutesAgo);
-        
+
         // Mapeia resultados por bot
         const botReports = {};
         if (recentReports && Array.isArray(recentReports)) {
           recentReports.forEach(report => {
             // Se não existir um relatório para este bot ou se for mais recente
-            if (!botReports[report.botId] || 
-                report.timestamp > botReports[report.botId].timestamp) {
+            if (!botReports[report.botId] ||
+              report.timestamp > botReports[report.botId].timestamp) {
               botReports[report.botId] = report;
             }
           });
         }
-        
+
         // Prepara resposta com dados adicionais
         res.json({
           status: 'ok',
@@ -105,15 +105,15 @@ class BotAPI {
           bots: this.bots.filter(bot => !bot.privado && !bot.useTelegram && !bot.useDiscord).map(bot => {
             // Busca relatório mais recente para este bot
             const report = botReports[bot.id] || null;
-            const messagesPerHour = report && report.messages ? 
+            const messagesPerHour = report && report.messages ?
               report.messages.messagesPerHour || 0 : 0;
-            
+
             // Adiciona informações de tempo de resposta
-            const avgResponseTime = report && report.responseTime ? 
+            const avgResponseTime = report && report.responseTime ?
               parseFloat(report.responseTime.average) || 0 : 0;
-            const maxResponseTime = report && report.responseTime ? 
+            const maxResponseTime = report && report.responseTime ?
               report.responseTime.max || 0 : 0;
-              
+
             return {
               id: bot.id,
               phoneNumber: bot.phoneNumber,
@@ -164,7 +164,7 @@ class BotAPI {
         });
       }
     });
-    
+
     // Middleware de autenticação básica
     const authenticateBasic = (req, res, next) => {
       const { botId } = req.params;
@@ -189,21 +189,21 @@ class BotAPI {
           message: 'Autenticação requerida'
         });
       }
-      
+
       // Decodifica e verifica credenciais
       try {
         // O formato é 'Basic <base64 encoded username:password>'
         const base64Credentials = authHeader.split(' ')[1];
         const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8');
         const [username, password] = credentials.split(':');
-        
+
         if (username === user && password === pass) {
           return next();
         }
       } catch (error) {
         this.logger.error('Erro ao processar autenticação básica:', error);
       }
-      
+
       // Credenciais inválidas
       res.set('WWW-Authenticate', 'Basic realm="RavenaBot API"');
       return res.status(401).json({
@@ -211,14 +211,14 @@ class BotAPI {
         message: 'Credenciais inválidas'
       });
     };
-    
+
     // Novo endpoint para reiniciar um bot específico (requer autenticação)
     this.app.get('/restart/:botId', authenticateBasic, async (req, res) => {
       try {
         // Obter parâmetros
         const { botId } = req.params;
         const { reason } = req.body || {};
-        
+
         // Validar parâmetros
         if (!botId) {
           return res.status(400).json({
@@ -226,7 +226,7 @@ class BotAPI {
             message: 'ID do bot não especificado'
           });
         }
-        
+
         // Encontrar o bot solicitado
         const bot = this.bots.find(b => b.id === botId);
         if (!bot) {
@@ -235,7 +235,7 @@ class BotAPI {
             message: `Bot com ID '${botId}' não encontrado`
           });
         }
-        
+
         // Verificar se o método de reinicialização está disponível
         if (typeof bot.restartBot !== 'function') {
           return res.status(400).json({
@@ -243,10 +243,10 @@ class BotAPI {
             message: `Bot '${botId}' não suporta reinicialização`
           });
         }
-        
+
         // Iniciar reinicialização em modo assíncrono
         const restartReason = reason || `Reinicialização via API em ${new Date().toLocaleString("pt-BR")}`;
-        
+
 
         try {
           this.logger.info(`Reiniciando bot ${botId} via endpoint API`);
@@ -273,7 +273,7 @@ class BotAPI {
         });
       }
     });
-    
+
     this.app.get('/logout/:botId', authenticateBasic, async (req, res) => {
       const { botId } = req.params;
       const bot = this.bots.find(b => b.id === botId);
@@ -305,69 +305,69 @@ class BotAPI {
         res.status(500).json({ status: 'error', message: e.message, details: e.stack });
       }
     });
-    
+
     // Webhook de doação do Tipa.ai
     this.app.post('/donate_tipa', async (req, res) => {
       try {
         this.logger.info('Recebido webhook de doação do Tipa.ai');
-        
+
         // Registra a requisição completa para depuração
         const donateData = {
           headers: req.headers,
           body: req.body
         };
-        
+
         this.logger.debug('Dados da doação:', donateData);
-        
+
         // Verifica o segredo do webhook
         const headerTipa = req.headers["x-tipa-webhook-secret-token"] || false;
         const expectedToken = process.env.TIPA_TOKEN;
-        
+
         if (!headerTipa || headerTipa !== expectedToken) {
           this.logger.warn('Token webhook inválido:', headerTipa);
           return res.status(403).send('-');
         }
-        
+
         // Extrai detalhes da doação
         let nome = req.body.payload.tip.name || "Alguém";
         const valor = parseFloat(req.body.payload.tip.amount) || 0;
         const msg = req.body.payload.tip.message || "";
 
         nome = nome.trim();
-        
+
         if (valor <= 0) {
           this.logger.warn(`Valor de doação inválido: ${valor}`);
           return res.send('ok');
         }
-        
+
         // Adiciona doação ao banco de dados
         const donationTotal = await this.database.addDonation(nome, valor);
-        
+
         // Notifica grupos sobre a doação
         await this.notifyGroupsAboutDonation(nome, valor, msg, donationTotal);
-        
+
         res.send('ok');
       } catch (error) {
         this.logger.error('Erro ao processar webhook de doação:', error);
         res.status(500).send('error');
       }
     });
-    
+
     // Endpoint para obter relatórios de carga
     this.app.post('/getLoad', async (req, res) => {
       try {
         const { timestamp } = req.body;
-        
+
         if (!timestamp || isNaN(parseInt(timestamp))) {
           return res.status(400).json({
             status: 'error',
             message: 'Timestamp inválido ou ausente'
           });
         }
-        
+
         // Obtém relatórios de carga após o timestamp especificado
         const reports = await this.database.getLoadReports(parseInt(timestamp));
-        
+
         res.json({
           status: 'ok',
           timestamp: Date.now(),
@@ -381,24 +381,24 @@ class BotAPI {
         });
       }
     });
-    
+
     // Novo endpoint para obter dados analíticos
     this.app.get('/analytics', (req, res) => {
       try {
         // Obtém parâmetros da requisição
         const period = req.query.period || 'today';
         let selectedBots = req.query['bots[]'];
-        
+
         // Converte para array se não for
         if (!Array.isArray(selectedBots)) {
           selectedBots = selectedBots ? [selectedBots] : [];
         }
-        
+
         // Se não há bots selecionados, usa todos
         if (selectedBots.length === 0) {
           selectedBots = Object.keys(this.analyticsCache.daily);
         }
-        
+
         // Verifica se o cache está atualizado
         const now = Date.now();
         if (now - this.analyticsCache.lastUpdate > this.analyticsCache.cacheTime) {
@@ -430,264 +430,264 @@ class BotAPI {
 
     // Endpoint para Top Donates
     this.app.get('/top-donates', async (req, res) => {
-        const donationsPath = path.join(this.database.databasePath, 'donations.json');
+      const donationsPath = path.join(this.database.databasePath, 'donations.json');
 
-        try {
-            await fs.access(donationsPath);
+      try {
+        await fs.access(donationsPath);
 
-            // Se a linha acima não lançar um erro, o arquivo existe.
-            const donationsData = await fs.readFile(donationsPath, 'utf8');
-            const donations = JSON.parse(donationsData);
+        // Se a linha acima não lançar um erro, o arquivo existe.
+        const donationsData = await fs.readFile(donationsPath, 'utf8');
+        const donations = JSON.parse(donationsData);
 
-            // Mapeia para remover o campo 'numero' por privacidade
-            const publicDonations = donations.map(({ nome, valor }) => ({ nome, valor }));
+        // Mapeia para remover o campo 'numero' por privacidade
+        const publicDonations = donations.map(({ nome, valor }) => ({ nome, valor }));
 
-            res.json(publicDonations);
+        res.json(publicDonations);
 
-        } catch (error) {
-            // O bloco catch lida com qualquer erro, seja o arquivo não encontrado ou um erro de processamento.
-            if (error.code === 'ENOENT') {
-                // Se o erro for 'ENOENT', o arquivo não foi encontrado.
-                res.status(404).json({ error: 'Arquivo de doações não encontrado' });
-            } else {
-                // Para outros erros, como falha ao ler ou processar o JSON.
-                this.logger.error('Erro ao ler ou processar o arquivo de doações:', error);
-                res.status(500).json({ error: 'Erro ao processar doações' });
-            }
+      } catch (error) {
+        // O bloco catch lida com qualquer erro, seja o arquivo não encontrado ou um erro de processamento.
+        if (error.code === 'ENOENT') {
+          // Se o erro for 'ENOENT', o arquivo não foi encontrado.
+          res.status(404).json({ error: 'Arquivo de doações não encontrado' });
+        } else {
+          // Para outros erros, como falha ao ler ou processar o JSON.
+          this.logger.error('Erro ao ler ou processar o arquivo de doações:', error);
+          res.status(500).json({ error: 'Erro ao processar doações' });
         }
+      }
     });
 
 
     // Serve management page
-    this.app.get('/manage/:token', (req, res) => {  
-      const { token } = req.params;  
-        const filePath = path.join(__dirname, '../public/management.html');  
-        this.logger.info(`[management] => '${token}'`);  
-        res.sendFile(filePath);  
+    this.app.get('/manage/:token', (req, res) => {
+      const { token } = req.params;
+      const filePath = path.join(__dirname, '../public/management.html');
+      this.logger.info(`[management] => '${token}'`);
+      res.sendFile(filePath);
     });
 
     // Validate token endpoint
     this.app.get('/api/validate-token', async (req, res) => {
-        const token = req.query.token;
-        
-        if (!token) {
-            return res.status(400).json({ valid: false, message: 'Token not provided' });
+      const token = req.query.token;
+
+      if (!token) {
+        return res.status(400).json({ valid: false, message: 'Token not provided' });
+      }
+
+      try {
+        const webManagementData = await this.readWebManagementToken(token);
+
+        if (!webManagementData) {
+          return res.status(401).json({ valid: false, message: 'Invalid token' });
         }
-        
-        try {
-            const webManagementData = await this.readWebManagementToken(token);
-            
-            if (!webManagementData) {
-                return res.status(401).json({ valid: false, message: 'Invalid token' });
-            }
-            
-            // Check expiration
-            const expiresAt = new Date(webManagementData.expiresAt);
-            const now = new Date();
-            
-            if (now > expiresAt) {
-                return res.status(401).json({ valid: false, message: 'Token expired' });
-            }
-            
-            return res.json({
-                valid: true,
-                requestNumber: webManagementData.requestNumber,
-                authorName: webManagementData.authorName,
-                groupId: webManagementData.groupId,
-                groupName: webManagementData.groupName,
-                expiresAt: webManagementData.expiresAt
-            });
-        } catch (error) {
-            this.logger.error('Error validating token:', error);
-            return res.status(500).json({ valid: false, message: 'Server error' });
+
+        // Check expiration
+        const expiresAt = new Date(webManagementData.expiresAt);
+        const now = new Date();
+
+        if (now > expiresAt) {
+          return res.status(401).json({ valid: false, message: 'Token expired' });
         }
+
+        return res.json({
+          valid: true,
+          requestNumber: webManagementData.requestNumber,
+          authorName: webManagementData.authorName,
+          groupId: webManagementData.groupId,
+          groupName: webManagementData.groupName,
+          expiresAt: webManagementData.expiresAt
+        });
+      } catch (error) {
+        this.logger.error('Error validating token:', error);
+        return res.status(500).json({ valid: false, message: 'Server error' });
+      }
     });
 
     // Get group data endpoint
-    this.app.get('/api/group', async (req, res) => {  
-        const { id, token } = req.query;  
-          
-        if (!id || !token) {  
-            return res.status(400).json({ message: 'Missing required parameters' });  
-        }  
-          
-        try {  
-            const webManagementData = await this.readWebManagementToken(token);  
-              
-            if (!webManagementData || webManagementData.groupId !== id) {  
-                return res.status(401).json({ message: 'Unauthorized' });  
-            }  
-              
-            if (new Date() > new Date(webManagementData.expiresAt)) {  
-                return res.status(401).json({ message: 'Token expired' });  
-            }  
-              
-            // Get database instance  
-            const groupData = await this.database.getGroup(id);  
-              
-            if (!groupData) {  
-                return res.status(404).json({ message: 'Group not found' });  
-            }  
-            
-            this.logger.info(`[management][${token}][${id}] Group ${groupData.name}`);
-            return res.json(groupData);  
-        } catch (error) {  
-            this.logger.error('Error getting group data:', error);  
-            return res.status(500).json({ message: 'Server error' });  
-        }  
+    this.app.get('/api/group', async (req, res) => {
+      const { id, token } = req.query;
+
+      if (!id || !token) {
+        return res.status(400).json({ message: 'Missing required parameters' });
+      }
+
+      try {
+        const webManagementData = await this.readWebManagementToken(token);
+
+        if (!webManagementData || webManagementData.groupId !== id) {
+          return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        if (new Date() > new Date(webManagementData.expiresAt)) {
+          return res.status(401).json({ message: 'Token expired' });
+        }
+
+        // Get database instance  
+        const groupData = await this.database.getGroup(id);
+
+        if (!groupData) {
+          return res.status(404).json({ message: 'Group not found' });
+        }
+
+        this.logger.info(`[management][${token}][${id}] Group ${groupData.name}`);
+        return res.json(groupData);
+      } catch (error) {
+        this.logger.error('Error getting group data:', error);
+        return res.status(500).json({ message: 'Server error' });
+      }
     });
 
     // Update the group data endpoint to use the correct methods
     this.app.post('/api/update-group', async (req, res) => {
-        const { token, groupId, changes } = req.body;
-        
-        if (!token || !groupId || !changes) {
-            return res.status(400).json({ success: false, message: 'Missing required parameters' });
+      const { token, groupId, changes } = req.body;
+
+      if (!token || !groupId || !changes) {
+        return res.status(400).json({ success: false, message: 'Missing required parameters' });
+      }
+
+      try {
+        const webManagementData = await this.readWebManagementToken(token);
+
+        if (!webManagementData || webManagementData.groupId !== groupId) {
+          return res.status(401).json({ success: false, message: 'Unauthorized' });
         }
-        
+
+        if (new Date() > new Date(webManagementData.expiresAt)) {
+          return res.status(401).json({ success: false, message: 'Token expired' });
+        }
+
+        // Get database instance - assuming it's exported from a central location          
+        const groupData = await this.database.getGroup(groupId);
+
+        if (!groupData) {
+          return res.status(404).json({ success: false, message: 'Group not found' });
+        }
+
+        this.logger.info(`[management][${token}][${groupId}] UPDATED Group data:\n${JSON.stringify(changes, null, 2)}`);
+
+        // Apply changes
+        Object.entries(changes).forEach(([key, value]) => {
+          groupData[key] = value;
+        });
+
+        // Add update timestamp
+        groupData.lastUpdated = new Date().toISOString();
+
+        // Save the updated group
+        await this.database.saveGroup(groupData);
+
+        // Signal bots to reload the group config
+        const updatesPath = path.join(this.database.databasePath, 'group_updates.json');
+        let updates = {};
+
         try {
-            const webManagementData = await this.readWebManagementToken(token);
-            
-            if (!webManagementData || webManagementData.groupId !== groupId) {
-                return res.status(401).json({ success: false, message: 'Unauthorized' });
-            }
-            
-            if (new Date() > new Date(webManagementData.expiresAt)) {
-                return res.status(401).json({ success: false, message: 'Token expired' });
-            }
-            
-            // Get database instance - assuming it's exported from a central location          
-            const groupData = await this.database.getGroup(groupId);
-            
-            if (!groupData) {
-                return res.status(404).json({ success: false, message: 'Group not found' });
-            }
-            
-            this.logger.info(`[management][${token}][${groupId}] UPDATED Group data:\n${JSON.stringify(changes, null, 2)}`);
-
-            // Apply changes
-            Object.entries(changes).forEach(([key, value]) => {
-                groupData[key] = value;
-            });
-            
-            // Add update timestamp
-            groupData.lastUpdated = new Date().toISOString();
-            
-            // Save the updated group
-            await this.database.saveGroup(groupData);
-            
-            // Signal bots to reload the group config
-            const updatesPath = path.join(this.database.databasePath, 'group_updates.json');
-            let updates = {};
-            
-            try {
-                const updatesData = await fs.readFile(updatesPath, 'utf8');
-                updates = JSON.parse(updatesData);
-            } catch (error) {
-                // File might not exist, continue with empty object
-            }
-            
-            updates[groupId] = {
-                timestamp: groupData.lastUpdated,
-                updatedBy: 'webmanagement'
-            };
-            
-            await fs.writeFile(updatesPath, JSON.stringify(updates, null, 2), 'utf8');
-
-            this.eventHandler.loadGroups(); // Recarrega os grupos em memória
-            
-            return res.json({ success: true });
+          const updatesData = await fs.readFile(updatesPath, 'utf8');
+          updates = JSON.parse(updatesData);
         } catch (error) {
-            this.logger.error('Error updating group:', error);
-            return res.status(500).json({ success: false, message: 'Server error' });
+          // File might not exist, continue with empty object
         }
+
+        updates[groupId] = {
+          timestamp: groupData.lastUpdated,
+          updatedBy: 'webmanagement'
+        };
+
+        await fs.writeFile(updatesPath, JSON.stringify(updates, null, 2), 'utf8');
+
+        this.eventHandler.loadGroups(); // Recarrega os grupos em memória
+
+        return res.json({ success: true });
+      } catch (error) {
+        this.logger.error('Error updating group:', error);
+        return res.status(500).json({ success: false, message: 'Server error' });
+      }
     });
 
     // Upload media endpoint
-    this.app.post('/api/upload-media', upload.single('file'), async (req, res) => {  
-        const { token, groupId, type, name } = req.body;  
-        const file = req.file;  
-          
-        if (!token || !groupId || !type || !name || !file) {  
-            return res.status(400).json({ success: false, message: 'Missing required parameters' });  
-        }  
-          
-        try {  
-            const webManagementData = await this.readWebManagementToken(token);  
-              
-            if (!webManagementData || webManagementData.groupId !== groupId) {  
-                return res.status(401).json({ success: false, message: 'Unauthorized' });  
-            }  
-              
-            if (new Date() > new Date(webManagementData.expiresAt)) {  
-                return res.status(401).json({ success: false, message: 'Token expired' });  
-            }  
-              
-            // Get database instance              
-            const groupData = await this.database.getGroup(groupId);  
-              
-            if (!groupData) {  
-                return res.status(404).json({ success: false, message: 'Group not found' });  
-            }  
-              
-            // Save file  
-            const fileName = `${Date.now()}-${file.originalname}`;  
-            const mediaPath = path.join(this.database.databasePath, "media");  
-              
-            await fs.mkdir(mediaPath, { recursive: true }).catch(() => {});  
-              
-            const filePath = path.join(mediaPath, fileName);  
-            await fs.copyFile(file.path, filePath);  
-              
-            // Update group data  
-            if (!groupData[type]) {  
-                groupData[type] = {};  
-            }  
-              
-            groupData[type][name] = {  
-                file: fileName,  
-                uploadedAt: new Date().toISOString(),  
-                uploadedBy: webManagementData.requestNumber  
-            };  
-              
-            // Add update timestamp  
-            groupData.lastUpdated = new Date().toISOString();  
-              
-            // Save the updated group  
-            await this.database.saveGroup(groupData);  
-              
-            // Signal bots to reload the group config  
-            const updatesPath = path.join(this.database.databasePath, 'group_updates.json');  
-            let updates = {};  
-              
-            try {  
-                const updatesData = await fs.readFile(updatesPath, 'utf8');  
-                updates = JSON.parse(updatesData);  
-            } catch (error) {  
-                // File might not exist, continue with empty object  
-            }  
-              
-            updates[groupId] = {  
-                timestamp: groupData.lastUpdated,  
-                updatedBy: 'webmanagement'  
-            };  
+    this.app.post('/api/upload-media', upload.single('file'), async (req, res) => {
+      const { token, groupId, type, name } = req.body;
+      const file = req.file;
 
-            this.logger.info(`[management][${token}][${groupId}] Media '${type}' uplodaded: ${fileName}`);
+      if (!token || !groupId || !type || !name || !file) {
+        return res.status(400).json({ success: false, message: 'Missing required parameters' });
+      }
 
-            await fs.writeFile(updatesPath, JSON.stringify(updates, null, 2), 'utf8');  
-              
-            return res.json({ success: true, fileName});  
-        } catch (error) {  
-            this.logger.error('Error uploading media:', error);  
-            return res.status(500).json({ success: false, message: 'Server error' });  
-        } finally {  
-            // Remove temp file  
-            if (req.file) {  
-                fs.unlink(req.file.path).catch(error => {  
-                    this.logger.error('Error removing temp file:', error);  
-                });  
-            }  
-        }  
+      try {
+        const webManagementData = await this.readWebManagementToken(token);
+
+        if (!webManagementData || webManagementData.groupId !== groupId) {
+          return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
+
+        if (new Date() > new Date(webManagementData.expiresAt)) {
+          return res.status(401).json({ success: false, message: 'Token expired' });
+        }
+
+        // Get database instance              
+        const groupData = await this.database.getGroup(groupId);
+
+        if (!groupData) {
+          return res.status(404).json({ success: false, message: 'Group not found' });
+        }
+
+        // Save file  
+        const fileName = `${Date.now()}-${file.originalname}`;
+        const mediaPath = path.join(this.database.databasePath, "media");
+
+        await fs.mkdir(mediaPath, { recursive: true }).catch(() => { });
+
+        const filePath = path.join(mediaPath, fileName);
+        await fs.copyFile(file.path, filePath);
+
+        // Update group data  
+        if (!groupData[type]) {
+          groupData[type] = {};
+        }
+
+        groupData[type][name] = {
+          file: fileName,
+          uploadedAt: new Date().toISOString(),
+          uploadedBy: webManagementData.requestNumber
+        };
+
+        // Add update timestamp  
+        groupData.lastUpdated = new Date().toISOString();
+
+        // Save the updated group  
+        await this.database.saveGroup(groupData);
+
+        // Signal bots to reload the group config  
+        const updatesPath = path.join(this.database.databasePath, 'group_updates.json');
+        let updates = {};
+
+        try {
+          const updatesData = await fs.readFile(updatesPath, 'utf8');
+          updates = JSON.parse(updatesData);
+        } catch (error) {
+          // File might not exist, continue with empty object  
+        }
+
+        updates[groupId] = {
+          timestamp: groupData.lastUpdated,
+          updatedBy: 'webmanagement'
+        };
+
+        this.logger.info(`[management][${token}][${groupId}] Media '${type}' uplodaded: ${fileName}`);
+
+        await fs.writeFile(updatesPath, JSON.stringify(updates, null, 2), 'utf8');
+
+        return res.json({ success: true, fileName });
+      } catch (error) {
+        this.logger.error('Error uploading media:', error);
+        return res.status(500).json({ success: false, message: 'Server error' });
+      } finally {
+        // Remove temp file  
+        if (req.file) {
+          fs.unlink(req.file.path).catch(error => {
+            this.logger.error('Error removing temp file:', error);
+          });
+        }
+      }
     });
 
 
@@ -700,15 +700,15 @@ class BotAPI {
 
     // Serve media files
     this.app.get('/qrimg/:botId', authenticateBasic, async (req, res) => {
-      const { botId } = req.params;    
+      const { botId } = req.params;
       const filePath = path.join(this.database.databasePath, `qrcode_${botId}.png`);
 
-      await fs.access(filePath).catch(() => {  
-          return res.status(404).send(`QRCode para '${botId}' não disponível.`);  
-      });  
-                
-      res.setHeader("Content-Type", "image/png");  
-      res.sendFile(filePath); 
+      await fs.access(filePath).catch(() => {
+        return res.status(404).send(`QRCode para '${botId}' não disponível.`);
+      });
+
+      res.setHeader("Content-Type", "image/png");
+      res.sendFile(filePath);
     });
 
     this.app.get('/qrcode/:botId', authenticateBasic, async (req, res) => {
@@ -732,7 +732,7 @@ class BotAPI {
       const instanceStatus = await bot._checkInstanceStatusAndConnect(true, true); // no retry
       const version = instanceStatus.instanceDetails.version ?? "?";
       const tipo = instanceStatus.instanceDetails.tipo ?? "?";
-      
+
       const buttons = `
         <div style="margin: 1rem 0; display: flex; justify-content: center; gap: 10px;">
           <button onclick="window.location.reload()">Atualizar</button>
@@ -760,10 +760,10 @@ class BotAPI {
         let qrCodeBase64 = "";
         let descQrCode = "Nenhum QRCode disponível";
 
-        if(codigoGerar.length > 200 && !codigoGerar.includes("undefined")){
+        if (codigoGerar.length > 200 && !codigoGerar.includes("undefined")) {
           qrCodeBase64 = qrcode(codigoGerar);
           descQrCode = codigoGerar;
-        } 
+        }
 
         pageContent = `
           <h2>QR Code</h2>
@@ -832,123 +832,123 @@ class BotAPI {
 
 
     // Groups !enviar public data
-    this.app.get('/getData/:groupId/:variable', (req, res) => {  
-        const { groupId, variable } = req.params;  
+    this.app.get('/getData/:groupId/:variable', (req, res) => {
+      const { groupId, variable } = req.params;
 
-        res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Type', 'application/json');
 
-        this.logger.info(`[getData] => '${variable}'@'${groupId}'`);  
+      this.logger.info(`[getData] => '${variable}'@'${groupId}'`);
 
-        if(groupId.length > 10 && groupId.endsWith("@g.us")){
-          const filePath = path.join(this.database.databasePath, `data-share`, `${groupId}.json`);
+      if (groupId.length > 10 && groupId.endsWith("@g.us")) {
+        const filePath = path.join(this.database.databasePath, `data-share`, `${groupId}.json`);
 
-          fs.access(filePath).then(async ()=> {
-            fs.readFile(filePath, 'utf8').then(data => {
-              const groupDataShare = JSON.parse(data);
+        fs.access(filePath).then(async () => {
+          fs.readFile(filePath, 'utf8').then(data => {
+            const groupDataShare = JSON.parse(data);
 
-              if(groupDataShare[variable]){
-                const dados = groupDataShare[variable][0];
+            if (groupDataShare[variable]) {
+              const dados = groupDataShare[variable][0];
 
-                if(dados){
-                  // Remove daqui a 30 segundos
-                  setTimeout((gds, vari, fP)=> {
-                    gds[vari].shift();
-                    if(gds[vari].length == 0){
-                      delete gds[vari];
-                    }
+              if (dados) {
+                // Remove daqui a 30 segundos
+                setTimeout((gds, vari, fP) => {
+                  gds[vari].shift();
+                  if (gds[vari].length == 0) {
+                    delete gds[vari];
+                  }
 
-                    fs.writeFile(fP, JSON.stringify(gds ?? {}, null, "\t"), "utf8");
-                  }, 30000, groupDataShare, variable, filePath);
+                  fs.writeFile(fP, JSON.stringify(gds ?? {}, null, "\t"), "utf8");
+                }, 30000, groupDataShare, variable, filePath);
 
-                  return res.status(200).send(JSON.stringify({restantes: groupDataShare[variable]?.length ?? 0, dados}));
-                } else {
-                  return res.status(200).send(JSON.stringify({restantes: 0, dados: null}));
-                }
+                return res.status(200).send(JSON.stringify({ restantes: groupDataShare[variable]?.length ?? 0, dados }));
               } else {
-                return res.status(404).send(JSON.stringify({erro: `'${variable}' indisponivel para '${groupId}'`}));
+                return res.status(200).send(JSON.stringify({ restantes: 0, dados: null }));
               }
-            });
-          }).catch(() => {  
-            return res.status(404).send(JSON.stringify({erro: `Nenhum dado disponível para '${groupId}'`}));
-          });  
-        } else {
-          return res.status(400).send(JSON.stringify({erro: `'${groupId}' não é válido`}));
-        }
+            } else {
+              return res.status(404).send(JSON.stringify({ erro: `'${variable}' indisponivel para '${groupId}'` }));
+            }
+          });
+        }).catch(() => {
+          return res.status(404).send(JSON.stringify({ erro: `Nenhum dado disponível para '${groupId}'` }));
+        });
+      } else {
+        return res.status(400).send(JSON.stringify({ erro: `'${groupId}' não é válido` }));
+      }
     });
 
 
 
-    this.app.get('/media/:platform/:channel/:event/:type', async (req, res) => {  
-        const { platform, channel, event, type } = req.params;  
-        const token = req.query.token;  
-          
-        if (!token) {  
-            return res.status(400).send('Token not provided');  
-        }  
-          
-        try {  
-            const webManagementData = await this.readWebManagementToken(token);  
-              
-            if (!webManagementData) {  
-                return res.status(401).send('Unauthorized');  
-            }  
-              
-            if (new Date() > new Date(webManagementData.expiresAt)) {  
-                return res.status(401).send('Token expired');  
-            }  
-              
-            // Get database instance                 
-            const groupData = await this.database.getGroup(webManagementData.groupId);  
-              
-            if (!groupData || !groupData[platform]) {  
-                return res.status(404).send('Platform not set');  
-            }  
-            
-            const allPlatformData = groupData[platform].find(plt => plt.channel == channel);
-            if(!allPlatformData){
-              return res.status(404).send('Channel not set');  
-            }
+    this.app.get('/media/:platform/:channel/:event/:type', async (req, res) => {
+      const { platform, channel, event, type } = req.params;
+      const token = req.query.token;
 
-            let mediaFound = allPlatformData.onConfig?.media?.find(m => m.type == type);
-            if(event == "off"){
-              mediaFound = allPlatformData.offConfig?.media.find(m => m.type == type);
-            }
+      if (!token) {
+        return res.status(400).send('Token not provided');
+      }
 
-            if(!mediaFound){
-              return res.status(404).send(`${type}@${event} not found`); 
-            }
+      try {
+        const webManagementData = await this.readWebManagementToken(token);
 
-            this.logger.info(mediaFound);
+        if (!webManagementData) {
+          return res.status(401).send('Unauthorized');
+        }
 
-            const fileName = mediaFound.content;  
-            const filePath = path.join(this.database.databasePath, "media", fileName);  
-            this.logger.info(filePath);
-              
-            // Verify file exists  
-            await fs.access(filePath).catch(() => {  
-                return res.status(404).send('File not found');  
-            });  
-              
-            // Set content type  
-            const ext = path.extname(fileName).toLowerCase();  
-            let contentType = 'application/octet-stream';  
-              
-            switch (ext) {  
-                case '.jpg':  
-                case '.jpeg': contentType = 'image/jpeg'; break;  
-                case '.png': contentType = 'image/png'; break;  
-                case '.gif': contentType = 'image/gif'; break;  
-                case '.mp4': contentType = 'video/mp4'; break;  
-                case '.mp3': contentType = 'audio/mpeg'; break;  
-                case '.wav': contentType = 'audio/wav'; break;  
-            }  
-              
-            res.setHeader('Content-Type', contentType);  
-            res.sendFile(filePath);  
-        } catch (error) {  
-            this.logger.error('Error serving media:', error);  
-            return res.status(500).send('Server error');  
-        }  
+        if (new Date() > new Date(webManagementData.expiresAt)) {
+          return res.status(401).send('Token expired');
+        }
+
+        // Get database instance                 
+        const groupData = await this.database.getGroup(webManagementData.groupId);
+
+        if (!groupData || !groupData[platform]) {
+          return res.status(404).send('Platform not set');
+        }
+
+        const allPlatformData = groupData[platform].find(plt => plt.channel == channel);
+        if (!allPlatformData) {
+          return res.status(404).send('Channel not set');
+        }
+
+        let mediaFound = allPlatformData.onConfig?.media?.find(m => m.type == type);
+        if (event == "off") {
+          mediaFound = allPlatformData.offConfig?.media.find(m => m.type == type);
+        }
+
+        if (!mediaFound) {
+          return res.status(404).send(`${type}@${event} not found`);
+        }
+
+        this.logger.info(mediaFound);
+
+        const fileName = mediaFound.content;
+        const filePath = path.join(this.database.databasePath, "media", fileName);
+        this.logger.info(filePath);
+
+        // Verify file exists  
+        await fs.access(filePath).catch(() => {
+          return res.status(404).send('File not found');
+        });
+
+        // Set content type  
+        const ext = path.extname(fileName).toLowerCase();
+        let contentType = 'application/octet-stream';
+
+        switch (ext) {
+          case '.jpg':
+          case '.jpeg': contentType = 'image/jpeg'; break;
+          case '.png': contentType = 'image/png'; break;
+          case '.gif': contentType = 'image/gif'; break;
+          case '.mp4': contentType = 'video/mp4'; break;
+          case '.mp3': contentType = 'audio/mpeg'; break;
+          case '.wav': contentType = 'audio/wav'; break;
+        }
+
+        res.setHeader('Content-Type', contentType);
+        res.sendFile(filePath);
+      } catch (error) {
+        this.logger.error('Error serving media:', error);
+        return res.status(500).send('Server error');
+      }
     });
 
     // Dashboard: Get bots configuration
@@ -1046,7 +1046,7 @@ class BotAPI {
       });
     });
   }
-  
+
   /**
    * Atualiza o cache de dados analíticos
    * @returns {Promise<void>}
@@ -1054,20 +1054,20 @@ class BotAPI {
   async updateAnalyticsCache() {
     try {
       this.logger.info('Atualizando cache de dados analíticos...');
-      
+
       // Obtém todos os relatórios de carga
       // Pegamos dados dos últimos 365 dias para análise anual
       const yearStart = new Date();
       yearStart.setDate(yearStart.getDate() - 365);
-      
+
       const reports = await this.database.getLoadReports(yearStart.getTime());
-      
+
       if (!reports || !Array.isArray(reports) || reports.length === 0) {
         this.logger.warn('Nenhum relatório de carga encontrado para processamento analítico');
         this.analyticsCache.lastUpdate = Date.now();
         return;
       }
-      
+
       // Agrupa relatórios por bot
       const botReports = {};
       reports.forEach(report => {
@@ -1076,22 +1076,22 @@ class BotAPI {
         }
         botReports[report.botId].push(report);
       });
-      
+
       // Processa dados para cada bot
       Object.keys(botReports).forEach(botId => {
         // Processa dados diários (por hora)
         this.analyticsCache.daily[botId] = this.processDailyData(botReports[botId]);
-        
+
         // Processa dados semanais (por dia da semana)
         this.analyticsCache.weekly[botId] = this.processWeeklyData(botReports[botId]);
-        
+
         // Processa dados mensais (por dia do mês)
         this.analyticsCache.monthly[botId] = this.processMonthlyData(botReports[botId]);
-        
+
         // Processa dados anuais (por dia)
         this.analyticsCache.yearly[botId] = this.processYearlyData(botReports[botId]);
       });
-      
+
       // Salva datas comuns para o gráfico anual
       const yearlyDates = new Set();
       Object.values(this.analyticsCache.yearly).forEach(data => {
@@ -1099,10 +1099,10 @@ class BotAPI {
           data.dates.forEach(date => yearlyDates.add(date));
         }
       });
-      
+
       // Ordena as datas
       const sortedDates = Array.from(yearlyDates).sort();
-      
+
       // Atualiza os dados de cada bot para usar as mesmas datas
       Object.keys(this.analyticsCache.yearly).forEach(botId => {
         const botData = this.analyticsCache.yearly[botId];
@@ -1110,19 +1110,19 @@ class BotAPI {
           // Cria novo array de valores baseado nas datas ordenadas
           const newValues = [];
           const dateValueMap = {};
-          
+
           // Cria um mapa de data para valor
           if (botData.dates && botData.values) {
             for (let i = 0; i < botData.dates.length; i++) {
               dateValueMap[botData.dates[i]] = botData.values[i] || 0;
             }
           }
-          
+
           // Preenche o novo array de valores com base nas datas ordenadas
           sortedDates.forEach(date => {
             newValues.push(dateValueMap[date] || 0);
           });
-          
+
           // Atualiza o objeto de dados do bot
           this.analyticsCache.yearly[botId] = {
             dates: sortedDates,
@@ -1130,7 +1130,7 @@ class BotAPI {
           };
         }
       });
-      
+
       // Atualiza o timestamp da última atualização
       this.analyticsCache.lastUpdate = Date.now();
       this.logger.info('Cache de dados analíticos atualizado com sucesso');
@@ -1138,7 +1138,7 @@ class BotAPI {
       this.logger.error('Erro ao atualizar cache de dados analíticos:', error);
     }
   }
-  
+
   /**
    * Processa dados diários (por hora)
    * @param {Array} reports - Relatórios de carga
@@ -1149,28 +1149,28 @@ class BotAPI {
       // Inicializa array de 24 posições para contagem por hora
       const hourCounts = Array(24).fill(0);
       const hourTotals = Array(24).fill(0);
-      
+
       // Processa cada relatório
       reports.forEach(report => {
         if (report.period && report.period.start && report.messages) {
           const date = new Date(report.period.start);
           const hour = date.getHours();
-          
+
           // Soma mensagens totais deste relatório
           const totalMsgs = (report.messages.totalReceived || 0) + (report.messages.totalSent || 0);
-          
+
           // Adiciona ao contador de horas e totais
           hourCounts[hour]++;
           hourTotals[hour] += totalMsgs;
         }
       });
-      
+
       // Calcula média por hora
       const hourlyAverages = hourTotals.map((total, index) => {
         const count = hourCounts[index];
         return count > 0 ? Math.round(total / count) : 0;
       });
-      
+
       return {
         values: hourlyAverages
       };
@@ -1179,7 +1179,7 @@ class BotAPI {
       return { values: Array(24).fill(0) };
     }
   }
-  
+
   /**
    * Processa dados semanais (por dia da semana)
    * @param {Array} reports - Relatórios de carga
@@ -1190,28 +1190,28 @@ class BotAPI {
       // Inicializa arrays para os 7 dias da semana
       const dayCounts = Array(7).fill(0);
       const dayTotals = Array(7).fill(0);
-      
+
       // Processa cada relatório
       reports.forEach(report => {
         if (report.period && report.period.start && report.messages) {
           const date = new Date(report.period.start);
           const day = date.getDay(); // 0-6 (Domingo-Sábado)
-          
+
           // Soma mensagens totais deste relatório
           const totalMsgs = (report.messages.totalReceived || 0) + (report.messages.totalSent || 0);
-          
+
           // Adiciona ao contador de dias e totais
           dayCounts[day]++;
           dayTotals[day] += totalMsgs;
         }
       });
-      
+
       // Calcula média por dia da semana
       const dailyAverages = dayTotals.map((total, index) => {
         const count = dayCounts[index];
         return count > 0 ? Math.round(total / count) : 0;
       });
-      
+
       return {
         values: dailyAverages
       };
@@ -1220,7 +1220,7 @@ class BotAPI {
       return { values: Array(7).fill(0) };
     }
   }
-  
+
   /**
    * Processa dados mensais (por dia do mês)
    * @param {Array} reports - Relatórios de carga
@@ -1231,28 +1231,28 @@ class BotAPI {
       // Inicializa arrays para os 31 dias do mês
       const dayCounts = Array(31).fill(0);
       const dayTotals = Array(31).fill(0);
-      
+
       // Processa cada relatório
       reports.forEach(report => {
         if (report.period && report.period.start && report.messages) {
           const date = new Date(report.period.start);
           const day = date.getDate() - 1; // 0-30
-          
+
           // Soma mensagens totais deste relatório
           const totalMsgs = (report.messages.totalReceived || 0) + (report.messages.totalSent || 0);
-          
+
           // Adiciona ao contador de dias e totais
           dayCounts[day]++;
           dayTotals[day] += totalMsgs;
         }
       });
-      
+
       // Calcula média por dia do mês
       const monthlyAverages = dayTotals.map((total, index) => {
         const count = dayCounts[index];
         return count > 0 ? Math.round(total / count) : 0;
       });
-      
+
       return {
         values: monthlyAverages
       };
@@ -1261,7 +1261,7 @@ class BotAPI {
       return { values: Array(31).fill(0) };
     }
   }
-  
+
   /**
    * Processa dados anuais (por dia)
    * @param {Array} reports - Relatórios de carga
@@ -1271,16 +1271,16 @@ class BotAPI {
     try {
       // Mapeia totais diários
       const dailyTotals = {};
-      
+
       // Processa cada relatório
       reports.forEach(report => {
         if (report.period && report.period.start && report.messages) {
           const date = new Date(report.period.start);
           const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD
-          
+
           // Soma mensagens totais deste relatório
           const totalMsgs = (report.messages.totalReceived || 0) + (report.messages.totalSent || 0);
-          
+
           // Adiciona ao total diário
           if (!dailyTotals[dateString]) {
             dailyTotals[dateString] = 0;
@@ -1288,11 +1288,11 @@ class BotAPI {
           dailyTotals[dateString] += totalMsgs;
         }
       });
-      
+
       // Converte para arrays ordenados por data
       const dates = Object.keys(dailyTotals).sort();
       const values = dates.map(date => dailyTotals[date] || 0);
-      
+
       return {
         dates,
         values
@@ -1302,7 +1302,7 @@ class BotAPI {
       return { dates: [], values: [] };
     }
   }
-  
+
   /**
    * Filtra dados analíticos do cache com base no período e bots selecionados
    * @param {string} period - Período (today, week, month, year)
@@ -1320,12 +1320,12 @@ class BotAPI {
         monthly: {},
         yearly: {}
       };
-      
+
       // Função auxiliar para processar dados por período
       const processData = (periodKey) => {
         const periodData = this.analyticsCache[periodKey];
         const seriesData = [];
-        
+
         // Para cada bot selecionado, adiciona uma série de dados
         selectedBots.forEach(botId => {
           if (periodData[botId]) {
@@ -1335,25 +1335,25 @@ class BotAPI {
             });
           }
         });
-        
+
         // Retorna os dados formatados para o período
         return {
           hours: periodKey === 'daily' ? Array.from({ length: 24 }, (_, i) => i) : null,
           days: periodKey === 'weekly' ? ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'] :
-                periodKey === 'monthly' ? Array.from({ length: 31 }, (_, i) => i + 1) : null,
+            periodKey === 'monthly' ? Array.from({ length: 31 }, (_, i) => i + 1) : null,
           dates: periodKey === 'yearly' ? (periodData.dates || []) : null,
-          values: periodKey === 'daily' ? 
-                  (selectedBots.length === 1 ? periodData[selectedBots[0]]?.values || [] : []) : null,
+          values: periodKey === 'daily' ?
+            (selectedBots.length === 1 ? periodData[selectedBots[0]]?.values || [] : []) : null,
           series: seriesData
         };
       };
-      
+
       // Processa dados para cada período
       result.daily = processData('daily');
       result.weekly = processData('weekly');
       result.monthly = processData('monthly');
       result.yearly = processData('yearly');
-      
+
       return result;
     } catch (error) {
       this.logger.error('Erro ao filtrar dados analíticos:', error);
@@ -1379,34 +1379,34 @@ class BotAPI {
       // Prepara a mensagem de notificação
       const totalMsg = (donationTotal > 0) ? `> _${name}_ já doou um total de R$${donationTotal.toFixed(2)}\n\n` : "";
 
-      const donationMsg = 
+      const donationMsg =
         `💸 Recebemos um DONATE no tipa.ai! 🥳\n\n` +
         `*MUITO obrigado* pelos R$${amount.toFixed(2)}, ${name}! 🥰\n` +
         `Compartilho aqui com todos sua mensagem:\n` +
         `💬 ${message}\n\n${totalMsg}` +
         `\`\`\`!doar ou !donate pra conhecer os outros apoiadores e doar também\`\`\``;
-      
+
       // Calcula tempo extra de fixação com base no valor da doação (300 segundos por 1 unidade de moeda)
       const extraPinTime = Math.floor(amount * 300);
       const pinDuration = 600 + extraPinTime; // Base de 10 minutos + tempo extra
-      
+
       // Apenas um dos bots devem enviar msg sobre donate
       const bot = this.bots.find(b => b.notificarDonate) ?? this.bots[Math.floor(Math.random() * this.bots.length)];
 
       // Primeiro notifica o grupo de logs
       if (bot.grupoLogs) {
         try {
-          await bot.sendMessage(bot.grupoLogs, donationMsg, {marcarTodos: true});
+          await bot.sendMessage(bot.grupoLogs, donationMsg, { marcarTodos: true });
         } catch (error) {
           this.logger.error(`Erro ao enviar notificação de doação para grupoLogs (${bot.grupoLogs}):`, error);
         }
       }
-      
+
       // Notifica o grupo de avisos
       if (bot.grupoAvisos && !ignorar) {
         try {
-          const sentMsg = await bot.sendMessage(bot.grupoAvisos, donationMsg, {marcarTodos: true});
-          
+          const sentMsg = await bot.sendMessage(bot.grupoAvisos, donationMsg, { marcarTodos: true });
+
           // Tenta fixar a mensagem
           try {
             if (sentMsg && sentMsg.pin) {
@@ -1419,12 +1419,12 @@ class BotAPI {
           this.logger.error(`Erro ao enviar notificação de doação para grupoAvisos (${bot.grupoAvisos}):`, error);
         }
 
-        
+
         // Notifica o grupo de interação
         if (bot.grupoInteracao && !ignorar) {
           try {
-            const sentMsg = await bot.sendMessage(bot.grupoInteracao, donationMsg, {marcarTodos: true});
-            
+            const sentMsg = await bot.sendMessage(bot.grupoInteracao, donationMsg, { marcarTodos: true });
+
             // Tenta fixar a mensagem
             try {
               if (sentMsg && sentMsg.pin) {
@@ -1442,7 +1442,7 @@ class BotAPI {
       this.logger.error('Erro ao notificar grupos sobre doação:', error);
     }
   }
-  
+
   /**
    * Limpa recursos antes de fechar
    */
@@ -1480,10 +1480,10 @@ class BotAPI {
         resolve();
         return;
       }
-      
+
       // Limpa recursos
       this.destroy();
-      
+
       try {
         this.server.close(() => {
           this.logger.info('Servidor API parado');
@@ -1497,10 +1497,10 @@ class BotAPI {
     });
   }
 
-/**
-   * Adiciona uma instância de bot à API
-   * @param {WhatsAppBot} bot - A instância do bot a adicionar
-   */
+  /**
+     * Adiciona uma instância de bot à API
+     * @param {WhatsAppBot} bot - A instância do bot a adicionar
+     */
   addBot(bot) {
     if (!this.bots.includes(bot)) {
       this.bots.push(bot);
