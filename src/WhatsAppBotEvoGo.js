@@ -101,7 +101,7 @@ class WhatsAppBotEvoGo {
     );
 
     this.database = Database.getInstance();
-    this.isConnected = true;
+    this.isConnected = false;
     this.safeMode = options.safeMode !== undefined ? options.safeMode : (process.env.SAFE_MODE === 'true');
     this.otherBots = options.otherBots || [];
 
@@ -195,8 +195,6 @@ class WhatsAppBotEvoGo {
   }
 
   async deleteInstance() {
-
-
     // Precisa pegar O ID da instancia, que só vem no /all
     const instanceToDelete = await this.getEvoGoInstance(this.evolutionInstanceApiKey, this.instanceName)
     this.logger.info(`[deleteInstance] Deleting instance ${this.instanceName}`, { instanceToDelete });
@@ -253,7 +251,17 @@ class WhatsAppBotEvoGo {
         this.logger.info(`[recreateInstance] Attempting to create instance (try ${i + 1}/3)...`);
         const createResult = await this.createInstance();
         results.push({ action: 'create', status: 'success', result: createResult });
-        this.logger.info(`[recreateInstance] Instance creation successful.`);
+        this.logger.info(`[recreateInstance] Instance creation successful, defining settings`);
+
+        try {
+          const settingsResult = await this.instanceAdvSettings(); // Default ok
+          results.push({ action: 'advSettings', status: 'success', result: settingsResult });
+          this.logger.info(`[recreateInstance] Instance advanced settings successful.`);
+        } catch (error) {
+          this.logger.error(`[recreateInstance] Failed to define instance advanced settings:`, error);
+          results.push({ action: 'advSettings', status: 'error', attempt: i + 1, error: error.message });
+        }
+
         return results;
       } catch (error) {
         this.logger.error(`[recreateInstance] Attempt ${i + 1} failed:`, error);
@@ -267,6 +275,18 @@ class WhatsAppBotEvoGo {
 
     this.logger.error(`[recreateInstance] Failed to create instance after 3 attempts.`);
     return results;
+  }
+
+  async instanceAdvSettings(alwaysOnline = true,rejectCall = true,readMessages = false,ignoreGroups = false,ignoreStatus = true) {
+    // Precisa pegar O ID da instancia, que só vem no /all
+    const instanceToEdit = await this.getEvoGoInstance(this.evolutionInstanceApiKey, this.instanceName)
+    this.logger.info(`[instanceAdvSettings] Instance Settings ${this.instanceName}`, { instanceToEdit, alwaysOnline, rejectCall, readMessages, ignoreGroups, ignoreStatus });
+
+    if (instanceToEdit) {
+      return await this.apiClient.put(`/instance/${instanceToEdit.id}/advanced-settings`, { alwaysOnline, rejectCall, readMessages, ignoreGroups, ignoreStatus });
+    } else {
+      throw new Error(JSON.stringify({ "erro": "não encontrei a instancia", name: this.instanceName, token: this.evolutionInstanceApiKey }));
+    }
   }
 
   async updateVersions() {
@@ -1077,7 +1097,7 @@ class WhatsAppBotEvoGo {
 
         await new Promise((resolve, reject) => {
           this.webhookServer = this.webhookApp.listen(this.webhookPort, () => {
-            this.logger.info(`Webhook listener for bot ${this.instanceName} started on http://${this.webhookHost}:${this.webhookPort}${webhookPath}`);
+            this.logger.info(`Webhook listener for bot ${this.instanceName} started on ${this.webhookHost}:${this.webhookPort}${webhookPath}`);
             resolve();
           }).on('error', (err) => {
             this.logger.error(`Failed to start webhook listener for bot ${this.instanceName}:`, err);
@@ -1101,16 +1121,17 @@ class WhatsAppBotEvoGo {
       const response = await this.apiClient.get(`/instance/status`);
 
       const statusData = response?.data;
-      const isConnected = statusData?.Connected && statusData?.LoggedIn;
-      const state = isConnected ? 'CONNECTED' : 'DISCONNECTED';
+      this.isConnected = statusData?.Connected && statusData?.LoggedIn;
+      const state = this.isConnected ? 'CONNECTED' : 'DISCONNECTED';
       const extra = {};
+
 
       const instanceDetails = {
         version: this.version,
         tipo: "evogo"
       }
 
-      if (isConnected) {
+      if (this.isConnected) {
         this._onInstanceConnected();
         extra.ok = true;
       } else {
@@ -1119,7 +1140,7 @@ class WhatsAppBotEvoGo {
 
           const connectResponse = await this.apiClient.post(`/instance/connect`, {
             webhookUrl: `${this.webhookHost}:${this.webhookPort}/webhook/evogo/${this.instanceName}`,
-            subscribe: ["MESSAGE", "PRESENCE", "CALL", "CONNECTION", "QRCODE", "CONTACT", "GROUP", "NEWSLETTER"],
+            subscribe: ["MESSAGE","SEND_MESSAGE","READ_RECEIPT","PRESENCE","CHAT_PRESENCE","CALL","CONNECTION","LABEL","CONTACT","GROUP","NEWSLETTER","QRCODE"],
             websocketEnable: this.websocket ? "enabled" : ""
           }, false);
 
@@ -1159,13 +1180,15 @@ class WhatsAppBotEvoGo {
   }
 
   async _onInstanceConnected() {
+    this._sendStartupNotifications();
+    this.fetchAndPrepareBlockedContacts();
+
     if (this.isConnected) return;
     this.isConnected = true;
     this.logger.info(`[${this.id}] Successfully connected to WhatsApp via EvolutionGO API.`);
     if (this.eventHandler && typeof this.eventHandler.onConnected === 'function') {
       this.eventHandler.onConnected(this);
     }
-    setTimeout((snf) => snf(), 5000, this._sendStartupNotifications);
   }
 
   _onInstanceDisconnected(reason = 'Unknown') {
@@ -1179,6 +1202,9 @@ class WhatsAppBotEvoGo {
   }
 
   async _handleWebhook(req, res) {
+    // Evitar um bugzinho
+    this.isConnected = true;
+
     const payload = req.body;
     // V3 Payload structure: { event: "Message", instance: "...", data: { ... } }
 
@@ -1276,6 +1302,40 @@ class WhatsAppBotEvoGo {
     }
     res.sendStatus(200);
   }
+
+  async fetchAndPrepareBlockedContacts() {
+    const blockList = await this.apiClient.get(`/user/blocklist`);
+    //blockList: {data: {      DHash: '1761266184514262',JIDs: [...  ]},message: 'success'}
+
+    this.logger.info(`[${this.id}][fetchAndPrepareBlockedContacts] `, { blockList });
+    this.blockedContacts = blockList.data?.JIDs?.map(jid => { 
+      return {
+        id: { _serialized: jid },
+        name: `Blocked_${jid}`
+      }
+    });
+
+    this.prepareOtherBotsBlockList(); // From original bot
+  }
+
+  prepareOtherBotsBlockList() {
+    if (!this.otherBots || !this.otherBots.length) return;
+    if (!this.blockedContacts || !Array.isArray(this.blockedContacts)) {
+      this.blockedContacts = [];
+    }
+    for (const bot of this.otherBots) { // Assuming otherBots is an array of JID-like strings or bot IDs
+      const botId = bot.endsWith("@c.us") || bot.endsWith("@s.whatsapp.net") ? bot : `${bot}@c.us`; // Basic normalization
+      if (!this.blockedContacts.some(c => c.id._serialized === botId)) {
+        this.blockedContacts.push({
+          id: { _serialized: botId },
+          name: `Other Bot: ${bot}` // Or some identifier
+        });
+        this.logger.info(`[${this.id}] Added other bot '${botId}' to internal ignore list.`);
+      }
+    }
+    this.logger.info(`[${this.id}] Ignored contacts/bots list size: ${this.blockedContacts.length}`);
+  }
+
 
   async formatMessageFromEvo(evoMessageData, skipCache = false) {
     return new Promise(async (resolve, reject) => {
@@ -1833,6 +1893,12 @@ class WhatsAppBotEvoGo {
     //this.logger.debug(`[getPnFromLid] `, {lid, chat});
     return (chat?.participants?.find(p => p.id?._serialized.startsWith(lid))?.phoneNumber) ?? lid;
   }
+
+  notInWhitelist(author) { // author is expected to be a JID string
+    const cleanAuthor = author.replace(/\D/g, ''); // Cleans non-digits from JID user part
+    return !(this.whitelist.includes(cleanAuthor))
+  }
+
 
   _loadDonationsToWhitelist() { }
   _sendStartupNotifications() { }

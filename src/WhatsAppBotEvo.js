@@ -99,7 +99,7 @@ class WhatsAppBotEvo {
     );
 
     this.database = Database.getInstance();
-    this.isConnected = true;
+    this.isConnected = false;
     this.safeMode = options.safeMode !== undefined ? options.safeMode : (process.env.SAFE_MODE === 'true');
     this.otherBots = options.otherBots || [];
 
@@ -891,7 +891,7 @@ class WhatsAppBotEvo {
 
         await new Promise((resolve, reject) => {
           this.webhookServer = this.webhookApp.listen(this.webhookPort, () => {
-            this.logger.info(`Webhook listener for bot ${this.instanceName} started on http://${this.webhookHost}:${this.webhookPort}${webhookPath}`);
+            this.logger.info(`Webhook listener for bot ${this.instanceName} started on ${this.webhookHost}:${this.webhookPort}${webhookPath}`);
             resolve();
           }).on('error', (err) => {
             this.logger.error(`Failed to start webhook listener for bot ${this.instanceName}:`, err);
@@ -935,8 +935,9 @@ class WhatsAppBotEvo {
       if (state === 'CONNECTED' || state === 'OPEN') { // open não era pra ser
         this._onInstanceConnected();
         extra.ok = true;
+        this.isConnected = true;
       } else if (state === 'CLOSE' || state === 'CONNECTING' || state === 'PAIRING' || !state) {
-
+        this.isConnected = false;
         if (forceConnect) {
           this.logger.info(`Instance ${this.instanceName} is not connected (state: ${state}). Attempting to connect with num ber ${this.phoneNumber}...`);
           const connectData = await this.apiClient.get(`/instance/connect`, { number: this.phoneNumber });
