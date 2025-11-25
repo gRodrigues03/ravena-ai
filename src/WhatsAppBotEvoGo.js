@@ -742,8 +742,10 @@ class WhatsAppBotEvoGo {
         await writeFileAsync(filePath, base64Data, 'base64');
 
         const fileUrl = `${process.env.BOT_DOMAIN_LOCAL ?? process.env.BOT_DOMAIN}/attachments/${fileName}`;
-        //this.logger.debug(`[_downloadMediaFromEvo] Res: ${fileUrl}`);
-        return { url: fileUrl, mimetype, filename: fileName, filePath, base64: base64Data };
+
+        const media = { url: fileUrl, mimetype, filename: fileName, filePath, base64: base64Data };
+        //this.logger.debug(`[_downloadMediaFromEvo] Res: ${fileUrl}`, media);
+        return media;
       }
     } catch (error) {
       this.logger.error(`[${this.id}] Error downloading media from Evo:`, error);
@@ -782,14 +784,14 @@ class WhatsAppBotEvoGo {
       const buffer = Buffer.from(base64Data, 'base64');
       const url = this._storeMediaFile(buffer, `.${extension}`);
 
-      return {
-        mimetype,
-        data: base64Data,
-        filename: filename || `file.${extension}`,
-        source: 'base64',
-        url,
-        isMessageMedia: true
-      };
+      // Fixes
+      if(mimetype === "application/mp4"){
+        mimetype = "video/mp4";
+      }
+
+      const media = { mimetype, data: base64Data, filename: filename || `file.${extension}`, source: 'base64', url, isMessageMedia: true };
+      //this.logger.info(`[createMediaFromBase64] `, media );
+      return media;
     } catch (error) {
       this.logger.error(`Error in createMediaFromBase64:`, error);
       throw error;
@@ -807,10 +809,17 @@ class WhatsAppBotEvoGo {
 
       const data = fs.readFileSync(filePath, { encoding: 'base64' });
       const filename = path.basename(filePath);
-      const mimetype = customMime ? customMime : (mime.lookup(filePath) || 'application/octet-stream');
+      let mimetype = customMime ? customMime : (mime.lookup(filePath) || 'application/octet-stream');
 
-      this.logger.info(`[createMedia] ${fileUrl}`);
-      return { mimetype, data, filename, source: 'file', url: fileUrl, isMessageMedia: true };
+
+      // Fixes
+      if(mimetype === "application/mp4"){
+        mimetype = "video/mp4";
+      }
+
+      const media = { mimetype, data, filename, source: 'file', url: fileUrl, isMessageMedia: true };
+      //this.logger.info(`[createMedia] `, media );
+      return media;
     } catch (error) {
       console.error(`Error creating media from ${filePath}:`, error);
       throw error;
@@ -830,7 +839,16 @@ class WhatsAppBotEvoGo {
           mimetype = options.customMime ? options.customMime : (headResponse.headers['content-type']?.split(';')[0] || 'application/octet-stream');
         } catch (e) { /* ignore */ }
       }
-      return { url, mimetype, filename, source: 'url', url, isMessageMedia: true }; // MessageMedia compatible for URL sending
+
+      // Fixes
+      if(mimetype === "application/mp4"){
+        mimetype = "video/mp4";
+      }
+
+      const media = { url, mimetype, filename, source: 'url', url, isMessageMedia: true };
+
+      //this.logger.info(`[createMediaFromURL] `, media);
+      return media;
     } catch (error) {
       this.logger.error(`[${this.id}] Evo: Error creating media from URL ${url}:`, error);
       throw error;
@@ -888,12 +906,17 @@ class WhatsAppBotEvoGo {
         } else {
           const actualId = this.getActualMsgId(messageId);
 
+          
           const msg = await this.cacheManager.getGoMessageFromCache(actualId);
+
+          //this.logger.debug(`[recoverMsgFromCache] `, { actualId, msg });
           if (!msg || !msg.evoMessageData) {
             resolve(msg || null);
             return;
           }
+
           const recovered = await this.formatMessageFromEvo(msg.evoMessageData);
+          //this.logger.debug(`[recoverMsgFromCache] `, { actualId, recovered });
           if (!recovered) {
             resolve(msg);
           } else {
@@ -1403,6 +1426,7 @@ class WhatsAppBotEvoGo {
           responseTime: responseTime,
           hasMedia: !!mediaInfo,
           mentions: mentions,
+          isQuoted: evoMessageData.isQuoted,
 
           getContact: async () => {
             return await this.getContactDetails(sender, pushName);

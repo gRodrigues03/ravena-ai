@@ -2183,235 +2183,6 @@ async setWelcomeMessage(bot, message, args, group) {
     }
   }
 
-  /**
-   * Sets the "online" media notification for a Twitch channel
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async setTwitchOnlineMedia(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    // Validate and get channel name
-    const channelName = await this.validateChannelName(bot, message, args, group, 'twitch');
-    
-    // If validateChannelName returned a ReturnMessage, return it
-    if (channelName instanceof ReturnMessage) {
-      return channelName;
-    }
-    
-    // Find the channel configuration
-    const channelConfig = this.findChannelConfig(group, 'twitch', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`
-      });
-    }
-    
-    // Verify if this is a reply to a message
-    const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
-    
-    if (!quotedMsg && args.length <= 1) {
-      // Reset to default if no quoted message and no additional args
-      channelConfig.onConfig = this.createDefaultNotificationConfig('twitch', channelName);
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Configuração de notificação "online" para o canal ${channelName} redefinida para o padrão.`
-      });
-    }
-    
-    if (!quotedMsg) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.'
-      });
-    }
-    
-    // Handle media message
-    try {
-      // Create media configuration
-      const mediaConfig = {
-        type: "text",
-        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body ?? ""
-      };
-      
-      // For media messages, add the media type
-      if (quotedMsg.hasMedia) {
-        const media = await quotedMsg.downloadMedia();
-        let mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
-        
-        if (quotedMsg.type.toLowerCase() === "sticker") {
-          mediaType = "sticker";
-        }
-        if (quotedMsg.type.toLowerCase() === "voice") {
-          mediaType = "voice";
-        }
-        
-        // Save media file
-        let fileExt = media.mimetype.split('/')[1];
-        if (fileExt.includes(";")) {
-          fileExt = fileExt.split(";")[0];
-        }
-        
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        const mediaDir = path.join(this.dataPath, 'media');
-        await fs.mkdir(mediaDir, { recursive: true });
-        
-        const filePath = path.join(mediaDir, fileName);
-        await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
-        
-        mediaConfig.type = mediaType;
-        mediaConfig.content = fileName;
-        mediaConfig.caption = quotedMsg.caption ?? "";
-      }
-      
-      // Set the new config (replace existing)
-      channelConfig.onConfig = {
-        media: [mediaConfig]
-      };
-      
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Configuração de notificação "online" para o canal ${channelName} atualizada com sucesso.`
-      });
-    } catch (error) {
-      this.logger.error(`Erro ao configurar notificação "online" para o canal ${channelName}:`, error);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Erro ao configurar notificação: ${error.message}`
-      });
-    }
-  }
-
-  /**
-   * Sets the "offline" media notification for a Twitch channel
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async setTwitchOfflineMedia(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    // Validate and get channel name
-    const channelName = await this.validateChannelName(bot, message, args, group, 'twitch');
-    
-    // If validateChannelName returned a ReturnMessage, return it
-    if (channelName instanceof ReturnMessage) {
-      return channelName;
-    }
-    
-    // Find the channel configuration
-    const channelConfig = this.findChannelConfig(group, 'twitch', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`
-      });
-    }
-    
-    // Verify if this is a reply to a message
-    const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
-    
-    if (!quotedMsg && args.length <= 1) {
-      // Reset to empty if no quoted message and no additional args
-      channelConfig.offConfig = {
-        media: []
-      };
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Configuração de notificação "offline" para o canal ${channelName} removida.`
-      });
-    }
-    
-    if (!quotedMsg) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.'
-      });
-    }
-    
-    // Handle media message (similar to setTwitchOnlineMedia)
-    try {
-      // Create media configuration
-      const mediaConfig = {
-        type: "text",
-        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body ?? ""
-      };
-      
-      // For media messages, add the media type
-      if (quotedMsg.hasMedia) {
-        const media = await quotedMsg.downloadMedia();
-        let mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
-        
-        if (quotedMsg.type.toLowerCase() === "sticker") {
-          mediaType = "sticker";
-        }
-        if (quotedMsg.type.toLowerCase() === "voice") {
-          mediaType = "voice";
-        }
-        
-        // Save media file
-        let fileExt = media.mimetype.split('/')[1];
-        if (fileExt.includes(";")) {
-          fileExt = fileExt.split(";")[0];
-        }
-        
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        const mediaDir = path.join(this.dataPath, 'media');
-        await fs.mkdir(mediaDir, { recursive: true });
-        
-        const filePath = path.join(mediaDir, fileName);
-        await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
-        
-        mediaConfig.type = mediaType;
-        mediaConfig.content = fileName;
-        mediaConfig.caption = quotedMsg.caption ?? "";
-      }
-      
-      // Set the new config (replace existing)
-      channelConfig.offConfig = {
-        media: [mediaConfig]
-      };
-      
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Configuração de notificação "offline" para o canal ${channelName} atualizada com sucesso.`
-      });
-    } catch (error) {
-      this.logger.error(`Erro ao configurar notificação "offline" para o canal ${channelName}:`, error);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Erro ao configurar notificação: ${error.message}`
-      });
-    }
-  }
 
   /**
    * Toggles title change on stream events
@@ -2942,222 +2713,6 @@ async setWelcomeMessage(bot, message, args, group) {
   }
 
   /**
-   * Sets the "online" media notification for a Kick channel
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async setKickOnlineMedia(bot, message, args, group) {
-    // This is identical to setTwitchOnlineMedia except for platform name differences
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    // Validate and get channel name
-    const channelName = await this.validateChannelName(bot, message, args, group, 'kick');
-    
-    // If validateChannelName returned a ReturnMessage, return it
-    if (channelName instanceof ReturnMessage) {
-      return channelName;
-    }
-    
-    const channelConfig = this.findChannelConfig(group, 'kick', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`
-      });
-    }
-    
-    const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
-    
-    if (!quotedMsg && args.length <= 1) {
-      channelConfig.onConfig = this.createDefaultNotificationConfig('kick', channelName);
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Configuração de notificação "online" para o canal ${channelName} redefinida para o padrão.`
-      });
-    }
-    
-    if (!quotedMsg) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.'
-      });
-    }
-    
-    try {
-      const mediaConfig = {
-        type: "text",
-        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body ?? ""
-      };
-      
-      if (quotedMsg.hasMedia) {
-        const media = await quotedMsg.downloadMedia();
-        let mediaType = media.mimetype.split('/')[0];
-        
-        if(quotedMsg.type.toLowerCase() == "sticker") {
-          mediaType = "sticker";
-        }
-        if(quotedMsg.type.toLowerCase() == "voice") {
-          mediaType = "voice";
-        }
-        
-        let fileExt = media.mimetype.split('/')[1];
-        if(fileExt.includes(";")) {
-          fileExt = fileExt.split(";")[0];
-        }
-        
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        const mediaDir = path.join(this.dataPath, 'media');
-        await fs.mkdir(mediaDir, { recursive: true });
-        
-        const filePath = path.join(mediaDir, fileName);
-        await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
-        
-        mediaConfig.type = mediaType;
-        mediaConfig.content = fileName;
-        mediaConfig.caption = quotedMsg.caption ?? "";
-      }
-      
-      channelConfig.onConfig = {
-        media: [mediaConfig]
-      };
-      
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Configuração de notificação "online" para o canal ${channelName} atualizada com sucesso.`
-      });
-    } catch (error) {
-      this.logger.error(`Erro ao configurar notificação "online" para o canal ${channelName}:`, error);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Erro ao configurar notificação: ${error.message}`
-      });
-    }
-  }
-
-  /**
-   * Sets the "offline" media notification for a Kick channel
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async setKickOfflineMedia(bot, message, args, group) {
-    // Identical to setTwitchOfflineMedia with platform name differences
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    // Validate and get channel name
-    const channelName = await this.validateChannelName(bot, message, args, group, 'kick');
-    
-    // If validateChannelName returned a ReturnMessage, return it
-    if (channelName instanceof ReturnMessage) {
-      return channelName;
-    }
-    
-    const channelConfig = this.findChannelConfig(group, 'kick', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`
-      });
-    }
-    
-    const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
-    
-    if (!quotedMsg && args.length <= 1) {
-      channelConfig.offConfig = { media: [] };
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Configuração de notificação "offline" para o canal ${channelName} removida.`
-      });
-    }
-    
-    if (!quotedMsg) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.'
-      });
-    }
-    
-    try {
-      // Similar media handling as in setKickOnlineMedia but for offConfig
-      const mediaConfig = {
-        type: "text",
-        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body ?? ""
-      };
-      
-      if (quotedMsg.hasMedia) {
-        // Identical media handling code
-        const media = await quotedMsg.downloadMedia();
-        let mediaType = media.mimetype.split('/')[0];
-        
-        if(quotedMsg.type.toLowerCase() == "sticker") {
-          mediaType = "sticker";
-        }
-        if(quotedMsg.type.toLowerCase() == "voice") {
-          mediaType = "voice";
-        }
-        
-        let fileExt = media.mimetype.split('/')[1];
-        if(fileExt.includes(";")) {
-          fileExt = fileExt.split(";")[0];
-        }
-        
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        const mediaDir = path.join(this.dataPath, 'media');
-        await fs.mkdir(mediaDir, { recursive: true });
-        
-        const filePath = path.join(mediaDir, fileName);
-        await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
-        
-        mediaConfig.type = mediaType;
-        mediaConfig.content = fileName;
-        mediaConfig.caption = quotedMsg.caption ?? "";
-      }
-      
-      channelConfig.offConfig = {
-        media: [mediaConfig]
-      };
-      
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Configuração de notificação "offline" para o canal ${channelName} atualizada com sucesso.`
-      });
-    } catch (error) {
-      this.logger.error(`Erro ao configurar notificação "offline" para o canal ${channelName}:`, error);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Erro ao configurar notificação: ${error.message}`
-      });
-    }
-  }
-
-  /**
    * Toggles title change on Kick stream events
    * @param {WhatsAppBot} bot - The bot instance
    * @param {Object} message - The message object
@@ -3554,115 +3109,6 @@ async setWelcomeMessage(bot, message, args, group) {
             `⚠️ Aviso: O monitoramento de canais não está inicializado no bot. Entre em contato com o administrador.`
         });
       }
-    }
-  }
-
-  /**
-   * Sets the video notification media for a YouTube channel
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async setYoutubeOnlineMedia(bot, message, args, group) {
-    // Similar to Twitch/Kick but with YouTube specific terms
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    // Validate and get channel name
-    const channelName = await this.validateChannelName(bot, message, args, group, 'youtube');
-    
-    // If validateChannelName returned a ReturnMessage, return it
-    if (channelName instanceof ReturnMessage) {
-      return channelName;
-    }
-    
-    const channelConfig = this.findChannelConfig(group, 'youtube', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal do YouTube não configurado: ${channelName}. Use !g-youtube-canal ${channelName} para configurar.`
-      });
-    }
-    
-    const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
-    
-    if (!quotedMsg && args.length <= 1) {
-      channelConfig.onConfig = this.createDefaultNotificationConfig('youtube', channelName);
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Configuração de notificação de vídeo para o canal ${channelName} redefinida para o padrão.`
-      });
-    }
-    
-    if (!quotedMsg) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.'
-      });
-    }
-    
-    // Rest of the method is identical to Twitch/Kick versions with platform name differences
-    try {
-      const mediaConfig = {
-        type: "text",
-        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body ?? ""
-      };
-      
-      if (quotedMsg.hasMedia) {
-        // Media handling code (identical to previous handlers)
-        const media = await quotedMsg.downloadMedia();
-        let mediaType = media.mimetype.split('/')[0];
-        
-        if(quotedMsg.type.toLowerCase() == "sticker") {
-          mediaType = "sticker";
-        }
-        if(quotedMsg.type.toLowerCase() == "voice") {
-          mediaType = "voice";
-        }
-        
-        let fileExt = media.mimetype.split('/')[1];
-        if(fileExt.includes(";")) {
-          fileExt = fileExt.split(";")[0];
-        }
-        
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        const mediaDir = path.join(this.dataPath, 'media');
-        await fs.mkdir(mediaDir, { recursive: true });
-        
-        const filePath = path.join(mediaDir, fileName);
-        await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
-        
-        mediaConfig.type = mediaType;
-        mediaConfig.content = fileName;
-        mediaConfig.caption = quotedMsg.caption ?? "";
-      }
-      
-      channelConfig.onConfig = {
-        media: [mediaConfig]
-      };
-      
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Configuração de notificação de vídeo para o canal ${channelName} atualizada com sucesso.`
-      });
-    } catch (error) {
-      this.logger.error(`Erro ao configurar notificação de vídeo para o canal ${channelName}:`, error);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Erro ao configurar notificação: ${error.message}`
-      });
     }
   }
 
@@ -4459,23 +3905,33 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     // Verify if this is a reply to a message
+
     const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
     
     const configKey = mode === 'on' ? 'onConfig' : 'offConfig';
     
     if (!quotedMsg && args.length <= 1) {
-      // Reset to default if no quoted message and no additional args
-      if (mode === 'on') {
-        channelConfig[configKey] = this.createDefaultNotificationConfig(platform, channelName);
+      this.logger.debug(`[stream media] no quoted`, {quotedMsg, message});
+
+      if(message.isQuoted){
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Ocorreu um erro e não consegui buscar a mensagem que você marcou.`
+        });
       } else {
-        channelConfig[configKey] = { media: [] };
+        // Reset to default if no quoted message and no additional args
+        if (mode === 'on') {
+          channelConfig[configKey] = this.createDefaultNotificationConfig(platform, channelName);
+        } else {
+          channelConfig[configKey] = { media: [] };
+        }
+        await this.database.saveGroup(group);
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Configuração de notificação "${mode === 'on' ? 'online' : 'offline'}" para o canal ${channelName} redefinida para o padrão.`
+        });
       }
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Configuração de notificação "${mode === 'on' ? 'online' : 'offline'}" para o canal ${channelName} redefinida para o padrão.`
-      });
     }
     
     if (!quotedMsg) {
@@ -4496,6 +3952,7 @@ async setWelcomeMessage(bot, message, args, group) {
       // For media messages, add the media type
       let mediaType = "text";
       if (quotedMsg.hasMedia) {
+        this.logger.debug(`[stream] hasMedia`, quotedMsg);
         const media = await quotedMsg.downloadMedia({keep: true});
         mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
         let fileExt = media.mimetype.split('/')[1];
@@ -4519,6 +3976,11 @@ async setWelcomeMessage(bot, message, args, group) {
           mediaType = "voice";
         }
         
+        // Sticker tem mimetype image, corrige
+        if (quotedMsg.type.toLowerCase() === "sticker") {
+          mediaType = "sticker";
+        }
+
         // Save media file
         if (fileExt.includes(";")) {
           fileExt = fileExt.split(";")[0];
