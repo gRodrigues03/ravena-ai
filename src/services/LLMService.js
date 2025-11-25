@@ -25,13 +25,13 @@ class LLMService {
           return response.choices[0].message.content;
         }
       },
-      {
-        name: 'openrouter_2',
-        method: async (options) => {
-          const response = await this.openRouterCompletion_dois(options);
-          return response.choices[0].message.content;
-        }
-      }
+      // {
+      //   name: 'openrouter_2',
+      //   method: async (options) => {
+      //     const response = await this.openRouterCompletion_dois(options);
+      //     return response.choices[0].message.content;
+      //   }
+      // }
 		];
 
 		this.providerQueue = [...this.providerDefinitions];
@@ -58,8 +58,8 @@ class LLMService {
 			const response = await axios.post(
 				'https://openrouter.ai/api/v1/chat/completions',
 				{
-					// model: "x-ai/grok-4.1-fast:free",
-					model: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+					model: "x-ai/grok-4.1-fast:free",
+					// model: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
 					messages: [
 						{ role: 'user', content: options.prompt }
 					],
