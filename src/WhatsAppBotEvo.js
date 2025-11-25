@@ -980,19 +980,16 @@ class WhatsAppBotEvo {
   }
 
   async _onInstanceConnected() {
-    if (this.isConnected) return; // Prevent multiple calls
+    this._sendStartupNotifications();
+    this.fetchAndPrepareBlockedContacts();
+
+    if (this.isConnected) return;
     this.isConnected = true;
     this.logger.info(`[${this.id}] Successfully connected to WhatsApp via Evolution API for instance ${this.instanceName}.`);
 
     if (this.eventHandler && typeof this.eventHandler.onConnected === 'function') {
       this.eventHandler.onConnected(this);
     }
-
-    setTimeout((snf, blck) => {
-      snf();
-      blck();
-    }, 5000, this._sendStartupNotifications, this.fetchAndPrepareBlockedContacts);
-
   }
 
   _onInstanceDisconnected(reason = 'Unknown') {

@@ -1307,7 +1307,7 @@ class WhatsAppBotEvoGo {
     const blockList = await this.apiClient.get(`/user/blocklist`);
     //blockList: {data: {      DHash: '1761266184514262',JIDs: [...  ]},message: 'success'}
 
-    this.logger.info(`[${this.id}][fetchAndPrepareBlockedContacts] `, { blockList });
+    //this.logger.info(`[${this.id}][fetchAndPrepareBlockedContacts] `, { blockList });
     this.blockedContacts = blockList.data?.JIDs?.map(jid => { 
       return {
         id: { _serialized: jid },
