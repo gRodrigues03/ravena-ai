@@ -1118,7 +1118,13 @@ class WhatsAppBotEvoGo {
   async _checkInstanceStatusAndConnect(isRetry = false, forceConnect = false) {
     this.logger.info(`Checking instance status for ${this.instanceName}...`);
     try {
-      const response = await this.apiClient.get(`/instance/status`);
+      let response;
+      try{
+        response = await this.apiClient.get(`/instance/status`);
+      } catch (e){
+        this.logger.error(`[_checkInstanceStatusAndConnect] Erro buscando status de ${this.instanceName}`, e);
+        response = {data: {Connected: false, LoggedIn: false}};
+      }
 
       const statusData = response?.data;
       this.isConnected = statusData?.Connected && statusData?.LoggedIn;
