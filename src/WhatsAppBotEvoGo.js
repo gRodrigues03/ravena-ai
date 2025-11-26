@@ -1223,44 +1223,53 @@ class WhatsAppBotEvoGo {
           // Lógica de conexão
           break;
 
-        case 'Message':
-        case 'SendMessage': // V3 separa enviadas?
+        case 'Message': // Mensagens e reactions
+        case 'SendMessage':
           this.lastMessageReceived = Date.now();
-          // V3 payload examples mostram "Message" com "IsFromMe": true/false dentro de Info
           const msgData = payload.data;
 
-          // Verificar se é array ou objeto (exemplos mostram array em alguns casos no JSON raiz, mas webhook geralmente manda um por vez)
-          // Se vier array:
-          const messages = Array.isArray(msgData) ? msgData : [msgData]; // Ajustar conforme payload real
+          if (msgData) {
+            const info = msgData.Info;
+            const msg = msgData.Message;
+            const reactionData = msg.reactionMessage;
 
-          // No exemplo payload-examples.json:
-          // "Message": [ { "data": { "Info": ..., "Message": ... }, "event": "Message", ... } ]
-          // O webhook deve enviar o objeto interno.
-
-          // Assumindo payload do webhook: { event: "Message", data: { Info: ..., Message: ... } }
-
-          if (payload.data && payload.data.Info) {
-            const info = payload.data.Info;
             const chatToFilter = info.Chat;
             if (chatToFilter === this.grupoLogs || chatToFilter === this.grupoInvites || chatToFilter === this.grupoEstabilidade) {
               break;
             }
 
-            // Adicionar campos para formatMessageFromEvo
-            const evoMsg = {
-              ...payload.data,
-              event: payload.event
-            };
+            if(reactionData){
+              // ravena só processa se VIER uma reaction (campo 'text')
+              if (reactionData.text !== "" && !reactionData.key.fromMe) {
 
-            this.formatMessageFromEvo(evoMsg).then(formattedMessage => {
-              if (formattedMessage && this.eventHandler && typeof this.eventHandler.onMessage === 'function') {
-                if (!formattedMessage.fromMe) {
-                  this.eventHandler.onMessage(this, formattedMessage);
-                }
+                //this.logger.debug(`[${this.id}] Received reaction:`, { reactionData });
+                // reactionData.text -> emoji
+                // reactionData.key.participant -> @lid da pessoa que RECEBEU a reaction
+                // reactionData.key.remoteJID -> chat que veio a reaction
+                this.reactionHandler.processReaction(this, {
+                  reaction: reactionData.text,
+                  senderId: info.Sender ?? info.SenderAlt,
+                  msgId: { _serialized: reactionData.key.ID }
+                });
               }
-            }).catch(e => {
-              this.logger.error(`[Message] Erro formatando mensagem`, e);
-            });
+            } else {
+              // Se não for reaction, é qualquer outro tipo de mensagem
+              // Adicionar campos para formatMessageFromEvo
+              const evoMsg = {
+                ...msgData,
+                event: payload.event
+              };
+
+              this.formatMessageFromEvo(evoMsg).then(formattedMessage => {
+                if (formattedMessage && this.eventHandler && typeof this.eventHandler.onMessage === 'function') {
+                  if (!formattedMessage.fromMe) {
+                    this.eventHandler.onMessage(this, formattedMessage);
+                  }
+                }
+              }).catch(e => {
+                this.logger.error(`[Message] Erro formatando mensagem`, e);
+              });
+            }
           }
           break;
 
@@ -1295,6 +1304,26 @@ class WhatsAppBotEvoGo {
               _raw: joinedData
             });
           }
+          break;
+
+        case 'PushName':
+          const newPushName = payload.data.Message.NewPushName ?? payload.data.Message.PushName;
+
+          if(newPushName && payload.data.JID){
+            this.cacheManager.putPushnameInCache({id: payload.data.JID , pushname: newPushName});
+          }
+          if(newPushName && payload.data.JIDAlt){
+            this.cacheManager.putPushnameInCache({id: payload.data.JIDAlt , pushname: newPushName});
+          }
+          break;
+
+        case 'ChatPresence':
+          break;
+        case 'Receipt':
+          break;
+
+        default:
+          this.logger.debug(`[_handleWebhook] Unhandled event: '${payload.event}'`, { payload });
           break;
       }
     } catch (error) {
@@ -1336,6 +1365,9 @@ class WhatsAppBotEvoGo {
     this.logger.info(`[${this.id}] Ignored contacts/bots list size: ${this.blockedContacts.length}`);
   }
 
+  async formatMessage(data) { // Fallback
+    return data;
+  }
 
   async formatMessageFromEvo(evoMessageData, skipCache = false) {
     return new Promise(async (resolve, reject) => {
@@ -1359,8 +1391,12 @@ class WhatsAppBotEvoGo {
         const fromMe = info.IsFromMe;
         const id = info.ID;
         const timestamp = new Date(info.Timestamp).getTime() / 1000;
-        const pushName = info.PushName;
+        let pushName = info.PushName;
         const sender = info.Sender; // JID
+
+        if(!pushName || pushName?.length < 1){
+          pushName = await this.fetchPushNameFromCache(id) ?? "Usuario";
+        }
 
         // Context Info (Reply/Mentions)
         let contextInfo = null;
@@ -1826,6 +1862,10 @@ class WhatsAppBotEvoGo {
     return { id: { _serialized: chatId }, isGroup: chatId.includes('@g.us') };
   }
 
+  async fetchPushNameFromCache(id){
+    return await this.cacheManager.getPushnameFromCache(id);
+  }
+
   async getContactDetails(id, prefetchedName) {
     if (!id) return null;
 
@@ -1840,25 +1880,29 @@ class WhatsAppBotEvoGo {
     }
 
     try {
-      // Check cache first (including LID)
-      // ...
 
       const infoResponse = await this.apiClient.post('/user/info', { number: [id] });
       const info = infoResponse.data?.Users?.[id];
 
       if (info) {
+        this.logger.debug(`[getChatDetails] ${id}`, { info });
         return {
           id: { _serialized: id },
           name: info.VerifiedName?.VerifiedName || prefetchedName || id.split('@')[0],
           number: id.split('@')[0],
           lid: info.LID,
-          picture: info.PictureID // Note: PictureID is ID, not URL. Use /user/avatar for URL.
+          picture: info.PictureID
         };
       }
     } catch (e) {
       // Ignore
     }
-    return { id: { _serialized: id }, name: prefetchedName || id.split('@')[0] };
+
+    const cacheName = await this.fetchPushNameFromCache(id);
+    const fallbackData = { id: { _serialized: id }, name: cacheName ?? prefetchedName ?? id.split('@')[0] };
+
+    this.logger.debug(`[getChatDetails] Fallback `, { fallbackData });
+    return fallbackData;
   }
 
   async sendReaction(chatId, messageId, reaction) {
