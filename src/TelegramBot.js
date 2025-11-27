@@ -11,7 +11,6 @@ const ReactionsHandler = require('./ReactionsHandler');
 const MentionHandler = require('./MentionHandler');
 const AdminUtils = require('./utils/AdminUtils');
 const InviteSystem = require('./InviteSystem');
-const StreamSystem = require('./StreamSystem');
 const Database = require('./utils/Database');
 const LoadReport = require('./LoadReport');
 const Logger = require('./utils/Logger');
@@ -88,8 +87,6 @@ class WhatsAppBotTelegram {
     this.loadReport = new LoadReport(this);
     // this.inviteSystem = new InviteSystem(this); // Ignorado no Telegram
     // this.reactionHandler = new ReactionsHandler(); // Ignorado no Telegram
-    this.streamSystem = new StreamSystem(this);
-    this.streamSystem.initialize();
     this.adminUtils = AdminUtils.getInstance();
 
     this.webhookApp = null;

@@ -9,7 +9,6 @@ const LoadReport = require('./LoadReport');
 const ReactionsHandler = require('./ReactionsHandler');
 const MentionHandler = require('./MentionHandler');
 const InviteSystem = require('./InviteSystem');
-const StreamSystem = require('./StreamSystem');
 const LLMService = require('./services/LLMService');
 const AdminUtils = require('./utils/AdminUtils');
 const { messageMediaToOpus } = require('./utils/Conversions');
@@ -65,7 +64,6 @@ class WhatsAppBot {
     this.linkGrupao = options.linkGrupao || process.env.LINK_GRUPO_INTERACAO;
     this.linkAvisos = options.linkAvisos || process.env.LINK_GRUPO_AVISOS;
     this.userAgent = options.userAgent ||  process.env.USER_AGENT || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0";
-    this.streamIgnoreGroups = [];
 
     this.lastMessageReceived = Date.now();
 
@@ -83,10 +81,6 @@ class WhatsAppBot {
 
     // Inicializa manipulador de reações
     this.reactionHandler = new ReactionsHandler();
-
-    // Inicializa StreamSystem (será definido em initialize())
-    this.streamSystem = null;
-    this.streamMonitor = null;
     
     // Pro painel
     this.status = "INITIALIZING";
@@ -298,11 +292,6 @@ class WhatsAppBot {
         this.logger.error('Erro ao carregar contatos bloqueados:', error);
         this.blockedContacts = [];
       }
-
-      // Inicializa o sistema de streaming agora que estamos conectados
-      this.streamSystem = new StreamSystem(this);
-      await this.streamSystem.initialize();
-      this.streamMonitor = this.streamSystem.streamMonitor;
     });
 
     // Evento de autenticado
@@ -774,28 +763,6 @@ class WhatsAppBot {
       this.loadReport.destroy();
     }
     
-    // // Limpa sistema de convites
-    // if (this.inviteSystem) {
-    //   this.inviteSystem.destroy();
-    // }
-
-    // // Limpa StreamSystem
-    // if (this.streamSystem) {
-    //   this.streamSystem.destroy();
-    //   this.streamSystem = null;
-    //   this.streamMonitor = null;
-    // }
-    
-    // // Envia notificação de desligamento para o grupo de logs
-    // if (this.grupoLogs && this.isConnected) {
-    //   try {
-    //     const shutdownMessage = `🔌 Bot ${this.id} desligando em ${new Date().toLocaleString("pt-BR")}`;
-    //     await this.sendMessage(this.grupoLogs, shutdownMessage);
-    //   } catch (error) {
-    //     this.logger.error('Erro ao enviar notificação de desligamento:', error);
-    //   }
-    // }
-    
   }
 
   /**
@@ -826,12 +793,6 @@ class WhatsAppBot {
       
       if (this.inviteSystem) {
         this.inviteSystem.destroy();
-      }
-      
-      if (this.streamSystem) {
-        this.streamSystem.destroy();
-        this.streamSystem = null;
-        this.streamMonitor = null;
       }
       
       // Destrói cliente atual
@@ -884,11 +845,6 @@ class WhatsAppBot {
           this.logger.error('Erro ao recarregar contatos bloqueados:', error);
           this.blockedContacts = [];
         }
-        
-        // Inicializa o sistema de streaming
-        this.streamSystem = new StreamSystem(this);
-        await this.streamSystem.initialize();
-        this.streamMonitor = this.streamSystem.streamMonitor;
         
         // Envia notificação de reinicialização bem-sucedida
         if (this.grupoAvisos) {

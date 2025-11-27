@@ -22,7 +22,6 @@ const LLMService = require('./services/LLMService');
 const MentionHandler = require('./MentionHandler');
 const AdminUtils = require('./utils/AdminUtils');
 const InviteSystem = require('./InviteSystem');
-const StreamSystem = require('./StreamSystem');
 const Database = require('./utils/Database');
 const LoadReport = require('./LoadReport');
 const Logger = require('./utils/Logger');
@@ -122,8 +121,6 @@ class WhatsAppBotEvo {
     this.inviteSystem = new InviteSystem(this);
     this.reactionHandler = new ReactionsHandler();
 
-    this.streamSystem = null;
-    this.streamMonitor = null;
     this.stabilityMonitor = options.stabilityMonitor ?? false;
 
     this.llmService = new LLMService({});
@@ -133,12 +130,6 @@ class WhatsAppBotEvo {
     this.webhookServer = null; // HTTP server instance
 
     this.blockedContacts = [];
-
-    if (!this.streamSystem) {
-      this.streamSystem = new StreamSystem(this);
-      this.streamSystem.initialize();
-      this.streamMonitor = this.streamSystem.streamMonitor;
-    }
 
     // Client Fake
     this.client = {
@@ -1642,10 +1633,7 @@ class WhatsAppBotEvo {
         from: this.phoneNumber ? `${this.phoneNumber.replace(/\D/g, '')}@c.us` : this.instanceName,
         to: chatId,
         url: (content && content.url) ? content.url : undefined,
-        _data: response,
-        getInfo: () => { // Usado no StreamSystem pra saber se foi enviada
-          return { delivery: [1], played: [1], read: [1] };
-        }
+        _data: response
       };
 
     } catch (error) {

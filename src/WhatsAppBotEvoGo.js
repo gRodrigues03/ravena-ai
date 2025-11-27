@@ -22,7 +22,6 @@ const LLMService = require('./services/LLMService');
 const MentionHandler = require('./MentionHandler');
 const AdminUtils = require('./utils/AdminUtils');
 const InviteSystem = require('./InviteSystem');
-const StreamSystem = require('./StreamSystem');
 const Database = require('./utils/Database');
 const LoadReport = require('./LoadReport');
 const Logger = require('./utils/Logger');
@@ -70,7 +69,6 @@ class WhatsAppBotEvoGo {
     this.redisTTL = options.redisTTL || 604800;
     this.maxCacheSize = 3000;
 
-    this.streamIgnoreGroups = [];
     this.messageCache = [];
     this.contactCache = [];
     this.sentMessagesCache = [];
@@ -123,8 +121,6 @@ class WhatsAppBotEvoGo {
     this.inviteSystem = new InviteSystem(this);
     this.reactionHandler = new ReactionsHandler();
 
-    this.streamSystem = null;
-    this.streamMonitor = null;
     this.stabilityMonitor = options.stabilityMonitor ?? false;
 
     this.llmService = new LLMService({});
@@ -134,12 +130,6 @@ class WhatsAppBotEvoGo {
     this.webhookServer = null;
 
     this.blockedContacts = [];
-
-    if (!this.streamSystem) {
-      this.streamSystem = new StreamSystem(this);
-      this.streamSystem.initialize();
-      this.streamMonitor = this.streamSystem.streamMonitor;
-    }
 
     // Client Fake
     this.client = {
