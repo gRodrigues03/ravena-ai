@@ -1,7 +1,5 @@
 const axios = require('axios');
 const Logger = require('../utils/Logger');
-const fs = require('fs');
-const path = require('path');
 
 /**
  * Serviço para interagir com APIs de LLM
@@ -11,106 +9,79 @@ class LLMService {
 	 * Cria um novo serviço LLM
 	 * @param {Object} config - Opções de configuração
 	 */
-	constructor(config = {}) {
-		this.logger = new Logger('llm-service');
-		this.openRouterKey = config.openRouterKey || process.env.OPENROUTER_API_KEY;
-		this.openRouterKey_dois = config.openRouterKey_dois || process.env.OPENROUTER_API_KEY_DOIS;
-		this.apiTimeout = config.apiTimeout || parseInt(process.env.API_TIMEOUT) || 60000;
+  constructor(config = {}) {
+    this.logger = new Logger('llm-service');
+    this.openRouterKey = config.openRouterKey || process.env.OPENROUTER_API_KEY;
+    this.apiTimeout = config.apiTimeout || parseInt(process.env.API_TIMEOUT) || 60000;
 
-		this.providerDefinitions = [
+    this.maxContextMessages = 40; // prevent token explosion
+
+    this.providerDefinitions = [
       {
         name: 'openrouter',
         method: async (options) => {
           const response = await this.openRouterCompletion(options);
           return response.choices[0].message.content;
         }
-      },
-      // {
-      //   name: 'openrouter_2',
-      //   method: async (options) => {
-      //     const response = await this.openRouterCompletion_dois(options);
-      //     return response.choices[0].message.content;
-      //   }
-      // }
-		];
+      }
+    ];
 
-		this.providerQueue = [...this.providerDefinitions];
-		this.lastQueueChangeTimestamp = 0;
-		this.resetQueueTimeout = 30 * 60 * 1000; // 30 minutos
-	}
+    this.providerQueue = [...this.providerDefinitions];
+    this.lastQueueChangeTimestamp = 0;
+    this.resetQueueTimeout = 30 * 60 * 1000;
+  }
 
-	/**
-	 * Envia uma solicitação de completação para OpenRouter
-	 * @param {Object} options - Opções de solicitação
-	 * @param {string} options.prompt - O texto do prompt
-	 * @param {string} [options.model='google/gemini-2.5-flash:free'] - O modelo a usar
-	 * @param {number} [options.maxTokens=1000] - Número máximo de tokens a gerar
-	 * @param {number} [options.temperature=0.7] - Temperatura de amostragem
-	 * @returns {Promise<Object>} - A resposta da API
-	 */
-	async openRouterCompletion(options) {
-		try {
-			if (!this.openRouterKey) {
-				this.logger.error('Chave da API OpenRouter não configurada');
-				throw new Error('Chave da API OpenRouter não configurada');
-			}
-
-			const response = await axios.post(
-				'https://openrouter.ai/api/v1/chat/completions',
-				{
-					model: "x-ai/grok-4.1-fast:free",
-					// model: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
-					messages: [
-						{ role: 'user', content: options.prompt }
-					],
-					max_tokens: options.maxTokens || 5000,
-					temperature: options.temperature || 0.7
-				},
-				{
-					headers: {
-						'Authorization': `Bearer ${this.openRouterKey}`,
-						'Content-Type': 'application/json'
-					},
-					timeout: options.timeout || this.apiTimeout
-				}
-			);
-
-			return response.data;
-		} catch (error) {
-			this.logger.error('Erro ao chamar API OpenRouter:', error.message);
-			throw error;
-		}
-	}
-  async openRouterCompletion_dois(options) {
+  /**
+   * OpenRouter completion WITH context support
+   */
+  async openRouterCompletion(options) {
     try {
-      if (!this.openRouterKey_dois) {
+      if (!this.openRouterKey) {
         this.logger.error('Chave da API OpenRouter não configurada');
         throw new Error('Chave da API OpenRouter não configurada');
+      }
+
+      // Add the prompt to instance context
+      this.messages.push({
+        role: "user",
+        content: options.prompt
+      });
+
+      // Prevent context from getting too large
+      if (this.messages.length > this.maxContextMessages) {
+        this.messages = this.messages.slice(-this.maxContextMessages);
       }
 
       const response = await axios.post(
         'https://openrouter.ai/api/v1/chat/completions',
         {
-          // model: "x-ai/grok-4.1-fast:free",
-          model: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
-          messages: [
-            { role: 'user', content: options.prompt }
-          ],
+          model: "x-ai/grok-4.1-fast:free",
+          messages: this.messages,
           max_tokens: options.maxTokens || 5000,
-          temperature: options.temperature || 0.7
+          temperature: options.temperature || 0.7,
         },
         {
           headers: {
-            'Authorization': `Bearer ${this.openRouterKey_dois}`,
+            'Authorization': `Bearer ${this.openRouterKey}`,
             'Content-Type': 'application/json'
           },
           timeout: options.timeout || this.apiTimeout
         }
       );
 
+      // Save assistant reply in context
+      const replyMsg = response.data?.choices?.[0]?.message;
+      if (replyMsg) {
+        this.messages.push(replyMsg);
+
+        if (this.messages.length > this.maxContextMessages) {
+          this.messages = this.messages.slice(-this.maxContextMessages);
+        }
+      }
+
       return response.data;
     } catch (error) {
-      this.logger.error('Erro ao chamar API OpenRouter Dois:', error.message);
+      this.logger.error('Erro ao chamar API OpenRouter:', error.message);
       throw error;
     }
   }
