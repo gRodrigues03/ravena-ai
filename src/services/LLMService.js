@@ -14,7 +14,8 @@ class LLMService {
     this.openRouterKey = config.openRouterKey || process.env.OPENROUTER_API_KEY;
     this.apiTimeout = config.apiTimeout || parseInt(process.env.API_TIMEOUT) || 60000;
 
-    this.maxContextMessages = 40; // prevent token explosion
+    this.messages = [];
+    this.maxContextMessages = 40;
 
     this.providerDefinitions = [
       {
