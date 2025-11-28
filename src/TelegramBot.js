@@ -172,7 +172,7 @@ class WhatsAppBotTelegram {
                 this._onInstanceConnected();
               }
             } catch (error) {
-              this.logger.error(`Error during polling for bot ${this.id}:`, error.response ? error.response.body : error.message);
+              this.logger.error(`Error during polling for bot ${this.id}`);
               if (this.isConnected) {
                 this._onInstanceDisconnected('POLLING_ERROR');
               }
@@ -425,7 +425,7 @@ class WhatsAppBotTelegram {
         }
         resolve(formattedMessage);
       } catch (error) {
-        this.logger.error(`Error formatting message from Telegram:`, error, message);
+        this.logger.error(`Error formatting message from Telegram:`, message);
         resolve(null);
       }
     });
@@ -486,7 +486,7 @@ class WhatsAppBotTelegram {
       };
 
     } catch (error) {
-      this.logger.error(`Error sending message to ${chatId} via Telegram:`, error.response ? error.response.body : error.message);
+      this.logger.error(`Error sending message to ${chatId} via Telegram:`);
       throw error;
     }
   }
@@ -672,6 +672,10 @@ class WhatsAppBotTelegram {
 
   async getChatDetails(chatId) {
     try {
+      if(chatId.includes("@")){ // Coisa do zap
+        return;
+      }
+
       const chat = await this.apiClient.getChat(chatId);
       const isGroup = chat.type === 'group' || chat.type === 'supergroup';
 
@@ -695,7 +699,7 @@ class WhatsAppBotTelegram {
       this.cacheManager.putChatInCache(formattedChat);
       return formattedChat;
     } catch (error) {
-      this.logger.error(`Failed to get chat details for ${chatId}:`, error);
+      this.logger.error(`Failed to get chat details for ${chatId}`);
       return null;
     }
   }

@@ -31,6 +31,9 @@ class EventHandler {
     this.groups = {};
     this.comandosWhitelist = process.env.CMD_WHITELIST ? process.env.CMD_WHITELIST.split(",") : ["sa-", "anoni"];
 
+    this.recentlyLeft = [];
+    this.recentlyJoined = [];
+
     this.logger.info(`[EventHandler] CmdWhitelist:`, this.comandosWhitelist);
     this.loadGroups();
   }
@@ -577,6 +580,12 @@ class EventHandler {
   async processGroupJoin(bot, data) {
     //this.logger.info(`[processGroupJoin] `, { data });
 
+    if(this.recentlyJoined.includes(data.user.id)) return;
+    this.recentlyJoined.push(data.user.id);
+    setTimeout((rtlyL,id) => {
+      rtlyL = rtlyL.filter(rt => rt !== id);
+    }, 60000, this.recentlyJoined, data.user.id);
+
     //this.logger.info(`Usuário ${data.user.name} (${data.user.id}) entrou no grupo ${data.group.name} (${data.group.id}). Quem adicionou: ${data.responsavel.name}/${data.responsavel.id}`);
 
     try {
@@ -585,7 +594,7 @@ class EventHandler {
 
       // Verifica se o próprio bot é quem está entrando
       const isBotJoining = data.isBotJoining || data?.user?.id?.startsWith(bot.phoneNumber);
-      this.logger.debug(`[processGroupJoin] isBotJoining (${data.isBotJoining} / ${isBotJoining}}) = data.user.id (${data.user.id}) -startsWith- bot.phoneNumber ${bot.phoneNumber}`);
+      //this.logger.debug(`[processGroupJoin] isBotJoining (${data.isBotJoining} / ${isBotJoining}}) = data.user.id (${data.user.id}) -startsWith- bot.phoneNumber ${bot.phoneNumber}`);
 
       // Obtém ou cria grupo
       const nomeGrupo = data.group?.name?.replace(/[^a-zA-Z0-9 ]/g, '').replace(/(?:^\w|[A-Z]|\b\w)/g, (w, i) => i === 0 ? w.toLowerCase() : w.toUpperCase()).replace(/\s+/g, '') ?? null;
@@ -744,7 +753,13 @@ class EventHandler {
   async processGroupLeave(bot, data) {
     //this.logger.info(`[processGroupLeave] `, { data });
 
-    this.logger.info(`Usuário ${data.user.name} (${data.user.id}) saiu do grupo ${data.group.name} (${data.group.id}). Quem removeu: ${data.responsavel.name}/${data.responsavel.id}`);
+    if(this.recentlyLeft.includes(data.user.id)) return;
+    this.recentlyLeft.push(data.user.id);
+    setTimeout((rtlyL,id) => {
+      rtlyL = rtlyL.filter(rt => rt !== id);
+    }, 60000, this.recentlyLeft, data.user.id);
+
+    this.logger.info(`Usuário ${data.user.name} (${data.user.id}) saiu do grupo ${data.group.name} (${data.group.id}). Quem removeu: ${data.responsavel.name}/${data.responsavel.id}`, { quemRemoveu: data.responsavel.name });
 
     try {
       // Obtém grupo
