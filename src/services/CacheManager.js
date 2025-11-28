@@ -5,7 +5,7 @@ class CacheManager {
   constructor(redisURL, redisDB, redisTTL, maxCacheSize) {
     this.logger = new Logger(`redis`);
     this.redisURL = redisURL;
-    this.redisDB = redisDB;
+    this.redisDB = (redisDB ?? 0) % 15;
     this.redisTTL = parseInt(redisTTL, 10) || 3600;
     this.maxCacheSize = parseInt(maxCacheSize, 10) || 100;
 

@@ -32,10 +32,10 @@ class StreamSystem {
    */
   async initialize() {
     try {
-      this.logger.info(`[Bot ${this.bot.id}] Inicializando sistema de monitoramento de streams`);
+      //this.logger.info(`[Bot ${this.bot.id}] Inicializando sistema de monitoramento de streams`);
 
       // Obtém a instância compartilhada do StreamMonitor usando o padrão Singleton
-      this.streamMonitor = StreamMonitor.getInstance();
+      this.streamMonitor = StreamMonitor.getInstance(this.bot?.otherBots?.length ?? 50);
 
       // Registra manipuladores de eventos
       this.registerEventHandlers();
@@ -46,14 +46,15 @@ class StreamSystem {
       // Inicia o monitoramento (apenas se ainda não estiver ativo)
       if (!this.streamMonitor.isMonitoring) {
         this.streamMonitor.startMonitoring();
-      } else {
-        this.logger.info(`[Bot ${this.bot.id}] Monitoramento de streams já está ativo, usando instância existente`);
       }
+      /*else {
+        this.logger.info(`[Bot ${this.bot.id}] Monitoramento de streams já está ativo, usando instância existente`);
+      }*/
 
       // Disponibiliza o streamMonitor para o bot
       this.bot.streamMonitor = this.streamMonitor;
 
-      this.logger.info(`[Bot ${this.bot.id}] Sistema de monitoramento de streams inicializado com sucesso`);
+      //this.logger.info(`[Bot ${this.bot.id}] Sistema de monitoramento de streams inicializado com sucesso`);
 
       // Envia mensagem de depuração se habilitado
       if (this.debugNotificacoes && this.bot.grupoLogs) {
@@ -179,7 +180,7 @@ class StreamSystem {
           const channelsToRemove = [];
 
           for (const channel of group.twitch) {
-            if (!channel.channel.startsWith("xxx_") && !channel.channel.includes("twitch")) {
+            if (!channel.channel.startsWith("xxx_") && !channel.channel.includes("twitchtv") || !channel.channel.includes("twitch.tv")) {
               // Se cleanup estiver ativado, verifica se o canal existe
               if (cleanup && this.streamMonitor) {
                 const channelExists = await this.streamMonitor.twitchChannelExists(channel.channel);
@@ -353,7 +354,7 @@ class StreamSystem {
 
         return;
       } else
-        if (this.bot.streamIgnoreGroups.includes(group.id)) {
+        if (this.bot.streamIgnoreGroups?.includes(group.id)) {
           this.logger.info(`Ignorando notificação de stream para grupo que o bot ${this.bot.id} não pertence: ${group.id}`);
           return;
         }
@@ -680,8 +681,7 @@ class StreamSystem {
           const photoData = channelConfig.groupPhotoOnline;
           if (photoData && photoData.data && photoData.mimetype) {
             // Cria o objeto de mídia
-            const { MessageMedia } = require('whatsapp-web.js');
-            const media = new MessageMedia(photoData.mimetype, photoData.data);
+            const media = await this.bot.createMediaFromBase64(photoData.data, photoData.mimetype, `fotoGrupo_${group.id.split("@")[0]}.jpg`);
 
             // Define a nova foto
             await chat.setPicture(media);
@@ -703,8 +703,7 @@ class StreamSystem {
           const photoData = channelConfig.groupPhotoOffline;
           if (photoData && photoData.data && photoData.mimetype) {
             // Cria o objeto de mídia
-            const { MessageMedia } = require('whatsapp-web.js');
-            const media = new MessageMedia(photoData.mimetype, photoData.data);
+            const media = await this.bot.createMediaFromBase64(photoData.data, photoData.mimetype, `fotoGrupo_${group.id.split("@")[0]}.jpg`);
 
             // Define a nova foto
             await chat.setPicture(media);

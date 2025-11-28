@@ -136,7 +136,6 @@ class WhatsAppBotEvo {
 
     if (!this.streamSystem) {
       this.streamSystem = new StreamSystem(this);
-      this.streamSystem.initialize();
       this.streamMonitor = this.streamSystem.streamMonitor;
     }
 
@@ -980,6 +979,7 @@ class WhatsAppBotEvo {
   }
 
   async _onInstanceConnected() {
+    this.streamSystem.initialize();
     this._sendStartupNotifications();
     this.fetchAndPrepareBlockedContacts();
 
@@ -1968,6 +1968,9 @@ class WhatsAppBotEvo {
               return await this.apiClient.post(`/group/updateSetting`, { groupJid: chatId, action: "not_announcement" });
             }
           },
+          setPicture: (picture) => {
+            this.logger.debug(`[chat] setPicture, não implementado`, { picture });
+          },
           id: { _serialized: groupData.id || chatId },
           name: groupData.subject,
           isGroup: true,
@@ -2190,7 +2193,7 @@ class WhatsAppBotEvo {
           id: { _serialized: botId },
           name: `Other Bot: ${bot}` // Or some identifier
         });
-        this.logger.info(`[${this.id}] Added other bot '${botId}' to internal ignore list.`);
+        //this.logger.info(`[${this.id}] Added other bot '${botId}' to internal ignore list.`);
       }
     }
     this.logger.info(`[${this.id}] Ignored contacts/bots list size: ${this.blockedContacts.length}`);

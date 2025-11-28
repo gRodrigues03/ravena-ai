@@ -16,20 +16,23 @@ class StreamMonitor extends EventEmitter {
    * @param {Array} [channels=[]] - Canais iniciais para monitorar (usado apenas na primeira instanciação)
    * @returns {StreamMonitor} A instância única do StreamMonitor
    */
-  static getInstance(channels = []) {
+  static getInstance(channels = [], totalBots = 50) {
     if (!StreamMonitor.instance) {
-      StreamMonitor.instance = new StreamMonitor(channels);
+      StreamMonitor.instance = new StreamMonitor(channels, totalBots);
     }
     return StreamMonitor.instance;
   }
 
-  constructor(channels = []) {
+  constructor(channels = [], totalBots = 50) {
     // Se já existir uma instância, retorna ela
     if (StreamMonitor.instance) {
       return StreamMonitor.instance;
     }
     
     super();
+
+    this.setMaxListeners(totalBots);
+
     this.database = Database.getInstance();
     this.monitoringDbPath = path.join(this.database.databasePath, "monitoramento.json");
     this.channels = [];
@@ -152,11 +155,11 @@ class StreamMonitor extends EventEmitter {
    * Set the polling interval for all platforms
    * @param {number} interval - Polling interval in milliseconds
    */
-  setPollingInterval(interval) {
+  setPollingInterval(interval, delay = 60000) {
     this.pollingInterval = interval;
     // Restart monitoring with new interval
     if (Object.values(this.pollingTimers).some(timer => timer !== null)) {
-      this.startMonitoring();
+      setTimeout(this.startMonitoring, delay);
     }
   }
 

@@ -137,7 +137,6 @@ class WhatsAppBotEvoGo {
 
     if (!this.streamSystem) {
       this.streamSystem = new StreamSystem(this);
-      this.streamSystem.initialize();
       this.streamMonitor = this.streamSystem.streamMonitor;
     }
 
@@ -1069,22 +1068,17 @@ class WhatsAppBotEvoGo {
   }
 
   async initialize() {
-
-    const instanceInfo = await this.getEvoGoInstance(this.evolutionInstanceApiKey, this.instanceName);
-    const wsUrl = `${this.evolutionWS}/ws?token=${this.evolutionApiKey}&instanceId=${instanceInfo.id}`;
-    //const wsUrl = `${this.evolutionWS}/ws?token=${this.evolutionApiKey}&instanceId=${this.instanceName}`;
-    const instanceDesc = this.websocket ? `Websocket to ${wsUrl}` : `Webhook on ${this.instanceName}:${this.webhookPort}`;
-
     this.database.registerBotInstance(this);
     this.startupTime = Date.now();
     this.lastMessageReceived = Date.now();
 
+    const instanceDesc = this.websocket ? `Websocket` : `Webhook on ${this.instanceName}:${this.webhookPort}`;
     this.logger.info(`[${this.startupTime}][${this.id}] Initializing EvolutionGO API bot instance ${this.instanceName} (Evo Instance: ${instanceDesc})`); // , { instanceInfo }
 
     try {
       if (this.websocket) {
-        await this._connectWebSocket();
-        this.startConnectionMonitor();
+          await this._connectWebSocket();
+          this.startConnectionMonitor();
       } else {
         // Webhook Setup
         this.webhookApp = express();
@@ -1186,6 +1180,7 @@ class WhatsAppBotEvoGo {
   }
 
   async _onInstanceConnected() {
+    this.streamSystem.initialize();
     this._sendStartupNotifications();
     this.fetchAndPrepareBlockedContacts();
 
@@ -1313,16 +1308,27 @@ class WhatsAppBotEvoGo {
           break;
 
         case 'PushName':
-          const newPushName = payload.data.Message.NewPushName ?? payload.data.Message.PushName;
+          const newPushName = payload.data.Message?.NewPushName ?? payload.data?.Message?.PushName;
 
-          if(newPushName && payload.data.JID){
+          if(newPushName && payload.data?.JID){
             this.cacheManager.putPushnameInCache({id: payload.data.JID , pushName: newPushName});
           }
-          if(newPushName && payload.data.JIDAlt){
+          if(newPushName && payload.data?.JIDAlt){
             this.cacheManager.putPushnameInCache({id: payload.data.JIDAlt , pushName: newPushName});
           }
           break;
+        case 'Contact':
+          // Não precisa, mas já que veio, vamo aproveitar
+          if(payload.data?.JID && payload.data?.Action){
+            const nomeCtt = payload.data.Action.fullName ??payload.data.Action.firstName;
 
+            this.cacheManager.putPushnameInCache({id: payload.data.JID , pushName: newPushName});
+
+            if(payload.data.Action.lidJID){
+              this.cacheManager.putPushnameInCache({id: payload.data.Action.lidJID , pushName: newPushName});
+            }
+          }
+          break;
         case 'ChatPresence':
           break;
         case 'Receipt':
@@ -1365,7 +1371,7 @@ class WhatsAppBotEvoGo {
           id: { _serialized: botId },
           name: `Other Bot: ${bot}` // Or some identifier
         });
-        this.logger.info(`[${this.id}] Added other bot '${botId}' to internal ignore list.`);
+        //this.logger.info(`[${this.id}] Added other bot '${botId}' to internal ignore list.`);
       }
     }
     this.logger.info(`[${this.id}] Ignored contacts/bots list size: ${this.blockedContacts.length}`);
@@ -1696,7 +1702,7 @@ class WhatsAppBotEvoGo {
         payload.mentionedJid = options.mentions.join(",");
       }
 
-      this.logger.debug(`[sendMessage] '${endpoint}'`, { content, payload });
+      //this.logger.debug(`[sendMessage] '${endpoint}'`, { content, payload });
 
       const response = await this.apiClient.post(endpoint, payload);
       this.loadReport.trackSentMessage(isGroup);
@@ -1843,6 +1849,10 @@ class WhatsAppBotEvoGo {
             setMessagesAdminsOnly: async (adminOnly) => {
               // TODO evogo
               return false;
+            },
+            setPicture: async (picture) => {
+              this.logger.debug(`[chat] setPicture, não implementado`, { picture });
+              return await this.apiClient.post(`/group/photo`, { groupJid: chatId, image: picture.url });
             }
           };
         }
@@ -1875,7 +1885,7 @@ class WhatsAppBotEvoGo {
     return await this.cacheManager.getPushnameFromCache(id);
   }
 
-  async getContactDetails(id, prefetchedName) {
+  async getContactDetails(id, prefetchedName, cacheDurationHours = 12) {
     if (!id) return null;
 
     if (id === this.phoneNumber) {
@@ -1888,35 +1898,40 @@ class WhatsAppBotEvoGo {
       };
     }
 
+    const now = Date.now();
+    const expirationMs = cacheDurationHours * 60 * 60 * 1000;
+
+    let returnData = { id: { _serialized: id }, number: id.split("@")[0], lid: id, name: prefetchedName ?? id.split('@')[0] };
+
+    let cacheName;
     try {
+      cacheName = await this.fetchPushNameFromCache(id);
+      returnData.name = cacheName ?? returnData.name;
+    } catch (e) {
+      // Ignore
+    }
 
-      const infoResponse = await this.apiClient.post('/user/info', { number: [id] });
-      const info = infoResponse.data?.Users?.[id];
+    try{
+      if (!cacheName || ((now - cachedContact._cachedAt) < expirationMs)) {
+        // Não tem cache ou expirou
+        const infoResponse = await this.apiClient.post('/user/info', { number: [id] });
+        const info = infoResponse.data?.Users?.[id];
 
+        if (info) {
+          returnData.name = info.VerifiedName ?? returnData.name;
+          returnData.lid =  info.LID;
+          returnData.picture =  info.PictureID;
 
-      if (info) {
-        //this.logger.debug(`[getChatDetails] ${id}`, { info });
-        let nomePessoa = info.VerifiedName;
-        if(!nomePessoa || nomePessoa.length < 1){
-          nomePessoa = await this.fetchPushNameFromCache(id);
+          this.cacheManager.putPushnameInCache({id: id , pushName: returnData.name});
         }
-        return {
-          id: { _serialized: id },
-          name: nomePessoa || prefetchedName || id.split('@')[0],
-          number: id.split('@')[0],
-          lid: info.LID,
-          picture: info.PictureID
-        };
       }
     } catch (e) {
       // Ignore
     }
 
-    const cacheName = await this.fetchPushNameFromCache(id);
-    const fallbackData = { id: { _serialized: id }, name: cacheName ?? prefetchedName ?? id.split('@')[0] };
 
-    this.logger.debug(`[getChatDetails] Fallback `, { fallbackData });
-    return fallbackData;
+    //this.logger.debug(`[getChatDetails] ${id}, ${prefetchedName}`, { returnData });
+    return returnData;
   }
 
   async sendReaction(chatId, messageId, reaction) {

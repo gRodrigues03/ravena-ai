@@ -575,7 +575,7 @@ class EventHandler {
    * @param {Object} data - Dados do evento
    */
   async processGroupJoin(bot, data) {
-    this.logger.info(`[processGroupJoin] `, { data });
+    //this.logger.info(`[processGroupJoin] `, { data });
 
     //this.logger.info(`Usuário ${data.user.name} (${data.user.id}) entrou no grupo ${data.group.name} (${data.group.id}). Quem adicionou: ${data.responsavel.name}/${data.responsavel.id}`);
 
@@ -590,7 +590,7 @@ class EventHandler {
       // Obtém ou cria grupo
       const nomeGrupo = data.group?.name?.replace(/[^a-zA-Z0-9 ]/g, '').replace(/(?:^\w|[A-Z]|\b\w)/g, (w, i) => i === 0 ? w.toLowerCase() : w.toUpperCase()).replace(/\s+/g, '') ?? null;
       const group = await this.getOrCreateGroup(data.group.id, nomeGrupo, bot.prefix);
-      this.logger.debug(`Informações do grupo: ${JSON.stringify(group)}`);
+      //this.logger.debug(`Informações do grupo: ${JSON.stringify(group)}`);
 
       // Envia notificação para o grupo de logs
       if (bot.grupoLogs) {
@@ -742,7 +742,7 @@ class EventHandler {
    * @param {Object} data - Dados do evento
    */
   async processGroupLeave(bot, data) {
-    this.logger.info(`[processGroupJoin] `, { data });
+    //this.logger.info(`[processGroupLeave] `, { data });
 
     this.logger.info(`Usuário ${data.user.name} (${data.user.id}) saiu do grupo ${data.group.name} (${data.group.id}). Quem removeu: ${data.responsavel.name}/${data.responsavel.id}`);
 
@@ -760,7 +760,7 @@ class EventHandler {
       // notInGroup é solução nova que coloquei da EvoGo, quando falha ao retornar info do grupo pois o bot não participa
       const isBotLeaving = data.group.notInGroup || data?.user?.id?.startsWith(botNumber);
 
-      this.logger.debug(`[processGroupLeave] isBotLeaving (${isBotLeaving}}) = data.user.id (${data.user.id}) -startsWith- bot.phoneNumber ${botNumber} | not in group? ${data.group.notInGroup}`, { data, chatInfo });
+      //this.logger.debug(`[processGroupLeave] isBotLeaving (${isBotLeaving}}) = data.user.id (${data.user.id}) -startsWith- bot.phoneNumber ${botNumber} | not in group? ${data.group.notInGroup}`, { data, chatInfo });
 
       // Envia notificação para o grupo de logs
       if (bot.grupoLogs) {
