@@ -706,7 +706,7 @@ async function fishCommand(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
     const userId = message.author;
-    const userName = message.pushName ?? message.origin?.pushName ?? message.evoMessageData?.pushName ?? message.authorName ?? "Pescador";
+    const userName = message.name ?? message.pushName ?? message.pushname ?? message.authorName ?? "Pescador";
     const groupId = message.group; 
     const mentionPessoa = [];
     
@@ -907,7 +907,7 @@ async function myFishCommand(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
     const userId = message.author;
-    const userName = message.authorName || "Pescador";
+    const userName = message.name ?? message.pushName ?? message.pushname ?? message.authorName ?? "Pescador";
     
     const fishingData = await getFishingData();
     

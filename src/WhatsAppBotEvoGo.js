@@ -1237,7 +1237,7 @@ class WhatsAppBotEvoGo {
           if (msgData) {
             const info = msgData.Info;
             const msg = msgData.Message;
-            const reactionData = msg.reactionMessage;
+            const reactionData = msg?.reactionMessage;
 
             const chatToFilter = info.Chat;
             if (chatToFilter === this.grupoLogs || chatToFilter === this.grupoInvites || chatToFilter === this.grupoEstabilidade) {
@@ -1316,10 +1316,10 @@ class WhatsAppBotEvoGo {
           const newPushName = payload.data.Message.NewPushName ?? payload.data.Message.PushName;
 
           if(newPushName && payload.data.JID){
-            this.cacheManager.putPushnameInCache({id: payload.data.JID , pushname: newPushName});
+            this.cacheManager.putPushnameInCache({id: payload.data.JID , pushName: newPushName});
           }
           if(newPushName && payload.data.JIDAlt){
-            this.cacheManager.putPushnameInCache({id: payload.data.JIDAlt , pushname: newPushName});
+            this.cacheManager.putPushnameInCache({id: payload.data.JIDAlt , pushName: newPushName});
           }
           break;
 
@@ -1333,7 +1333,7 @@ class WhatsAppBotEvoGo {
           break;
       }
     } catch (error) {
-      this.logger.error(`[${this.id}] Error processing webhook for event ${payload.event}:`, error);
+      this.logger.error(`[${this.id}] Error processing webhook for event ${payload.event}:`, {error, payload});
     }
     res.sendStatus(200);
   }
@@ -1393,12 +1393,13 @@ class WhatsAppBotEvoGo {
         }
 
         const chatId = info.Chat;
-        const isGroup = info.IsGroup;
+        const isGroup = info.IsGroup || chatId.includes("broadcast");
         const fromMe = info.IsFromMe;
         const id = info.ID;
         const timestamp = new Date(info.Timestamp).getTime() / 1000;
         let pushName = info.PushName;
-        const sender = info.Sender; // JID
+        const sender = info.Sender; // geralmente phoneNumber (JID)
+        const senderAlt = info.SenderAlt // geralmente LID
 
         if(!pushName || pushName?.length < 1){
           pushName = await this.fetchPushNameFromCache(id) ?? "Usuario";
@@ -1518,8 +1519,10 @@ class WhatsAppBotEvoGo {
           group: isGroup ? chatId : null,
           from: isGroup ? chatId : sender,
           author: this._normalizeId(sender),
+          authorAlt: senderAlt,
           name: pushName,
           pushname: pushName,
+          authorName: pushName,
           type: type,
           content: content,
           body: content,
@@ -1719,7 +1722,7 @@ class WhatsAppBotEvoGo {
 
   async _handleGroupParticipantsUpdate(groupData) {
     // groupData: { JID, Join: [], Leave: [], Promote: [], Demote: [] }
-    this.logger.debug(`[_handleGroupParticipantsUpdate] `, groupData);
+    //this.logger.debug(`[_handleGroupParticipantsUpdate] `, groupData);
     const groupId = groupData.JID;
 
     // Helper to process actions
@@ -1890,11 +1893,16 @@ class WhatsAppBotEvoGo {
       const infoResponse = await this.apiClient.post('/user/info', { number: [id] });
       const info = infoResponse.data?.Users?.[id];
 
+
       if (info) {
-        this.logger.debug(`[getChatDetails] ${id}`, { info });
+        //this.logger.debug(`[getChatDetails] ${id}`, { info });
+        let nomePessoa = info.VerifiedName;
+        if(!nomePessoa || nomePessoa.length < 1){
+          nomePessoa = await this.fetchPushNameFromCache(id);
+        }
         return {
           id: { _serialized: id },
-          name: info.VerifiedName?.VerifiedName || prefetchedName || id.split('@')[0],
+          name: nomePessoa || prefetchedName || id.split('@')[0],
           number: id.split('@')[0],
           lid: info.LID,
           picture: info.PictureID
@@ -1927,6 +1935,7 @@ class WhatsAppBotEvoGo {
   }
 
   async deleteMessageByKey(key) {
+    this.logger.debug(`[deleteMessageByKey] `, { key });
     return await this.apiClient.post('/message/delete', {
       chat: key.remoteJid,
       messageId: key.id

@@ -144,6 +144,10 @@ class EventHandler {
    */
   async processMessage(bot, message) {
     try {
+
+      // Ignorar: Mensagens do bot e mensagens de broadcast ('status@broadcast')
+      if(message.fromMe || message.from?.includes("broadcast") || message.group?.includes("broadcast")) return;
+
       let ignorePV = bot.ignorePV && bot.notInWhitelist(message.author) && message.group === null;
 
       // Verifica links de convite em chats privados
@@ -425,7 +429,7 @@ class EventHandler {
   async applyFilters(bot, message, group) {
     if (!group || !group.filters) return false;
 
-    const textContent = message.type === 'text' ? message.content : message.caption ?? "";
+    const textContent = (message.type === 'text' ? message.content : message.caption) ?? "";
 
     if (textContent.includes("g-filtro")) {
       return false; // Não filtrar comandos de filtro
@@ -465,15 +469,19 @@ class EventHandler {
     }
 
     // Verifica filtro de pessoas
-    if (filters.people && Array.isArray(filters.people) && filters.people.some(person => message.author.includes(person))) {
-      this.logger.info(`Mensagem filtrada no grupo ${group.id} - de usuário banido: ${message.author}`);
+    if (filters.people && Array.isArray(filters.people) && filters.people.length > 0) {
+      //this.logger.debug(`[filters][person] Filtrar? ${message.author}|${message.authorAlt} vs ${filters.people.join(", ")}`);
 
-      // Deleta a mensagem se possível - não bloqueia
-      message.origin.delete(true).catch(error => {
-        this.logger.error('Erro ao deletar mensagem filtrada:', error);
-      });
+      if(filters.people.some(person => message.author.includes(person) || message.authorAlt.includes(person))){
+        this.logger.info(`Mensagem filtrada no grupo ${group.id} - de usuário banido: ${message.author}`);
 
-      return true;
+        // Deleta a mensagem se possível - não bloqueia
+        message.origin.delete(true).catch(error => {
+          this.logger.error('Erro ao deletar mensagem filtrada:', error);
+        });
+
+        return true;
+      }
     }
 
     // Verifica filtro NSFW para imagens e vídeos

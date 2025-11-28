@@ -1163,7 +1163,7 @@ class WhatsAppBotEvo {
             author = author.replace("@s.whatsapp.net", "@c.us");
           }
 
-
+          let authorAlt = key.remoteJidAlt ?? key.remoteJid ?? key.participantAlt;
 
           const messageTimestamp = typeof evoMessageData.messageTimestamp === 'number'
             ? evoMessageData.messageTimestamp
@@ -1319,6 +1319,7 @@ class WhatsAppBotEvo {
             group: isGroup ? chatId : null,
             from: isGroup ? chatId : author,
             author: this._normalizeId(author),
+            authorAlt: authorAlt,
             name: authorName,
             authorName: authorName,
             pushname: authorName,

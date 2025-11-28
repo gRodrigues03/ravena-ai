@@ -220,6 +220,7 @@ async function apagarMensagem(bot, message, args, group) {
     const quotedSender = quotedMsg.author || quotedMsg.from;
     
     if (quotedSender !== botNumber) {
+      logger.info(`[apagarMensagem] Mensagem requisitada não é do bot: ${quotedSender} !== ${botNumber}`);
       // Se a mensagem não for do bot, verifica se o bot é admin do grupo (e sem quem pediu tb é)
       if (message.group) {
         try {
@@ -229,10 +230,9 @@ async function apagarMensagem(bot, message, args, group) {
           // Verifica se quem pediu é admin
           if (chat.isGroup) {
             const participants = chat.participants || [];
-            const botParticipant = participants.find(p => p.id._serialized === botNumber);
             const quemPediuIsAdmin = await adminUtils.isAdmin(quemPediu, group, chat, bot.client);
             
-            if (botParticipant && botParticipant.isAdmin && quemPediuIsAdmin) {
+            if (quemPediuIsAdmin) {
               // Bot é admin, pode apagar mensagens de outros
               logger.info(`Tentando apagar mensagem de outro usuário como admin: ${quotedSender}`);
               await quotedMsg.delete(true);
@@ -255,7 +255,7 @@ async function apagarMensagem(bot, message, args, group) {
       // Se chegou aqui, ou não está em grupo ou bot não é admin
       return new ReturnMessage({
         chatId: message.group || message.author,
-        content: '🗑 Só posso apagar minhas próprias mensagens ou mensagens de outros se eu for admin do grupo.'
+        content: '🗑 Só posso apagar minhas próprias mensagens ou mensagens de outros em grupos (e preciso ser admin)'
       });
     }
     
@@ -381,8 +381,8 @@ const commands = [
     description: 'Apaga a mensagem do bot quando usado em resposta a ela',
     category: 'grupo',
     reactions: {
-      trigger: "🧹", 
-      before: "🧹",
+      trigger: "🗑️", 
+      before: "🗑️",
       after: false
     },
     method: apagarMensagem

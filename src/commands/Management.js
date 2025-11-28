@@ -110,7 +110,7 @@ class Management {
       },
       'filtro-pessoa': {
         method: 'filterPerson',
-        description: 'Detecta e Apaga mensagens desta pessoa'
+        description: 'Detecta e Apaga mensagens desta pessoa (Marcar com @)'
       },
       'filtro-nsfw': {
         method: 'filterNSFW',
@@ -1081,7 +1081,7 @@ async setWelcomeMessage(bot, message, args, group) {
   *Comandos de Filtro:*
   *!g-filtro-palavra* <palavra> - Adiciona/remove palavra do filtro
   *!g-filtro-links* - Ativa/desativa filtro de links
-  *!g-filtro-pessoa* <número> - Adiciona/remove número do filtro
+  *!g-filtro-pessoa* @MarcarPessoa - Adiciona/remove número do filtro
   *!g-filtro-nsfw* - Ativa/desativa filtro de conteúdo NSFW
 
   *Variáveis em mensagens:*
@@ -1629,8 +1629,12 @@ async setWelcomeMessage(bot, message, args, group) {
     if (!group.filters.people || !Array.isArray(group.filters.people)) {
       group.filters.people = [];
     }
+
+    // this.logger.debug(`[filtroPesosa] `, { message });
     
-    if (args.length === 0) {
+    const pessoasIgnorar = message.mentions ?? [];  
+
+    if (pessoasIgnorar.length === 0) {
       // Mostra lista de pessoas filtradas
       const personFilters = group.filters.people.length > 0
         ? group.filters.people.join(', ')
@@ -1638,58 +1642,36 @@ async setWelcomeMessage(bot, message, args, group) {
       
       return new ReturnMessage({
         chatId: group.id,
-        content: `*Pessoas filtradas atualmente:*\n${personFilters}\n\nPara adicionar ou remover uma pessoa do filtro, use: !g-filtro-pessoa <número>`
+        content: `*Pessoas filtradas atualmente:*\n${personFilters}\n\nPara adicionar ou remover uma pessoa do filtro, use: !g-filtro-pessoa @MarcarPessoa`
       });
     }
     
-    // Obtém número do primeiro argumento
-    let numero = args[0].replace(/\D/g, ''); // Remove não-dígitos
     
-    // Verifica se o número tem pelo menos 8 dígitos
-    if (numero.length < 8) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: '❌ O número deve ter pelo menos 8 dígitos.'
-      });
+    let msgRetorno = "";
+    for(let numero of pessoasIgnorar){
+      numero = numero.split("@")[0];
+      // Verifica se o número já está no filtro
+      const index = group.filters.people.indexOf(numero);
+
+      if (index !== -1) {
+        // Remove o número
+        group.filters.people.splice(index, 1);
+        msgRetorno += `➖ Pessoa removida ao filtro: ${numero}`;
+      } else {
+        group.filters.people.push(numero);
+        msgRetorno += `➕ Pessoa adicionada ao filtro: ${numero}`;
+      }
     }
-    
-    // Adiciona @c.us ao número se não estiver completo
-    if (!numero.includes('@')) {
-      numero = `${numero}@c.us`;
-    }
-    
-    // Verifica se o número já está no filtro
-    const index = group.filters.people.indexOf(numero);
-    
-    if (index !== -1) {
-      // Remove o número
-      group.filters.people.splice(index, 1);
-      await this.database.saveGroup(group);
-      
-      // Mostra lista atualizada
-      const personFilters = group.filters.people.length > 0
-        ? group.filters.people.join(', ')
-        : 'Nenhuma pessoa filtrada';
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `✅ Pessoa removida do filtro: ${numero}\n\n*Pessoas filtradas atualmente:*\n${personFilters}`
-      });
-    } else {
-      // Adiciona o número
-      group.filters.people.push(numero);
-      await this.database.saveGroup(group);
-      
-      // Mostra lista atualizada
-      const personFilters = group.filters.people.length > 0
-        ? group.filters.people.join(', ')
-        : 'Nenhuma pessoa filtrada';
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `✅ Pessoa adicionada ao filtro: ${numero}\n\n*Pessoas filtradas atualmente:*\n${personFilters}`
-      });
-    }
+
+    await this.database.saveGroup(group);
+    // Mostra lista atualizada
+    const personFilters = group.filters.people.length > 0 ? group.filters.people.join(', ') : 'Nenhuma pessoa filtrada';
+
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `${msgRetorno}\n*Pessoas filtradas atualmente:*\n${personFilters}`
+    });
+
   }
   
   /**
