@@ -875,11 +875,12 @@ async function fishCommand(bot, message, args, group) {
     // Se for peixe raro, tentar gerar imagem
     if (caughtFishes.length === 1 && caughtFishes[0].isRare) {
       let rareFishImage = await generateRareFishImage(bot, userName, caughtFishes[0].name);
+
       if(!rareFishImage){
         // Placeholder
-        const pchPescaRara = path.join(database.databasePath, "media", "rare-fish.png");
+        const pchPescaRara = path.join(database.databasePath, "rare-fish.jpg");
         logger.error(`[fishing] Erro gerando imagem de peixe raro, usando placeholder '${pchPescaRara}'`);
-        rareFishImage = await bot.createMedia(pchPescaRara, "image/png");
+        rareFishImage = await bot.createMedia(pchPescaRara, "image/jpeg");
       }
       
       const savedImageName = await saveRareFishImage(rareFishImage, userId, caughtFishes[0].name);
@@ -901,13 +902,13 @@ async function fishCommand(bot, message, args, group) {
 
       if (bot.grupoInteracao) {
         notificacaoPeixeRaro.chatId = bot.grupoInteracao;
-        const msgsEnviadas = bot.sendReturnMessages(notificacaoPeixeRaro);
+        const msgsEnviadas = await bot.sendReturnMessages(notificacaoPeixeRaro);
         msgsEnviadas[0].pin(260000);
       }
       
       if (bot.grupoAvisos) {
         notificacaoPeixeRaro.chatId = bot.grupoAvisos;
-        const msgsEnviadas = bot.sendReturnMessages(notificacaoPeixeRaro);
+        const msgsEnviadas = await bot.sendReturnMessages(notificacaoPeixeRaro);
         msgsEnviadas[0].pin(260000);
       }
 
