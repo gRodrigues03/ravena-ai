@@ -69,7 +69,10 @@ class WhatsAppBotEvo {
     this.redisTTL = options.redisTTL || 604800;
     this.maxCacheSize = 3000;
 
+    this.skipGroupsPath = path.join(__dirname, '..', 'data', 'skip-groups.json');
+
     this.streamIgnoreGroups = [];
+    this.skipGroupInfo = [];
     this.messageCache = [];
     this.contactCache = [];
     this.sentMessagesCache = [];
@@ -828,6 +831,7 @@ class WhatsAppBotEvo {
   }
 
   async initialize() {
+    await this._loadSkipGroupInfo();
     const wsUrl = `${this.evolutionWS}/${this.instanceName}`;
 
     const instanceDesc = this.websocket ? `Websocket to ${wsUrl}` : `Webhook on ${this.instanceName}:${this.webhookPort}`;
@@ -1945,6 +1949,18 @@ class WhatsAppBotEvo {
     if (!chatId) return null;
     let chat;
 
+    if (this.skipGroupInfo && this.skipGroupInfo.includes(chatId)) {
+      this.logger.info(`[getChatDetails] Skipping fetch for ${chatId} as it is in skipGroupInfo list.`);
+      return {
+        id: { _serialized: chatId },
+        name: chatId,
+        isGroup: true,
+        notInGroup: true,
+        participants: [],
+        _isPartial: true
+      };
+    }
+
     try {
 
 
@@ -1997,34 +2013,78 @@ class WhatsAppBotEvo {
 
       //this.logger.debug(`[getChatDetails] Grupo '${chatId}' buscando, colocando no cache`, {chat});
       this.cacheManager.putChatInCache(chat);
-
       return chat;
     } catch (error) {
-      try {
-        //this.logger.error(`[getChatDetails] Erro buscando chat ${chatId} na API, tentando cache`);
-        chat = await this.cacheManager.getChatFromCache(chatId);
-
-        if (chat) {
-          return chat;
-        } else {
-          if (chatId.includes("@g")) {
-            return null;
-          } else {
-            return { id: { _serialized: chatId }, name: chatId.split('@')[0], isGroup: false, _isPartial: true }; // Basic fallback
-          }
-        }
-      } catch (e) {
-        //this.logger.error(`[getChatDetails] Erro buscando chat ${chatId} ate no cache`, e);
-
-        // Se estiver buscando grupo, retorna null pra saber que o bot não faz parte
-        // Se for contato, cria um placeholder pra não bugar algumas coisas
-        if (chatId.includes("@g")) {
-          return null;
-        } else {
-          return { id: { _serialized: chatId }, name: chatId.split('@')[0], isGroup: false, _isPartial: true }; // Basic fallback
-        }
+      if (error.status === 404 && (error.response?.message?.includes('item-not-found') || error.response?.message?.includes('Error: forbidden'))) {
+        this.logger.warn(`[getChatDetails] Group ${chatId} does not exist (status 404). Adding to skip list.`);
+        await this.addSkipGroup(chatId);
+        return {
+          id: { _serialized: chatId },
+          name: chatId,
+          isGroup: true,
+          notInGroup: true,
+          participants: [],
+          _isPartial: true
+        };
+      } else {
+        this.logger.error(`[getChatDetails] Failed to get chat details for ${chatId}:`, error);
+        return { id: { _serialized: chatId }, name: chatId, isGroup: chatId.endsWith('@g.us'), _isPartial: true };
       }
     }
+  }
+
+  async _loadSkipGroupInfo() {
+    try {
+        const data = await readFileAsync(this.skipGroupsPath, 'utf8');
+        const allSkips = JSON.parse(data);
+        this.skipGroupInfo = allSkips[this.id] || [];
+        this.logger.info(`[SkipGroups] Loaded ${this.skipGroupInfo.length} skipped groups for bot ${this.id}.`);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            this.logger.info(`[SkipGroups] ${this.skipGroupsPath} not found. Initializing empty skip list.`);
+            this.skipGroupInfo = [];
+            await this._saveSkipGroupInfo();
+        } else {
+            this.logger.error(`[SkipGroups] Error loading skip groups file:`, error);
+        }
+    }
+  }
+
+  async _saveSkipGroupInfo() {
+      let allSkips = {};
+      try {
+          const data = await readFileAsync(this.skipGroupsPath, 'utf8');
+          allSkips = JSON.parse(data);
+      } catch (error) {
+          if (error.code !== 'ENOENT') {
+              this.logger.error(`[SkipGroups] Error reading skip groups file before saving:`, error);
+              return;
+          }
+      }
+      allSkips[this.id] = this.skipGroupInfo;
+      try {
+          await writeFileAsync(this.skipGroupsPath, JSON.stringify(allSkips, null, 2));
+          this.logger.info(`[SkipGroups] Saved ${this.skipGroupInfo.length} skipped groups for bot ${this.id}.`);
+      } catch (error) {
+          this.logger.error(`[SkipGroups] Error saving skip groups file:`, error);
+      }
+  }
+
+  async addSkipGroup(groupId) {
+      if (!this.skipGroupInfo.includes(groupId)) {
+          this.skipGroupInfo.push(groupId);
+          await this._saveSkipGroupInfo();
+          this.logger.info(`[SkipGroups] Added ${groupId} to skip list.`);
+      }
+  }
+
+  async removeSkipGroup(groupId) {
+      const initialLength = this.skipGroupInfo.length;
+      this.skipGroupInfo = this.skipGroupInfo.filter(id => id !== groupId);
+      if (this.skipGroupInfo.length < initialLength) {
+          await this._saveSkipGroupInfo();
+          this.logger.info(`[SkipGroups] Removed ${groupId} from skip list.`);
+      }
   }
 
 

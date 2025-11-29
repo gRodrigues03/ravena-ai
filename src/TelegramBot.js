@@ -68,6 +68,8 @@ class WhatsAppBotTelegram {
     this.userAgent = options.userAgent;
     this.stabilityMonitor = options.stabilityMonitor;
 
+    this.streamIgnoreGroups = [];
+
     if (!this.telegramBotToken) {
       const errMsg = 'WhatsAppBotTelegram: telegramBotToken is required!';
       this.logger.error(errMsg, {

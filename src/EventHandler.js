@@ -578,6 +578,10 @@ class EventHandler {
    * @param {Object} data - Dados do evento
    */
   async processGroupJoin(bot, data) {
+    const groupId = data.group.id;
+    if (bot.removeSkipGroup) {
+        await bot.removeSkipGroup(groupId);
+    }
     //this.logger.info(`[processGroupJoin] `, { data });
 
     if(this.recentlyJoined.includes(data.user.id)) return;
@@ -781,6 +785,10 @@ class EventHandler {
       if (bot.grupoLogs) {
         try {
           if (isBotLeaving) {
+            const groupId = data.group.id;
+            if (bot.addSkipGroup) {
+                await bot.addSkipGroup(groupId);
+            }
             //group.paused = true; // Sempre que o bot sai do grupo, pausa o mesmo
             await this.database.saveGroup(group);
             bot.sendMessage(bot.grupoLogs, `🚪 Bot ${bot.id} saiu do grupo: ${data.group.name} (${data.group.id})})\nQuem removeu: ${data.responsavel.name}/${data.responsavel.id}`).catch(error => {

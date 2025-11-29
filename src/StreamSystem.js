@@ -364,7 +364,7 @@ class StreamSystem {
       try {
         // Esta verificação deve ser adaptada conforme a plataforma (WhatsApp, Telegram, etc.)
         const chat = await this.bot.client.getChatById(group.id);
-        if (chat.notInGroup || !chat || !chat.isGroup) {
+        if (!chat || !chat.isGroup || chat?.notInGroup) {
           this.logger.info(`Chat ${group.id} não é um grupo ou não foi encontrado`);
           isMember = false;
         }
@@ -557,7 +557,7 @@ class StreamSystem {
       if (!chat || !chat.isGroup) return [];
 
       const ignoredSet = new Set(group.ignoredUsers || []);
-      const participants = chat.participants.filter(participant => {
+      const participants = (chat.participants ?? []).filter(participant => {
         const idsToTest = [
           participant.id?._serialized,
           participant.phoneNumber
