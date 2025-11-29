@@ -70,8 +70,9 @@ class WhatsAppBotEvoGo {
     this.redisTTL = options.redisTTL || 604800;
     this.maxCacheSize = 3000;
 
-    this.skipGroupsPath = path.join(__dirname, '..', 'data', 'skip-groups.json');
+    this.skipGroupsPath = path.join(__dirname, '..', 'data', `skip-groups-${this.id}.json`);
 
+    this.streamIgnoreGroups = [];
     this.skipGroupInfo = [];
     this.messageCache = [];
     this.contactCache = [];
@@ -1659,7 +1660,7 @@ class WhatsAppBotEvoGo {
           // Facilidade pra enviar mídia
           endpoint = '/send/media';
           payload.url = content;
-          payload.type = mime.lookup(content.split("?")[0]) || (options.unsafeMime ? 'application/octet-stream' : null);
+          payload.type = content.endsWith(".gif") ? "video" : (mime.lookup(content.split("?")[0]) ?? "document");
         } else {
           endpoint = '/send/text';
           payload.text = content;

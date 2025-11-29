@@ -69,8 +69,9 @@ class WhatsAppBotEvo {
     this.redisTTL = options.redisTTL || 604800;
     this.maxCacheSize = 3000;
 
-    this.skipGroupsPath = path.join(__dirname, '..', 'data', 'skip-groups.json');
+    this.skipGroupsPath = path.join(__dirname, '..', 'data', `skip-groups-${this.id}.json`);
 
+    this.streamIgnoreGroups = [];
     this.skipGroupInfo = [];
     this.messageCache = [];
     this.contactCache = [];

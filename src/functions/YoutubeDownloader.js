@@ -257,8 +257,8 @@ async function baixarMusicaYoutube(idVideo, dadosSolicitante, callback) {
       const tituloVideo = videoInfo.title;
       logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Info do video '${videoInfo.id}': ${tituloVideo}, ${autorVideo}, ${videoInfo.duration}s.`);
 
-      if (videoInfo.duration > 480) {
-        return callback(new Error(`Atualmente, só consigo baixar músicas de até 8 minutos.`), null);
+      if (videoInfo.duration > 20*60) {
+        return callback(new Error(`Atualmente, só consigo baixar músicas de até 20 minutos.`), null);
       }
 
       logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Fazendo download do vídeo para conversão...`);
