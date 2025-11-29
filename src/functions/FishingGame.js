@@ -324,6 +324,7 @@ async function getRandomFish(fishArray, isMultiCatch = false, userData = null) {
           name: rareFish.name,
           weight: totalWeight,
           timestamp: Date.now(),
+          chance: rareFish.chance,
           isRare: true,
           emoji: rareFish.emoji,
           baseWeight: baseWeight,
@@ -671,6 +672,7 @@ function applyBuffs(userData, fish) {
 async function generateRareFishImage(bot, userName, fishName) {
   try {
     const prompt = `${userName} fishing an epic enormous fish named '${fishName}' using only a wooden fishing rod`;
+    logger.info(`[fishing] generateRareFishImage: ${prompt}`);
     if (!sdModule || !sdModule.commands || !sdModule.commands[0] || !sdModule.commands[0].method) return null;
     
     const mockMessage = { author: 'SYSTEM', authorName: 'Sistema', content: prompt, origin: { getQuotedMessage: () => Promise.resolve(null) } };
@@ -854,7 +856,7 @@ async function fishCommand(bot, message, args, group) {
     } else {
       const fish = caughtFishes[0];
       if (fish.isRare) {
-        fishMessage = `🏆 INCRÍVEL! ${userName} capturou um(a) *${fish.name}* GIGANTE de _${fish.weight.toFixed(2)} kg_! (${fish.emoji})`;
+        fishMessage = `🏆 INCRÍVEL! _${userName}_ capturou um(a) _raríssimo_ *${fish.name}* de _${fish.weight.toFixed(2)} kg_! (${fish.emoji} ${fish.chance*100}% de chance)`;
       } else {
         fishMessage = `🎣 ${userName} ${extraMsg}pescou um *${fish.name}* de _${fish.weight.toFixed(2)} kg_!`;
       }
@@ -872,25 +874,49 @@ async function fishCommand(bot, message, args, group) {
 
     // Se for peixe raro, tentar gerar imagem
     if (caughtFishes.length === 1 && caughtFishes[0].isRare) {
-      const rareFishImage = await generateRareFishImage(bot, userName, caughtFishes[0].name);
-      
-      // Se gerar imagem com sucesso, retorna mensagem com imagem
-      if (rareFishImage) {
-          const savedImageName = await saveRareFishImage(rareFishImage, userId, caughtFishes[0].name);
-          if (!fishingData.legendaryFishes) fishingData.legendaryFishes = [];
-          
-          fishingData.legendaryFishes.push({
-            fishName: caughtFishes[0].name, weight: caughtFishes[0].weight, userId: userId,
-            userName: userName, groupId: groupId || null, groupName: group ? group.name : "chat privado",
-            timestamp: Date.now(), imageName: savedImageName
-          });
-          return new ReturnMessage({
-            chatId, content: rareFishImage,
-            options: { caption: fishMessage, quotedMessageId: message.origin.id._serialized, mentions: mentionPessoa, evoReply: message.origin },
-            reactions: { after: "🎣" }
-          });
+      let rareFishImage = await generateRareFishImage(bot, userName, caughtFishes[0].name);
+      if(!rareFishImage){
+        // Placeholder
+        const pchPescaRara = path.join(database.databasePath, "media", "rare-fish.png");
+        logger.error(`[fishing] Erro gerando imagem de peixe raro, usando placeholder '${pchPescaRara}'`);
+        rareFishImage = await bot.createMedia(pchPescaRara, "image/png");
       }
-      // Se rareFishImage for null (falha), o código continua para o return final (texto apenas)
+      
+      const savedImageName = await saveRareFishImage(rareFishImage, userId, caughtFishes[0].name);
+      if (!fishingData.legendaryFishes) fishingData.legendaryFishes = [];
+      
+      fishingData.legendaryFishes.push({
+        fishName: caughtFishes[0].name, weight: caughtFishes[0].weight, userId: userId,
+        userName: userName, groupId: groupId || null, groupName: group ? group.name : "chat privado",
+        timestamp: Date.now(), imageName: savedImageName
+      });
+
+      const groupName = group ? group.name : "chat privado";
+      const notificacaoPeixeRaro = new ReturnMessage({
+        content: rareFishImage,
+        options: {
+          caption: `🏆 ${userName} capturou um(a) *${caughtFishes[0].name}* LENDÁRIO(A) de *${caughtFishes[0].weight.toFixed(2)} kg* no grupo "${groupName}"!`
+        }
+      });
+
+      if (bot.grupoInteracao) {
+        notificacaoPeixeRaro.chatId = bot.grupoInteracao;
+        const msgsEnviadas = bot.sendReturnMessages(notificacaoPeixeRaro);
+        msgsEnviadas[0].pin(260000);
+      }
+      
+      if (bot.grupoAvisos) {
+        notificacaoPeixeRaro.chatId = bot.grupoAvisos;
+        const msgsEnviadas = bot.sendReturnMessages(notificacaoPeixeRaro);
+        msgsEnviadas[0].pin(260000);
+      }
+
+      return new ReturnMessage({
+        chatId, content: rareFishImage,
+        options: { caption: fishMessage, quotedMessageId: message.origin.id._serialized, mentions: mentionPessoa, evoReply: message.origin },
+        reactions: { after: "🎣" }
+      });
+
     }
     
     return new ReturnMessage({

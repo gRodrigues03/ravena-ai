@@ -1725,6 +1725,10 @@ class WhatsAppBotEvoGo {
         _data: response,
         getInfo: () => { // Usado no StreamSystem pra saber se foi enviada
           return { delivery: [1], played: [1], read: [1] };
+        },
+        pin: (tempo) =>{
+          this.logger.info(`[${response?.data?.Info?.ID}] message.pin por ${tempo}ms: Não implementado`);
+          return true;
         }
       };
 
