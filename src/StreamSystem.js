@@ -354,8 +354,8 @@ class StreamSystem {
 
         return;
       } else
-        if (this.bot.streamIgnoreGroups?.includes(group.id)) {
-          this.logger.info(`Ignorando notificação de stream para grupo que o bot ${this.bot.id} não pertence: ${group.id}`);
+        if (this.bot.skipGroupInfo?.includes(group.id)) {
+          //this.logger.info(`Ignorando notificação de stream para grupo que o bot ${this.bot.id} não pertence: ${group.id}`);
           return;
         }
 
@@ -377,7 +377,7 @@ class StreamSystem {
       if (!isMember) {
         this.logger.info(`Bot não é mais membro do grupo ${group.id}, ignorando nesta instancia`);
 
-        this.bot.streamIgnoreGroups.push(group.id);
+        this.bot.addSkipGroup(group.id);
         return;
       }
 

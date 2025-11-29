@@ -96,7 +96,7 @@ class InviteSystem {
       
       // Define um timeout para tratar o convite mesmo se o usuário não responder
       const timeoutId = setTimeout(() => {
-        this.handleInviteRequest(message.author, inviteCode, inviteLink, "Nenhum motivo fornecido");
+        this.handleInviteRequest(message.author, inviteCode, inviteLink, "Nenhum motivo fornecido", message);
       }, 5 * 60 * 1000); // 5 minutos
       
       // Armazena a solicitação pendente
@@ -141,7 +141,7 @@ class InviteSystem {
       this.pendingRequests.delete(message.author);
       
       // Trata o convite com o motivo fornecido
-      await this.handleInviteRequest(message.author, inviteCode, inviteLink, text);
+      await this.handleInviteRequest(message.author, inviteCode, inviteLink, text, message);
       
       return true;
     } catch (error) {
@@ -157,18 +157,12 @@ class InviteSystem {
    * @param {string} inviteLink - O link de convite completo
    * @param {string} reason - Motivo do convite
    */
-  async handleInviteRequest(authorId, inviteCode, inviteLink, reason) {
+  async handleInviteRequest(authorId, inviteCode, inviteLink, reason, message) {
     try {
       this.logger.info(`Processando solicitação de convite de ${authorId} para o código ${inviteCode}`);
       
       // Obtém informações do usuário
-      let userName = "Desconhecido";
-      try {
-        const contact = await this.bot.client.getContactById(authorId);
-        userName = contact.pushname || contact.name || "Desconhecido";
-      } catch (error) {
-        this.logger.error('Erro ao obter contato:', error);
-      }
+      const userName = message.name ?? message.pushName ?? message.pushname ?? message.authorName ?? "Pessoa";
       
       // Salva o convite pendente no banco de dados
       const invite = {

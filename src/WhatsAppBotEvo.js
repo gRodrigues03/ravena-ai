@@ -71,7 +71,6 @@ class WhatsAppBotEvo {
 
     this.skipGroupsPath = path.join(__dirname, '..', 'data', 'skip-groups.json');
 
-    this.streamIgnoreGroups = [];
     this.skipGroupInfo = [];
     this.messageCache = [];
     this.contactCache = [];
