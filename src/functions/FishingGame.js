@@ -1651,94 +1651,17 @@ async function resetFishingDataCommand(bot, message, args, group) {
 
 // Exportação
 const commands = [
-  new Command({ name: 'pescar', description: 'Pesque um peixe', category: "jogos", cooldown: 0, reactions: { before: "🎣", after: "🐟", error: "❌" }, method: fishCommand }),
-  new Command({ name: 'pesca', hidden: true, description: 'Pesque um peixe', category: "jogos", cooldown: 0, reactions: { before: "🎣", after: "🐟", error: "❌" }, method: fishCommand }),
-  new Command({ name: 'meus-pescados', description: 'Seus peixes', category: "jogos", cooldown: 5, reactions: { after: "🐠", error: "❌" }, method: myFishCommand }),
-  new Command({ name: 'psc-addBaits', description: 'Add Iscas', category: "jogos", adminOnly: true, hidden: true, cooldown: 0, reactions: { after: "➕", error: "❌" }, method: addBaitsCmd }),
-  new Command({
-    name: 'pesca-ranking',
-    description: 'Mostra o ranking de pescaria do grupo atual',
-    category: "jogos",
-    group: "pescrank",
-    cooldown: 5,
-    reactions: {
-      after: "🏆",
-      error: "❌"
-    },
-    method: fishingRankingCommand
-  }),
-    new Command({
-    name: 'pescados',
-    description: 'Mostra o ranking de pescaria do grupo atual',
-    category: "jogos",
-    group: "pescrank",
-    cooldown: 5,
-    reactions: {
-      after: "🐋",
-      error: "❌"
-    },
-    method: fishingRankingCommand
-  }),
-    new Command({  
-    name: 'pesca-info',  
-    description: 'Informações do jogo',  
-    category: "jogos",  
-    adminOnly: true,  
-    cooldown: 60,  
-    reactions: {  
-      after: "📕",  
-      error: "❌"  
-    },  
-    method: fishingInfoCommand  
-  }),
-  new Command({  
-    name: 'pesca-reset',  
-    description: 'Reseta os dados de pesca para o grupo atual',  
-    category: "jogos",  
-    adminOnly: true,  
-    cooldown: 10,  
-    reactions: {  
-      before: process.env.LOADING_EMOJI ?? "🌀",  
-      after: "✅",  
-      error: "❌"  
-    },  
-    method: resetFishingDataCommand  
-  }),
-  new Command({
-    name: 'pesca-lendas',
-    description: 'Mostra os peixes lendários que foram pescados',
-    category: "jogos",
-    cooldown: 10,
-    reactions: {
-      after: "🐉",
-      error: "❌"
-    },
-    method: legendaryFishCommand
-  }),
-    new Command({
-    name: 'pesca-peixes',
-    description: 'Lista todos os tipos de peixes disponíveis',
-    category: "jogos",
-    hidden: true,
-    cooldown: 5,
-    reactions: {
-      after: "📋",
-      error: "❌"
-    },
-    method: listFishTypesCommand
-  }),
-  
-  new Command({
-    name: 'pesca-iscas',
-    description: 'Mostra suas iscas de pesca',
-    category: "jogos",
-    cooldown: 5,
-    reactions: {
-      after: "🐛",
-      error: "❌"
-    },
-    method: showBaitsCommand
-  })
+  new Command({name: 'pescar', description: 'Pesque um peixe', category: "jogos", cooldown: 0, reactions: { before: "🎣", after: "🐟", error: "❌" }, method: fishCommand }),
+  new Command({name: 'pesca', hidden: true, description: 'Pesque um peixe', category: "jogos", cooldown: 0, reactions: { before: "🎣", after: "🐟", error: "❌" }, method: fishCommand }),
+  new Command({name: 'meus-pescados', description: 'Seus peixes', category: "jogos", cooldown: 5, reactions: { after: "🐠", error: "❌" }, method: myFishCommand }),
+  new Command({name: 'pesca-ranking',description: 'Mostra o ranking de pescaria do grupo atual',category: "jogos",group: "pescrank",cooldown: 5,reactions: {after: "🏆",error: "❌"},method: fishingRankingCommand}),
+  new Command({name: 'pescados',hidden: true, description: 'Mostra o ranking de pescaria do grupo atual',category: "jogos",group: "pescrank",cooldown: 5,reactions: {after: "🐋",error: "❌"},method: fishingRankingCommand}),
+  new Command({name: 'pesca-info',  description: 'Informações do jogo',  category: "jogos",  adminOnly: true,  cooldown: 60,  reactions: {  after: "📕",  error: "❌"  },  method: fishingInfoCommand  }),
+  new Command({name: 'pesca-reset',  description: 'Reseta os dados de pesca para o grupo atual',  category: "jogos",  adminOnly: true,  cooldown: 10,  reactions: {  before: process.env.LOADING_EMOJI ?? "🌀",  after: "✅",  error: "❌"  },  method: resetFishingDataCommand  }),
+  new Command({name: 'pesca-lendas',description: 'Mostra os peixes lendários que foram pescados',category: "jogos",cooldown: 10,reactions: {after: "🐉",error: "❌"},method: legendaryFishCommand}),
+  new Command({name: 'pesca-peixes',description: 'Lista todos os tipos de peixes disponíveis',category: "jogos",cooldown: 5,reactions: {after: "📋",error: "❌"},method: listFishTypesCommand}),
+  new Command({name: 'pesca-iscas',description: 'Mostra suas iscas de pesca',category: "jogos",cooldown: 5,reactions: {after: "🐛",error: "❌"},method: showBaitsCommand}),
+  new Command({name: 'psc-addBaits', description: 'Add Iscas', category: "jogos", adminOnly: true, hidden: true, cooldown: 0, reactions: { after: "➕", error: "❌" }, method: addBaitsCmd })
 ];
 
 module.exports = { 
