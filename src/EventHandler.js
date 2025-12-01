@@ -393,7 +393,7 @@ class EventHandler {
       }
     }
 
-    if (message.type === 'text' && bot.pvAI) {
+    if (message.type === 'text' && bot.pvAI && message.group === null) {
       this.logger.debug(`[processNonCommandMessage] PV sem comando, chamando LLM com '${message.content}'`);
       const msgsLLM = await aiCommand(bot, message, [], group);
       bot.sendReturnMessages(msgsLLM);
