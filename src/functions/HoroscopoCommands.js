@@ -112,7 +112,7 @@ async function detectHoroscopo(msgBody, groupId) {
     }
 
     const horoscopoRegex = /\*.*?\s(?:♈|♉|♊|♋|♌|♍|♎|♏|♐|♑|♒|♓)\s+(Áries|Touro|Gêmeos|Câncer|Leão|Virgem|Libra|Escorpião|Sagitário|Capricórnio|Aquário|Peixes):\*\s+([\s\S]*?)(?:\n\n|$)/i;
-    const match = msgBody.match(horoscopoRegex);
+    const match = msgBody?.match(horoscopoRegex);
 
     if (match) {
       const signoNome = match[1];

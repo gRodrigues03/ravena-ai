@@ -234,6 +234,10 @@ class WhatsAppBotEvoGo {
     return cleanId;
   }
 
+  async isUserAdminInGroup(userId, groupId) {
+    return this.adminUtils.isAdmin(userId, { id: groupId }, null, this.client);
+  }
+
   async recreateInstance() {
     const results = [];
     this.logger.info(`[recreateInstance] Starting recreation for ${this.instanceName}`);
@@ -1542,6 +1546,7 @@ class WhatsAppBotEvoGo {
           hasMedia: !!mediaInfo,
           mentions: mentions,
           isQuoted: evoMessageData.isQuoted,
+          isNewsletter: chatId.includes("newsletter"),
 
           getContact: async () => {
             return await this.getContactDetails(sender, pushName);
@@ -1599,6 +1604,7 @@ class WhatsAppBotEvoGo {
         if (!skipCache) {
           this.cacheManager.putGoMessageInCache(formattedMessage);
         }
+
         resolve(formattedMessage);
 
       } catch (error) {

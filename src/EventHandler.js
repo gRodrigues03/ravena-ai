@@ -151,6 +151,32 @@ class EventHandler {
       // Ignorar: Mensagens do bot e mensagens de broadcast ('status@broadcast')
       if(message.fromMe || message.from?.includes("broadcast") || message.group?.includes("broadcast")) return;
 
+      // Newsletter/Canais: Apenas pra detectar jrmunews, horóscopos, etc. 
+      if (message.isNewsletter) {
+        try {
+          const isNewsDetected = await MuNewsCommands.detectNews(message.content, group.id);
+          if (isNewsDetected) {
+            // Opcionalmente, envia uma confirmação de que a MuNews foi detectada e salva
+            bot.sendMessage(process.env.GRUPO_LOGS, "📰 *MuNews detectada e salva!*").catch(error => {
+              this.logger.error('Erro ao enviar confirmação de MuNews:', error);
+            });
+          }
+
+          const isHoroscopoDetected = await HoroscopoCommands.detectHoroscopo(message.content, group.id);
+          if (isHoroscopoDetected) {
+            // Opcionalmente, envia uma confirmação de que um Horoscopo foi detectado e salvo
+            // bot.sendMessage(process.env.GRUPO_LOGS, "🔮 *Horoscopo detectado e salvo!*").catch(error => {
+            //   this.logger.error('Erro ao enviar confirmação de Horoscopo:', error);
+            // });
+          }
+
+        } catch (error) {
+          this.logger.error('Erro ao verificar Newsletter:', error);
+        }
+
+        return;
+      }
+
       let ignorePV = bot.ignorePV && bot.notInWhitelist(message.author) && message.group === null;
 
       // Verifica links de convite em chats privados
@@ -367,39 +393,10 @@ class EventHandler {
       }
     }
 
-    if (message.type === 'text') {
-      if (group) {
-        // Vê se a mensagem não é um MuNews ou horóscopo
-        try {
-          const isNewsDetected = await MuNewsCommands.detectNews(message.content, group.id);
-          if (isNewsDetected) {
-            // Opcionalmente, envia uma confirmação de que a MuNews foi detectada e salva
-            bot.sendMessage(process.env.GRUPO_LOGS, "📰 *MuNews detectada e salva!*").catch(error => {
-              this.logger.error('Erro ao enviar confirmação de MuNews:', error);
-            });
-            return;
-          }
-
-          const isHoroscopoDetected = await HoroscopoCommands.detectHoroscopo(message.content, group.id);
-          if (isHoroscopoDetected) {
-            // Opcionalmente, envia uma confirmação de que um Horoscopo foi detectado e salvo
-            // bot.sendMessage(process.env.GRUPO_LOGS, "🔮 *Horoscopo detectado e salvo!*").catch(error => {
-            //   this.logger.error('Erro ao enviar confirmação de Horoscopo:', error);
-            // });
-            return;
-          }
-
-        } catch (error) {
-          this.logger.error('Erro ao verificar MuNews ou horóscopo:', error);
-        }
-      } else {
-        // Msg no PV, responder usando IA
-        if (bot.pvAI) {
-          this.logger.debug(`[processNonCommandMessage] PV sem comando, chamando LLM com '${message.content}'`);
-          const msgsLLM = await aiCommand(bot, message, [], group);
-          bot.sendReturnMessages(msgsLLM);
-        }
-      }
+    if (message.type === 'text' && bot.pvAI) {
+      this.logger.debug(`[processNonCommandMessage] PV sem comando, chamando LLM com '${message.content}'`);
+      const msgsLLM = await aiCommand(bot, message, [], group);
+      bot.sendReturnMessages(msgsLLM);
     }
 
     if (group) {

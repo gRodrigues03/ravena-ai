@@ -1338,6 +1338,7 @@ class WhatsAppBotEvo {
             key: key,
             secret: evoMessageData.message?.messageContextInfo?.messageSecret,
             hasMedia: (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)),
+            isNewsletter: chatId.includes("newsletter"),
 
             getContact: async () => {
               const contactIdToFetch = isGroup ? (key.participant || author) : author;
