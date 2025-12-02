@@ -713,7 +713,7 @@ class StreamMonitor extends EventEmitter {
                         this.streamStatuses[channelKey].viewerCount = stream.viewer_count;
                         this.streamStatuses[channelKey].startedAt = stream.start_time;
                         this.streamStatuses[channelKey].platform = "kick";
-                        this.streamStatuses[channelKey].channelName = channelName;
+                        this.streamStatuses[channelKey].channelName = channel.name;
                         this.streamStatuses[channelKey].startedAt = stream.start_time;
                         this.streamStatuses[channelKey].game = channelData.category ? channelData.category.name : 'Unknown';
                     }

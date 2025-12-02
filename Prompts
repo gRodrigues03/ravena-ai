@@ -3101,3 +3101,57 @@ MessageMedia: Excelente. A EvolutionAPI também não utiliza nativamente, apenas
   de convite e adicionar o bot ao seu servidor.
 
   
+
+  ----
+
+  EOVLUTION GO
+  -----
+  Tenho um bot de whatsapp escrito em várias bibliotecas. O atual utiliza a EvolutionAPI v2. Fioi lançada uma nova versão em GO, chamada V3. Você é um engenheiro senior e irá implementar o novo wrapper
+
+Arquivos chaves para o desenvolvimento
+- @WhatsAppBotEvo.js  : Atual implementação funcional do bot na V2. Este é o arquivo base para implementação do 'src/WhatsAppBotEvoGo.js'. Todos os métodos especificados neste arquivo DEVEM ser implementados, caso ache algum redutante, transforme-os em stub, apenas retornando a entrada, por exemplo
+- @EvolutionApiClient.js : API client wrapper  V2
+- @EvolutionGoClient.js : API client wrapper V3
+- @EvoGO_API.json : Swagger que descreve todos os endpoints disponíveis na V3
+- @api-overview.md :  Visão geral e pontos importantes na implementação da V3
+- @dev/guias-api : Os arquivos MD nesta pasta mostram o retorno de todos os endpoints, para que você faça uma implementação PRECISA sem ter que advinhar parametros de resposta ou request
+- @api-call.md, @api-chats.md, @api-community.md, @api-groups.md, @api-instances.md, @api-messages.md, @api-newsletter.md, @api-user.md: Request e response exemplos NECESSÁRIOS para implementação ((PRECISA))
+- @payload-examples.json : Arquivo JSON que possui exemplos REAIS recebidos via webhook, a chave da raiz descreve o nome do evento e o conteudo desta chave representa o recebido no payload do mesmo
+- @index.js : ponto de entrada. Já está especificado como serão criados os objetos da nova classe WhatsAppBotEvoGo
+
+Detalhes importantes:
+- formatMessageFromEvo é a função CHAVE do código. Ela deve fazer o parse perfeito de tudo que for recebido nos webhook/websockets. O mesmo vale para a _handleGroupParticipantsUpdate
+- Na antiga se usava a API KEY GLOBAL para tudo: Agora deve ser usada apenas no criar/deletar instancias (administrativo) 
+- A classe deve receber, além da evolutionApiKey, um evolutionInstanceApiKey. Este é o token que identifica a instancia. Formato UUID (f2ba3d3b-12ea-4973-bde0-baa1856955bb)
+- Essa evolutionInstanceApiKey deve ser utilizada também na criação da instancia, para que ela tenha sempre o mesmo token quando recriada. 
+- O evento 'JoinedGroup' é disparado quando o bot é adicionado a um grupo
+- O evento 'GroupInfo' é disparado quando alguma mudança ocorre no grupo. Se o @lid do bot estiver em data.leave, quer dizer que ele foi removido do grupo. O @lid do bot pode ser encontrado no objeto 'group', retornado 
+O @lid é único para cada usuário dentro do grupo, você deve armazenar um objeto que associe o xxxxx@g.us com o @lid do bot. Caso não tenha vindo em nenhum evento, busque manualmente em '/group/info'
+- Utilize os websockets nativos ao invés de socket.io: const WebSocket = require('ws');
+- o /instance/status é diferente, sugestão: const state = statusData?.data?.Connected && statusData?.data?.LoggedIn ? "CONNECTED" : "DISCONNECTED";
+
+Não esquecer:
+- Copie os metodos de conversão de imagens/gifs para economizar tokens
+- formattedMessage.origin: Deve seguir o mesmo padrão da original para total compatibilidade
+- sendReturnMessages
+- createMedia e createMediaFromURL: Utilizar boa parte das funções, mas o download da midia deve ser feito no novo endpoint '/message/downloadmedia'
+- 
+
+
+Mudanças pequenas:
+- Renomeie o pedaço URL do webhook de '/webhook/evo/' para '/webhook/evogo/'
+
+Outros arquivos:
+- CacheManager.js:
+Este arquivo deve receber novas funções relativas a putMessageInCache, putSentMessageInCache, getMessageFromCache pois elas não possuem o elemento 'key', apenas o 'id'. putGoMessageInCache, putGoSentMessageInCache e getGoMessageFromCache
+Atualize as chamadas para os métodos no arquivo principal, WhatsAppBotEvoGo.js
+Certifiquese de tratar o messageId no recoverMsgFromCache, onde o options.quotedMessageId pode vir com o formato do formattedMessage.origin.id ("chatId_fromMe_messageId")
+
+---
+TypeError: Cannot read properties of undefined (reading 'Info')
+src/WhatsAppBotEvoGo.js:1036:37
+
+Este erro aconteceu ao executar a função recoverMsgFromCache
+indicando que a prorpriedade Info possivelmente não está sendo incluída no cache.
+
+Analise e corrija

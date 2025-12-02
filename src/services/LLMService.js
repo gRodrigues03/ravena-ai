@@ -26,13 +26,6 @@ class LLMService {
 
 		this.providerDefinitions = [
 			{
-				name: 'lmstudio',
-				method: async (options) => {
-					const response = await this.lmstudioCompletion(options);
-					return response.choices[0].message.content;
-				}
-			},
-			{
 				name: 'ollama',
 				method: async (options) => {
 					const response = await this.ollamaCompletion(options);
@@ -43,6 +36,13 @@ class LLMService {
 						return response.choices[0].message.content;
 					}
 					throw new Error('Resposta inválida ou vazia do Ollama');
+				}
+			},
+			{
+				name: 'lmstudio',
+				method: async (options) => {
+					const response = await this.lmstudioCompletion(options);
+					return response.choices[0].message.content;
 				}
 			},
 			{
@@ -268,7 +268,7 @@ class LLMService {
 		try {
 			// Determina endpoint e chave da API com base em local ou remoto
 			const endpoint = options.useLocal 
-				? `${this.localEndpoint}/chat/completions` 
+				? `${(options.customEndpoint ?? this.localEndpoint)}/chat/completions` 
 				: 'https://api.openai.com/v1/chat/completions';
 			
 			const apiKey = options.useLocal ? `Basic ${this.LMStudioToken}` : `Bearer ${this.openAIKey}`;
@@ -333,7 +333,7 @@ class LLMService {
 	 */
 	async lmstudioCompletion(options) {
 		try {
-			const endpoint = this.localEndpoint + '/api/v0/chat/completions';
+			const endpoint = (options.customEndpoint ?? this.localEndpoint) + '/api/v0/chat/completions';
 			
 			const messages = [];
 			const systemContext = options.systemContext ?? "Você é ravena, um bot de whatsapp criado por moothz";
@@ -414,7 +414,7 @@ class LLMService {
 	 */
 	async ollamaCompletion(options) {
 		try {
-			const endpoint = this.ollamaEndpoint + '/api/chat';
+			const endpoint = (options.customEndpoint ?? this.ollamaEndpoint) + '/api/chat';
 
 			// 1. Set up the messages array, starting with the system context if provided.
 			const messages = [];

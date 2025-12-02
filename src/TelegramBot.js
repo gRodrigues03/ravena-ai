@@ -89,8 +89,8 @@ class WhatsAppBotTelegram {
     this.loadReport = new LoadReport(this);
     // this.inviteSystem = new InviteSystem(this); // Ignorado no Telegram
     // this.reactionHandler = new ReactionsHandler(); // Ignorado no Telegram
-    this.streamSystem = new StreamSystem(this);
-    this.streamSystem.initialize();
+    //this.streamSystem = new StreamSystem(this);
+    //this.streamSystem.initialize();
     this.adminUtils = AdminUtils.getInstance();
 
     this.webhookApp = null;
