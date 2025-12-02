@@ -24,6 +24,7 @@ class StreamMonitor extends EventEmitter {
   }
 
   constructor(channels = [], totalBots = 50) {
+    
     // Se já existir uma instância, retorna ela
     if (StreamMonitor.instance) {
       return StreamMonitor.instance;
@@ -54,12 +55,12 @@ class StreamMonitor extends EventEmitter {
     
     // Flag para verificar se o monitoramento está ativo
     this.isMonitoring = false;
-    
-    // Initialize database file if it doesn't exist
-    this._initDatabase();
 
     this.logger = new Logger('stream-monitor');
     this.logger.info('Service StreamMonitor carregado (modo singleton)');
+    
+    // Initialize database file if it doesn't exist
+    this._initDatabase();
     
     // Subscribe to initial channels if provided
     if (channels.length > 0) {
@@ -595,7 +596,11 @@ class StreamMonitor extends EventEmitter {
               .replace('{width}', '640')
               .replace('{height}', '360');
             this.streamStatuses[channelKey].viewerCount = liveStream.viewer_count;
+            this.streamStatuses[channelKey].platform = "twitch";
+            this.streamStatuses[channelKey].channelName = channelName;
             this.streamStatuses[channelKey].startedAt = liveStream.started_at;
+            this.streamStatuses[channelKey].game = liveStream.game_name;
+
           }
           
           // Emit events for status changes
@@ -699,7 +704,7 @@ class StreamMonitor extends EventEmitter {
                     }
                     this.streamStatuses[channelKey].isLive = isLiveNow;
                     this.streamStatuses[channelKey].lastChecked = new Date().toISOString();
-
+                    
                     // Add stream details if live
                     if (isLiveNow) {
                         const stream = channelData.stream;
@@ -707,6 +712,10 @@ class StreamMonitor extends EventEmitter {
                         this.streamStatuses[channelKey].thumbnail = stream.thumbnail;
                         this.streamStatuses[channelKey].viewerCount = stream.viewer_count;
                         this.streamStatuses[channelKey].startedAt = stream.start_time;
+                        this.streamStatuses[channelKey].platform = "kick";
+                        this.streamStatuses[channelKey].channelName = channelName;
+                        this.streamStatuses[channelKey].startedAt = stream.start_time;
+                        this.streamStatuses[channelKey].game = channelData.category ? channelData.category.name : 'Unknown';
                     }
 
                     // Emit events for status changes
@@ -1083,6 +1092,8 @@ class StreamMonitor extends EventEmitter {
             const isLiveNow = liveStreamUserIds.includes(user.id);
             const liveStream = liveStreams.find(stream => stream.user_id === user.id);
             
+            //this.logger.debug(`[StreamMonitor] liveStream`, {channel: user.login, streamResponse, liveStream});
+
             // Cria o objeto de status
             const status = {
               platform: 'twitch',
