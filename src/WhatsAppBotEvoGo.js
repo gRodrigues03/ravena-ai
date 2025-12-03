@@ -70,10 +70,6 @@ class WhatsAppBotEvoGo {
     this.redisTTL = options.redisTTL || 604800;
     this.maxCacheSize = 3000;
 
-    this.skipGroupsPath = path.join(__dirname, '..', 'data', `skip-groups-${this.id}.json`);
-
-    this.streamIgnoreGroups = [];
-    this.skipGroupInfo = [];
     this.messageCache = [];
     this.contactCache = [];
     this.sentMessagesCache = [];
@@ -104,7 +100,7 @@ class WhatsAppBotEvoGo {
     );
 
     this.database = Database.getInstance();
-    this.isConnected = false;
+    this.isConnected = true;
     this.safeMode = options.safeMode !== undefined ? options.safeMode : (process.env.SAFE_MODE === 'true');
     this.otherBots = options.otherBots || [];
 
@@ -119,15 +115,13 @@ class WhatsAppBotEvoGo {
 
     this.mentionHandler = new MentionHandler();
 
-    this.lastMessageReceived = 0;
-    this.startupTime = 0;
+    this.lastMessageReceived = Date.now();
+    this.startupTime = Date.now();
 
     this.loadReport = new LoadReport(this);
     this.inviteSystem = new InviteSystem(this);
     this.reactionHandler = new ReactionsHandler();
 
-    this.streamSystem = null;
-    this.streamMonitor = null;
     this.stabilityMonitor = options.stabilityMonitor ?? false;
 
     this.llmService = new LLMService({});
@@ -137,11 +131,6 @@ class WhatsAppBotEvoGo {
     this.webhookServer = null;
 
     this.blockedContacts = [];
-
-    if (!this.streamSystem) {
-      this.streamSystem = new StreamSystem(this);
-      this.streamMonitor = this.streamSystem.streamMonitor;
-    }
 
     // Client Fake
     this.client = {
@@ -186,25 +175,24 @@ class WhatsAppBotEvoGo {
     setInterval(this.updateVersions, 3600000);
   }
 
-  async getEvoGoInstance(token, name) {
-    const allInstances = await this.apiClient.get(`/instance/all`, {}, true);
-    return allInstances.data?.find(aI => aI.token === token && aI.name === name);
-  }
-
   async logout() {
     this.logger.info(`[logout] Logging out instance ${this.instanceName}`);
     return await this.apiClient.delete('/instance/logout', {}, false);
   }
 
   async deleteInstance() {
+
     // Precisa pegar O ID da instancia, que só vem no /all
-    const instanceToDelete = await this.getEvoGoInstance(this.evolutionInstanceApiKey, this.instanceName)
-    this.logger.info(`[deleteInstance] Deleting instance ${this.instanceName}`, { instanceToDelete });
+    this.logger.info(`[deleteInstance] Deleting instance ${this.instanceName}`);
+
+    const allInstances = await this.apiClient.get(`/instance/all`, {}, true);
+    const instanceToDelete = allInstances.data?.find(aI => aI.token === this.evolutionInstanceApiKey && aI.name === this.instanceName);
 
     if (instanceToDelete) {
+      this.logger.debug(`[deleteInstance] Instances`, { allInstances, instanceToDelete })
       return await this.apiClient.delete(`/instance/delete/${instanceToDelete.id}`, {}, true);
     } else {
-      return { "erro": "não encontrei a instancia", name: this.instanceName, token: this.evolutionInstanceApiKey };
+      return { "erro": "não encontrei a instancia", allInstances, name: this.instanceName, token: this.evolutionInstanceApiKey };
     }
   }
 
@@ -234,10 +222,6 @@ class WhatsAppBotEvoGo {
     return cleanId;
   }
 
-  async isUserAdminInGroup(userId, groupId) {
-    return this.adminUtils.isAdmin(userId, { id: groupId }, null, this.client);
-  }
-
   async recreateInstance() {
     const results = [];
     this.logger.info(`[recreateInstance] Starting recreation for ${this.instanceName}`);
@@ -257,17 +241,7 @@ class WhatsAppBotEvoGo {
         this.logger.info(`[recreateInstance] Attempting to create instance (try ${i + 1}/3)...`);
         const createResult = await this.createInstance();
         results.push({ action: 'create', status: 'success', result: createResult });
-        this.logger.info(`[recreateInstance] Instance creation successful, defining settings`);
-
-        try {
-          const settingsResult = await this.instanceAdvSettings(); // Default ok
-          results.push({ action: 'advSettings', status: 'success', result: settingsResult });
-          this.logger.info(`[recreateInstance] Instance advanced settings successful.`);
-        } catch (error) {
-          this.logger.error(`[recreateInstance] Failed to define instance advanced settings:`, error);
-          results.push({ action: 'advSettings', status: 'error', attempt: i + 1, error: error.message });
-        }
-
+        this.logger.info(`[recreateInstance] Instance creation successful.`);
         return results;
       } catch (error) {
         this.logger.error(`[recreateInstance] Attempt ${i + 1} failed:`, error);
@@ -281,18 +255,6 @@ class WhatsAppBotEvoGo {
 
     this.logger.error(`[recreateInstance] Failed to create instance after 3 attempts.`);
     return results;
-  }
-
-  async instanceAdvSettings(alwaysOnline = true,rejectCall = true,readMessages = false,ignoreGroups = false,ignoreStatus = true) {
-    // Precisa pegar O ID da instancia, que só vem no /all
-    const instanceToEdit = await this.getEvoGoInstance(this.evolutionInstanceApiKey, this.instanceName)
-    this.logger.info(`[instanceAdvSettings] Instance Settings ${this.instanceName}`, { instanceToEdit, alwaysOnline, rejectCall, readMessages, ignoreGroups, ignoreStatus });
-
-    if (instanceToEdit) {
-      return await this.apiClient.put(`/instance/${instanceToEdit.id}/advanced-settings`, { alwaysOnline, rejectCall, readMessages, ignoreGroups, ignoreStatus });
-    } else {
-      throw new Error(JSON.stringify({ "erro": "não encontrei a instancia", name: this.instanceName, token: this.evolutionInstanceApiKey }));
-    }
   }
 
   async updateVersions() {
@@ -768,60 +730,13 @@ class WhatsAppBotEvoGo {
         await writeFileAsync(filePath, base64Data, 'base64');
 
         const fileUrl = `${process.env.BOT_DOMAIN_LOCAL ?? process.env.BOT_DOMAIN}/attachments/${fileName}`;
-
-        const media = { url: fileUrl, mimetype, filename: fileName, filePath, base64: base64Data };
-        //this.logger.debug(`[_downloadMediaFromEvo] Res: ${fileUrl}`, media);
-        return media;
+        //this.logger.debug(`[_downloadMediaFromEvo] Res: ${fileUrl}`);
+        return { url: fileUrl, mimetype, filename: fileName, filePath, base64: base64Data };
       }
     } catch (error) {
       this.logger.error(`[${this.id}] Error downloading media from Evo:`, error);
     }
     return null;
-  }
-
-  _storeMediaFile(source, extension) {
-    const outputDir = path.join(__dirname, '..', 'public', 'attachments');
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
-
-    const tempId = randomBytes(8).toString('hex');
-    const outputFileName = `${tempId}${extension}`;
-    const outputFilePath = path.join(outputDir, outputFileName);
-
-    if (Buffer.isBuffer(source)) {
-      fs.writeFileSync(outputFilePath, source);
-    } else if (typeof source === 'string' && fs.existsSync(source)) {
-      fs.copyFileSync(source, outputFilePath);
-    } else {
-      throw new Error("Invalid source for _storeMediaFile");
-    }
-
-    setTimeout((ofp) => {
-      if (fs.existsSync(ofp)) fs.unlinkSync(ofp);
-    }, 10 * 60 * 1000, outputFilePath);
-
-    return `${process.env.BOT_DOMAIN_LOCAL ?? process.env.BOT_DOMAIN}/attachments/${outputFileName}`;
-  }
-
-  async createMediaFromBase64(base64Data, mimetype, filename) {
-    try {
-      const extension = mime.extension(mimetype) || 'bin';
-      const buffer = Buffer.from(base64Data, 'base64');
-      const url = this._storeMediaFile(buffer, `.${extension}`);
-
-      // Fixes
-      if(mimetype === "application/mp4"){
-        mimetype = "video/mp4";
-      }
-
-      const media = { mimetype, data: base64Data, filename: filename || `file.${extension}`, source: 'base64', url, isMessageMedia: true };
-      //this.logger.info(`[createMediaFromBase64] `, media );
-      return media;
-    } catch (error) {
-      this.logger.error(`Error in createMediaFromBase64:`, error);
-      throw error;
-    }
   }
 
   async createMedia(filePath, customMime = false) {
@@ -830,53 +745,31 @@ class WhatsAppBotEvoGo {
         throw new Error(`File not found: ${filePath}`);
       }
 
-      const extension = path.extname(filePath);
-      const fileUrl = this._storeMediaFile(filePath, extension);
+      const outputDir = path.join(__dirname, '..', 'public', 'attachments');
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+
+      const extension = path.extname(filePath); // e.g., '.mp4'
+      const tempId = randomBytes(8).toString('hex');
+      const outputFileName = `${tempId}${extension}`;
+      const outputFilePath = path.join(outputDir, outputFileName);
+
+      fs.copyFileSync(filePath, outputFilePath);
+
+      setTimeout((ofp, ofn) => {
+        if (fs.existsSync(ofp)) fs.unlinkSync(ofp);
+      }, 10 * 60 * 1000, outputFilePath, outputFileName); // 10 minutes in milliseconds
 
       const data = fs.readFileSync(filePath, { encoding: 'base64' });
       const filename = path.basename(filePath);
-      let mimetype = customMime ? customMime : (mime.lookup(filePath) || 'application/octet-stream');
+      const mimetype = customMime ? customMime : (mime.lookup(filePath) || 'application/octet-stream');
+      const fileUrl = `${process.env.BOT_DOMAIN_LOCAL ?? process.env.BOT_DOMAIN}/attachments/${outputFileName}`;
 
-
-      // Fixes
-      if(mimetype === "application/mp4"){
-        mimetype = "video/mp4";
-      }
-
-      const media = { mimetype, data, filename, source: 'file', url: fileUrl, isMessageMedia: true };
-      //this.logger.info(`[createMedia] `, media );
-      return media;
+      this.logger.info(`[createMedia] ${fileUrl}`);
+      return { mimetype, data, filename, source: 'file', url: fileUrl, isMessageMedia: true };
     } catch (error) {
       console.error(`Error creating media from ${filePath}:`, error);
-      throw error;
-    }
-  }
-
-
-  async createMediaFromURL(url, options = { unsafeMime: true, customMime: false }) {
-    try {
-      const filename = path.basename(new URL(url).pathname) || 'media_from_url';
-      let mimetype = mime.lookup(url.split("?")[0]) || (options.unsafeMime ? 'application/octet-stream' : null);
-
-      if (!mimetype && options.unsafeMime) {
-        try {
-          const headResponse = await axios.head(url);
-          this.logger.info("mimetype do header? ", headResponse);
-          mimetype = options.customMime ? options.customMime : (headResponse.headers['content-type']?.split(';')[0] || 'application/octet-stream');
-        } catch (e) { /* ignore */ }
-      }
-
-      // Fixes
-      if(mimetype === "application/mp4"){
-        mimetype = "video/mp4";
-      }
-
-      const media = { url, mimetype, filename, source: 'url', url, isMessageMedia: true };
-
-      //this.logger.info(`[createMediaFromURL] `, media);
-      return media;
-    } catch (error) {
-      this.logger.error(`[${this.id}] Evo: Error creating media from URL ${url}:`, error);
       throw error;
     }
   }
@@ -912,16 +805,29 @@ class WhatsAppBotEvoGo {
         }
       } catch (sendError) {
         this.logger.error(`[${this.id}] Falha enviando ReturnMessages pra ${message.chatId}:`, sendError);
-        results.push({
-          error: sendError,
-          messageContent: message.content,
-          getInfo: () => { // Usado no StreamSystem pra saber se foi enviada
-            return { delivery: [], played: [], read: [] };
-          }
-        });
+        results.push({ error: sendError, messageContent: message.content }); // Push error for this message
       }
     }
     return results;
+  }
+
+  async createMediaFromURL(url, options = { unsafeMime: true, customMime: false }) {
+    try {
+      const filename = path.basename(new URL(url).pathname) || 'media_from_url';
+      let mimetype = mime.lookup(url.split("?")[0]) || (options.unsafeMime ? 'application/octet-stream' : null);
+
+      if (!mimetype && options.unsafeMime) {
+        try {
+          const headResponse = await axios.head(url);
+          this.logger.info("mimetype do header? ", headResponse);
+          mimetype = options.customMime ? options.customMime : (headResponse.headers['content-type']?.split(';')[0] || 'application/octet-stream');
+        } catch (e) { /* ignore */ }
+      }
+      return { url, mimetype, filename, source: 'url', url, isMessageMedia: true }; // MessageMedia compatible for URL sending
+    } catch (error) {
+      this.logger.error(`[${this.id}] Evo: Error creating media from URL ${url}:`, error);
+      throw error;
+    }
   }
 
   recoverMsgFromCache(messageId) {
@@ -932,17 +838,12 @@ class WhatsAppBotEvoGo {
         } else {
           const actualId = this.getActualMsgId(messageId);
 
-          
           const msg = await this.cacheManager.getGoMessageFromCache(actualId);
-
-          //this.logger.debug(`[recoverMsgFromCache] `, { actualId, msg });
           if (!msg || !msg.evoMessageData) {
             resolve(msg || null);
             return;
           }
-
           const recovered = await this.formatMessageFromEvo(msg.evoMessageData);
-          //this.logger.debug(`[recoverMsgFromCache] `, { actualId, recovered });
           if (!recovered) {
             resolve(msg);
           } else {
@@ -978,135 +879,62 @@ class WhatsAppBotEvoGo {
     });
   }
 
-  startConnectionMonitor() {
-    if (!this.websocket) return;
-
-    if (this.connectionMonitorInterval) {
-      clearInterval(this.connectionMonitorInterval);
-    }
-
-    this.logger.info(`[ConnectionMonitor] Starting monitor...`);
-
-    this.connectionMonitorInterval = setInterval(() => {
-      const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-      const currentTimeInMinutes = hours * 60 + minutes;
-
-      let thresholdMinutes = 5; // Default 07:31 - 23:59
-
-      // 00:00 - 05:00 (5 * 60 = 300)
-      if (currentTimeInMinutes >= 0 && currentTimeInMinutes <= 300) {
-        thresholdMinutes = 30;
-      }
-      // 05:01 - 07:30 (7 * 60 + 30 = 450)
-      else if (currentTimeInMinutes > 300 && currentTimeInMinutes <= 450) {
-        thresholdMinutes = 10;
-      }
-
-      const timeSinceLastMessage = Date.now() - this.lastMessageReceived;
-      const thresholdMs = thresholdMinutes * 60 * 1000;
-
-      const isDisconnected = !this.isConnected || (this.ws && this.ws.readyState !== WebSocket.OPEN);
-
-      if (isDisconnected) {
-        this.logger.warn(`[ConnectionMonitor] WebSocket disconnected. Reconnecting...`);
-        this._connectWebSocket();
-      } else if (timeSinceLastMessage > thresholdMs) {
-        this.logger.warn(`[ConnectionMonitor] No messages received for ${Math.floor(timeSinceLastMessage / 60000)} minutes (Threshold: ${thresholdMinutes}m). Restarting WebSocket...`);
-        this._connectWebSocket();
-      }
-
-    }, 60000); // Check every minute
-  }
-
-  async _connectWebSocket() {
-    try {
-      const instanceInfo = await this.getEvoGoInstance(this.evolutionInstanceApiKey, this.instanceName);
-      if (!instanceInfo) {
-        this.logger.error(`[${this.id}] Instance not found for WebSocket connection.`);
-        return;
-      }
-      const wsUrl = `${this.evolutionWS}/ws?token=${this.evolutionApiKey}&instanceId=${instanceInfo?.id}`;
-
-      this.logger.info(`[${this.id}] Connecting to WebSocket: ${wsUrl}`);
-
-      if (this.ws) {
-        try {
-          this.ws.removeAllListeners();
-          this.ws.terminate();
-        } catch (e) {
-          this.logger.error(`[${this.id}] Error closing existing WebSocket:`, e);
-        }
-      }
-
-      this.ws = new WebSocket(wsUrl);
-
-      this.ws.on('open', () => {
-        this.logger.info(`[${this.id}] WebSocket connected.`);
-        this._onInstanceConnected();
-      });
-
-      this.ws.on('message', (rawData) => {
-        try {
-          const data = JSON.parse(rawData);
-          const payload = JSON.parse(data.payload);
-
-          //this.logger.info(`[WebSocket] `, { payload });
-
-          return this._handleWebhook({ websocket: true, body: payload }, { sendStatus: () => 0 }, true);
-        } catch (err) {
-          this.logger.error(`[${this.id}] Error parsing WebSocket message:`, err);
-        }
-      });
-
-      this.ws.on('error', (err) => {
-        this.logger.error(`[${this.id}] WebSocket error:`, err);
-      });
-
-      this.ws.on('close', () => {
-        this.logger.warn(`[${this.id}] WebSocket disconnected.`);
-        this._onInstanceDisconnected('WEBSOCKET_CLOSE');
-      });
-
-    } catch (error) {
-      this.logger.error(`[${this.id}] Error in _connectWebSocket:`, error);
-    }
-  }
-
   async initialize() {
-    await this._loadSkipGroupInfo();
+    const wsUrl = `${this.evolutionWS}?token=${this.evolutionInstanceApiKey}&instanceId=${this.instanceName}`;
+    const instanceDesc = this.websocket ? `Websocket to ${wsUrl}` : `Webhook on ${this.instanceName}:${this.webhookPort}`;
+    this.logger.info(`[${this.id}] Initializing EvolutionGO API bot instance ${this.instanceName} (Evo Instance: ${instanceDesc})`);
     this.database.registerBotInstance(this);
     this.startupTime = Date.now();
-    this.lastMessageReceived = Date.now();
-
-    const instanceDesc = this.websocket ? `Websocket` : `Webhook on ${this.instanceName}:${this.webhookPort}`;
-    this.logger.info(`[${this.startupTime}][${this.id}] Initializing EvolutionGO API bot instance ${this.instanceName} (Evo Instance: ${instanceDesc})`); // , { instanceInfo }
 
     try {
       if (this.websocket) {
-          await this._connectWebSocket();
-          this.startConnectionMonitor();
-      } else {
-        // Webhook Setup
-        this.webhookApp = express();
-        this.webhookApp.use(express.json({ limit: '500mb' }));
-        this.webhookApp.use(express.urlencoded({ extended: true, limit: '500mb' }));
+        this.logger.info(`[${this.id}] Connecting to WebSocket: ${wsUrl}`);
+        const ws = new WebSocket(wsUrl);
 
-        const webhookPath = `/webhook/evogo/${this.instanceName}`;
-        this.webhookApp.post(webhookPath, this._handleWebhook.bind(this));
-        this.webhookApp.get(webhookPath, this._handleWebhook.bind(this));
+        ws.on('open', () => {
+          this.logger.info(`[${this.id}] WebSocket connected.`);
+          this._onInstanceConnected();
+        });
 
-        await new Promise((resolve, reject) => {
-          this.webhookServer = this.webhookApp.listen(this.webhookPort, () => {
-            this.logger.info(`Webhook listener for bot ${this.instanceName} started on ${this.webhookHost}:${this.webhookPort}${webhookPath}`);
-            resolve();
-          }).on('error', (err) => {
-            this.logger.error(`Failed to start webhook listener for bot ${this.instanceName}:`, err);
-            reject(err);
-          });
+        ws.on('message', (data) => {
+          try {
+            const message = JSON.parse(data);
+            // Adaptar estrutura do evento se necessário. V3 envia { event: "...", data: ... }
+            this._handleWebhook({ body: message }, { sendStatus: () => { }, status: () => ({ send: () => { } }) });
+          } catch (err) {
+            this.logger.error(`[${this.id}] Error parsing WebSocket message:`, err);
+          }
+        });
+
+        ws.on('error', (err) => {
+          this.logger.error(`[${this.id}] WebSocket error:`, err);
+        });
+
+        ws.on('close', () => {
+          this.logger.warn(`[${this.id}] WebSocket disconnected.`);
+          this._onInstanceDisconnected('WEBSOCKET_CLOSE');
         });
       }
+
+      // Webhook Setup
+      this.webhookApp = express();
+      this.webhookApp.use(express.json({ limit: '500mb' }));
+      this.webhookApp.use(express.urlencoded({ extended: true, limit: '500mb' }));
+
+      const webhookPath = `/webhook/evogo/${this.instanceName}`;
+      this.webhookApp.post(webhookPath, this._handleWebhook.bind(this));
+      this.webhookApp.get(webhookPath, this._handleWebhook.bind(this));
+
+      await new Promise((resolve, reject) => {
+        this.webhookServer = this.webhookApp.listen(this.webhookPort, () => {
+          this.logger.info(`Webhook listener for bot ${this.instanceName} started on http://${this.webhookHost}:${this.webhookPort}${webhookPath}`);
+          resolve();
+        }).on('error', (err) => {
+          this.logger.error(`Failed to start webhook listener for bot ${this.instanceName}:`, err);
+          reject(err);
+        });
+      });
+
     } catch (error) {
       this.logger.error(`Error during webhook setup for instance ${this.instanceName}:`, error);
     }
@@ -1120,26 +948,19 @@ class WhatsAppBotEvoGo {
   async _checkInstanceStatusAndConnect(isRetry = false, forceConnect = false) {
     this.logger.info(`Checking instance status for ${this.instanceName}...`);
     try {
-      let response;
-      try{
-        response = await this.apiClient.get(`/instance/status`);
-      } catch (e){
-        this.logger.error(`[_checkInstanceStatusAndConnect] Erro buscando status de ${this.instanceName}`, e);
-        response = {data: {Connected: false, LoggedIn: false}};
-      }
+      const response = await this.apiClient.get(`/instance/status`);
 
       const statusData = response?.data;
-      this.isConnected = statusData?.Connected && statusData?.LoggedIn;
-      const state = this.isConnected ? 'CONNECTED' : 'DISCONNECTED';
+      const isConnected = statusData?.Connected && statusData?.LoggedIn;
+      const state = isConnected ? 'CONNECTED' : 'DISCONNECTED';
       const extra = {};
-
 
       const instanceDetails = {
         version: this.version,
         tipo: "evogo"
       }
 
-      if (this.isConnected) {
+      if (isConnected) {
         this._onInstanceConnected();
         extra.ok = true;
       } else {
@@ -1148,7 +969,7 @@ class WhatsAppBotEvoGo {
 
           const connectResponse = await this.apiClient.post(`/instance/connect`, {
             webhookUrl: `${this.webhookHost}:${this.webhookPort}/webhook/evogo/${this.instanceName}`,
-            subscribe: ["MESSAGE","SEND_MESSAGE","READ_RECEIPT","PRESENCE","CHAT_PRESENCE","CALL","CONNECTION","LABEL","CONTACT","GROUP","NEWSLETTER","QRCODE"],
+            subscribe: ["MESSAGE", "PRESENCE", "CALL", "CONNECTION", "QRCODE", "CONTACT", "GROUP", "NEWSLETTER"],
             websocketEnable: this.websocket ? "enabled" : ""
           }, false);
 
@@ -1188,16 +1009,13 @@ class WhatsAppBotEvoGo {
   }
 
   async _onInstanceConnected() {
-    this.streamSystem.initialize();
-    this._sendStartupNotifications();
-    this.fetchAndPrepareBlockedContacts();
-
     if (this.isConnected) return;
     this.isConnected = true;
     this.logger.info(`[${this.id}] Successfully connected to WhatsApp via EvolutionGO API.`);
     if (this.eventHandler && typeof this.eventHandler.onConnected === 'function') {
       this.eventHandler.onConnected(this);
     }
+    setTimeout((snf) => snf(), 5000, this._sendStartupNotifications);
   }
 
   _onInstanceDisconnected(reason = 'Unknown') {
@@ -1211,9 +1029,6 @@ class WhatsAppBotEvoGo {
   }
 
   async _handleWebhook(req, res) {
-    // Evitar um bugzinho
-    this.isConnected = true;
-
     const payload = req.body;
     // V3 Payload structure: { event: "Message", instance: "...", data: { ... } }
 
@@ -1232,161 +1047,75 @@ class WhatsAppBotEvoGo {
           // Lógica de conexão
           break;
 
-        case 'Message': // Mensagens e reactions
-        case 'SendMessage':
+        case 'Message':
+        case 'SendMessage': // V3 separa enviadas?
           this.lastMessageReceived = Date.now();
+          // V3 payload examples mostram "Message" com "IsFromMe": true/false dentro de Info
           const msgData = payload.data;
 
-          if (msgData) {
-            const info = msgData.Info;
-            const msg = msgData.Message;
-            const reactionData = msg?.reactionMessage;
+          // Verificar se é array ou objeto (exemplos mostram array em alguns casos no JSON raiz, mas webhook geralmente manda um por vez)
+          // Se vier array:
+          const messages = Array.isArray(msgData) ? msgData : [msgData]; // Ajustar conforme payload real
 
+          // No exemplo payload-examples.json:
+          // "Message": [ { "data": { "Info": ..., "Message": ... }, "event": "Message", ... } ]
+          // O webhook deve enviar o objeto interno.
+
+          // Assumindo payload do webhook: { event: "Message", data: { Info: ..., Message: ... } }
+
+          if (payload.data && payload.data.Info) {
+            const info = payload.data.Info;
             const chatToFilter = info.Chat;
             if (chatToFilter === this.grupoLogs || chatToFilter === this.grupoInvites || chatToFilter === this.grupoEstabilidade) {
               break;
             }
 
-            if(reactionData){
-              // ravena só processa se VIER uma reaction (campo 'text')
-              if (reactionData.text !== "" && !reactionData.key.fromMe) {
+            // Adicionar campos para formatMessageFromEvo
+            const evoMsg = {
+              ...payload.data,
+              event: payload.event
+            };
 
-                //this.logger.debug(`[${this.id}] Received reaction:`, { reactionData });
-                // reactionData.text -> emoji
-                // reactionData.key.participant -> @lid da pessoa que RECEBEU a reaction
-                // reactionData.key.remoteJID -> chat que veio a reaction
-                this.reactionHandler.processReaction(this, {
-                  reaction: reactionData.text,
-                  senderId: info.Sender ?? info.SenderAlt,
-                  msgId: { _serialized: reactionData.key.ID }
-                });
-              }
-            } else {
-              // Se não for reaction, é qualquer outro tipo de mensagem
-              // Adicionar campos para formatMessageFromEvo
-              const evoMsg = {
-                ...msgData,
-                event: payload.event
-              };
-
-              this.formatMessageFromEvo(evoMsg).then(formattedMessage => {
-                if (formattedMessage && this.eventHandler && typeof this.eventHandler.onMessage === 'function') {
-                  if (!formattedMessage.fromMe) {
-                    this.eventHandler.onMessage(this, formattedMessage);
-                  }
+            this.formatMessageFromEvo(evoMsg).then(formattedMessage => {
+              if (formattedMessage && this.eventHandler && typeof this.eventHandler.onMessage === 'function') {
+                if (!formattedMessage.fromMe) {
+                  this.eventHandler.onMessage(this, formattedMessage);
                 }
-              }).catch(e => {
-                this.logger.error(`[Message] Erro formatando mensagem`, e);
-              });
-            }
+              }
+            }).catch(e => {
+              this.logger.error(`[Message] Erro formatando mensagem`, e);
+            });
           }
           break;
 
         case 'GroupInfo':
           // Payload: { event: "GroupInfo", data: { ... } }
           // data has: JID, Join, Leave, Promote, Demote
-          // Aqui vem várias coisas, quando muda titulo, configs, etc.
           const groupInfoData = payload.data;
           if (groupInfoData) {
-
-            // Eventos de mudança de membro
-            if (groupInfoData.Join || groupInfoData.Leave || groupInfoData.Promote || groupInfoData.Demote) {
-              this._handleGroupParticipantsUpdate(groupInfoData);
-            }
-
-            // Se mudou de nome, groupInfoData.Name Name: {Name: 'Novo Titulo',NameSetAt: '2025-11-24T16:57:49-03:00',NameSetBy: '123456@lid',NameSetByPN: '5599123456@s.whatsapp.net'}
+            this._handleGroupParticipantsUpdate(groupInfoData);
           }
           break;
 
         case 'JoinedGroup':
           // Bot joined a group
           // Payload: { event: "JoinedGroup", data: { JID: "...", Participants: [...] } }
-          this.logger.info(`[JoinedGroup] `, { payload });
+          //this.logger.info(`[JoinedGroup] `, { payload });
           const joinedData = payload.data;
           if (joinedData) {
             this._handleGroupParticipantsUpdate({
               JID: joinedData.JID,
               Join: [this.phoneNumber],
-              Sender: joinedData.Sender,
-              SenderPN: joinedData.SenderPN,
               isBotJoining: true,
               _raw: joinedData
             });
           }
           break;
-
-        case 'PushName':
-          const newPushName = payload.data.Message?.NewPushName ?? payload.data?.Message?.PushName;
-
-          if(newPushName && payload.data?.JID){
-            this.cacheManager.putPushnameInCache({id: payload.data.JID , pushName: newPushName});
-          }
-          if(newPushName && payload.data?.JIDAlt){
-            this.cacheManager.putPushnameInCache({id: payload.data.JIDAlt , pushName: newPushName});
-          }
-          break;
-        case 'Contact':
-          // Não precisa, mas já que veio, vamo aproveitar
-          if(payload.data?.JID && payload.data?.Action){
-            const nomeCtt = payload.data.Action.fullName ??payload.data.Action.firstName;
-
-            this.cacheManager.putPushnameInCache({id: payload.data.JID , pushName: newPushName});
-
-            if(payload.data.Action.lidJID){
-              this.cacheManager.putPushnameInCache({id: payload.data.Action.lidJID , pushName: newPushName});
-            }
-          }
-          break;
-        case 'ChatPresence':
-          break;
-        case 'Receipt':
-          break;
-
-        default:
-          this.logger.debug(`[_handleWebhook] Unhandled event: '${payload.event}'`, { payload });
-          break;
       }
     } catch (error) {
-      this.logger.error(`[${this.id}] Error processing webhook for event ${payload.event}:`, {error, payload});
+      this.logger.error(`[${this.id}] Error processing webhook for event ${payload.event}:`, error);
     }
     res.sendStatus(200);
-  }
-
-  async fetchAndPrepareBlockedContacts() {
-    const blockList = await this.apiClient.get(`/user/blocklist`);
-    //blockList: {data: {      DHash: '1761266184514262',JIDs: [...  ]},message: 'success'}
-
-    //this.logger.info(`[${this.id}][fetchAndPrepareBlockedContacts] `, { blockList });
-    this.blockedContacts = blockList.data?.JIDs?.map(jid => { 
-      return {
-        id: { _serialized: jid },
-        name: `Blocked_${jid}`
-      }
-    });
-
-    this.prepareOtherBotsBlockList(); // From original bot
-  }
-
-  prepareOtherBotsBlockList() {
-    if (!this.otherBots || !this.otherBots.length) return;
-    if (!this.blockedContacts || !Array.isArray(this.blockedContacts)) {
-      this.blockedContacts = [];
-    }
-    for (const bot of this.otherBots) { // Assuming otherBots is an array of JID-like strings or bot IDs
-      const botId = bot.endsWith("@c.us") || bot.endsWith("@s.whatsapp.net") ? bot : `${bot}@c.us`; // Basic normalization
-      if (!this.blockedContacts.some(c => c.id._serialized === botId)) {
-        this.blockedContacts.push({
-          id: { _serialized: botId },
-          name: `Other Bot: ${bot}` // Or some identifier
-        });
-        //this.logger.info(`[${this.id}] Added other bot '${botId}' to internal ignore list.`);
-      }
-    }
-    this.logger.info(`[${this.id}] Ignored contacts/bots list size: ${this.blockedContacts.length}`);
-  }
-
-  async formatMessage(data) { // Fallback
-    return data;
   }
 
   async formatMessageFromEvo(evoMessageData, skipCache = false) {
@@ -1407,17 +1136,12 @@ class WhatsAppBotEvoGo {
         }
 
         const chatId = info.Chat;
-        const isGroup = info.IsGroup || chatId.includes("broadcast");
+        const isGroup = info.IsGroup;
         const fromMe = info.IsFromMe;
         const id = info.ID;
         const timestamp = new Date(info.Timestamp).getTime() / 1000;
-        let pushName = info.PushName;
-        const sender = info.Sender; // geralmente phoneNumber (JID)
-        const senderAlt = info.SenderAlt // geralmente LID
-
-        if(!pushName || pushName?.length < 1){
-          pushName = await this.fetchPushNameFromCache(id) ?? "Usuario";
-        }
+        const pushName = info.PushName;
+        const sender = info.Sender; // JID
 
         // Context Info (Reply/Mentions)
         let contextInfo = null;
@@ -1533,20 +1257,15 @@ class WhatsAppBotEvoGo {
           group: isGroup ? chatId : null,
           from: isGroup ? chatId : sender,
           author: this._normalizeId(sender),
-          authorAlt: senderAlt,
           name: pushName,
           pushname: pushName,
-          authorName: pushName,
           type: type,
           content: content,
           body: content,
           caption: caption,
           timestamp: timestamp,
-          responseTime: responseTime,
           hasMedia: !!mediaInfo,
           mentions: mentions,
-          isQuoted: evoMessageData.isQuoted,
-          isNewsletter: chatId.includes("newsletter"),
 
           getContact: async () => {
             return await this.getContactDetails(sender, pushName);
@@ -1604,7 +1323,6 @@ class WhatsAppBotEvoGo {
         if (!skipCache) {
           this.cacheManager.putGoMessageInCache(formattedMessage);
         }
-
         resolve(formattedMessage);
 
       } catch (error) {
@@ -1662,31 +1380,20 @@ class WhatsAppBotEvoGo {
 
       let endpoint = '';
       if (typeof content === 'string') {
-        if(this.validURL(content)){
-          // Facilidade pra enviar mídia
-          endpoint = '/send/media';
-          payload.url = content;
-          payload.type = content.endsWith(".gif") ? "video" : (mime.lookup(content.split("?")[0]) ?? "document");
-        } else {
-          endpoint = '/send/text';
-          payload.text = content;
-        }
+        endpoint = '/send/text';
+        payload.text = content;
       } else if (content.isMessageMedia || options.sendMediaAsSticker) {
         if (options.sendMediaAsSticker) {
           endpoint = '/send/sticker';
-          if (!content.url && content.data) {
-            const media = await this.createMediaFromBase64(content.data, content.mimetype, content.filename);
-            payload.sticker = media.url;
-          } else {
-            payload.sticker = content.url || content.data;
-          }
+          payload.sticker = content.url || content.data; // URL preferred
         } else {
           endpoint = '/send/media';
           payload.url = content.url;
           if (!payload.url && content.data) {
-            const media = await this.createMediaFromBase64(content.data, content.mimetype, content.filename);
-            payload.url = media.url;
-            if (options.sendMediaAsSticker) payload.sticker = media.url;
+            // If no URL, we might need to upload or use base64 if supported (docs say file or url)
+            // For now assuming URL is available or handled elsewhere. 
+            // If only base64 available, might need to save to file and upload via form-data (not implemented here yet)
+            this.logger.warn("Sending media via base64 not fully supported in this wrapper version without file upload.");
           }
           payload.type = content.mimetype ? content.mimetype.split('/')[0] : 'image';
           if (options.sendMediaAsDocument) payload.type = 'document';
@@ -1719,7 +1426,7 @@ class WhatsAppBotEvoGo {
         payload.mentionedJid = options.mentions.join(",");
       }
 
-      //this.logger.debug(`[sendMessage] '${endpoint}'`, { content, payload });
+      this.logger.debug(`[sendMessage] '${endpoint}'`, { content, payload });
 
       const response = await this.apiClient.post(endpoint, payload);
       this.loadReport.trackSentMessage(isGroup);
@@ -1727,18 +1434,8 @@ class WhatsAppBotEvoGo {
       return {
         id: { _serialized: response.data?.Info?.ID || 'unknown' },
         ack: 1,
-        timestamp: Math.floor(Date.now() / 1000),
-        _data: response,
-        getInfo: () => { // Usado no StreamSystem pra saber se foi enviada
-          return { delivery: [1], played: [1], read: [1] };
-        },
-        pin: (tempo) =>{
-          this.logger.info(`[${response?.data?.Info?.ID}] message.pin por ${tempo}ms: Não implementado`);
-          return true;
-        }
+        timestamp: Math.floor(Date.now() / 1000)
       };
-
-
 
     } catch (error) {
       this.logger.error(`[${this.id}] Error sending message:`, error);
@@ -1749,16 +1446,29 @@ class WhatsAppBotEvoGo {
 
   async _handleGroupParticipantsUpdate(groupData) {
     // groupData: { JID, Join: [], Leave: [], Promote: [], Demote: [] }
-    //this.logger.debug(`[_handleGroupParticipantsUpdate] `, groupData);
     const groupId = groupData.JID;
 
     // Helper to process actions
     const processAction = async (groupData, participants, action) => {
       if (!participants || !participants.length) return;
 
-
       let groupDetails = await this.getChatDetails(groupId);
       let groupName = groupDetails?.name || groupId;
+
+      // Check if bot was removed
+      if (action === 'remove') {
+        const myJid = this.phoneNumber + '@s.whatsapp.net'; // Or fetch from status
+        // Check if any of the removed participants is the bot (using JID or LID)
+        // We need to know our LID.
+        const myLid = this.myLid; // Assuming we stored it
+
+        for (const p of participants) {
+          if (p === myJid || (myLid && p === myLid)) {
+            this.logger.info(`[${this.id}] Bot removed from group ${groupId}`);
+            // Handle bot removal logic if needed
+          }
+        }
+      }
 
       for (const participant of participants) {
         // participant is JID string
@@ -1766,9 +1476,9 @@ class WhatsAppBotEvoGo {
         const contactResp = await this.getContactDetails(groupData.Sender) ?? await this.getContactDetails(groupData.SenderPN);
 
         const eventData = {
-          group: { id: groupId, name: groupName, notInGroup: groupDetails.notInGroup, isBotJoining: groupData.isBotJoining },
+          group: { id: groupId, name: groupName },
           user: { id: participant, name: contact?.name || participant.split('@')[0] },
-          responsavel: { id: groupData.SenderPN, name: contactResp?.name || groupData.SenderPN?.split('@')[0] },
+          responsavel: { id: groupData.SenderPN, name: contactResp?.name || groupData.SenderPN.split('@')[0] },
           action: action,
           origin: { getChat: async () => await this.getChatDetails(groupId) }
         };
@@ -1791,57 +1501,10 @@ class WhatsAppBotEvoGo {
     await processAction(groupData, groupData.Demote, 'demote');
   }
 
-  acceptInviteCode(inviteCode) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        this.logger.debug(`[acceptInviteCode][${this.instanceName}] '${inviteCode}'`);
-        const resp = await this.apiClient.post(`/group/join`, { code: inviteCode });
-
-        resolve({ accepted: true });
-      } catch (e) {
-        this.logger.warn(`[acceptInviteCode][${this.instanceName}] Erro aceitando invite para '${inviteCode}'`, { e });
-        resolve({ accepted: false, error: e.data?.error ?? "Erro aceitando invite" });
-      }
-
-    });
-  }
-
-  // NÃO TEM NA EVOGO
-  // Fazer?
-  inviteInfo(inviteCode) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        this.logger.debug(`[inviteInfo][${this.instanceName}] '${inviteCode}'`);
-        //const inviteInfo = await this.apiClient.get(`/group/inviteInfo`, { inviteCode });
-        const inviteInfo = { code: inviteCode };
-        this.logger.info(`[inviteInfo] '${inviteCode}': ${JSON.stringify(inviteInfo)}`);
-
-        resolve(inviteInfo);
-      } catch (e) {
-        this.logger.warn(`[inviteInfo] Erro pegando invite info para '${inviteCode}'`);
-        reject(e);
-      }
-
-    });
-  }
-
   async getChatDetails(chatId) {
     if (!chatId) return null;
-
-    if (this.skipGroupInfo && this.skipGroupInfo.includes(chatId)) {
-      this.logger.info(`[getChatDetails] Skipping fetch for ${chatId} as it is in skipGroupInfo list.`);
-      return {
-        id: { _serialized: chatId },
-        name: chatId,
-        isGroup: true,
-        notInGroup: true,
-        participants: []
-      };
-    }
-
     try {
       if (chatId.includes('@g.us')) {
-
         const groupInfoResponse = await this.apiClient.post('/group/info', { groupJid: chatId });
         const groupInfo = groupInfoResponse.data;
 
@@ -1858,35 +1521,16 @@ class WhatsAppBotEvoGo {
           }
 
           return {
-            id: { _serialized: groupInfo.JID },
-            name: groupInfo.Name || chatId,
+            id: { _serialized: chatId },
+            name: groupInfo.GroupName?.Name || chatId,
             isGroup: true,
-            notInGroup: false,
-            groupMetadata: { desc: groupInfo.Topic },
             participants: groupInfo.Participants.map(p => ({
               id: { _serialized: p.JID },
               isAdmin: p.IsAdmin,
               isSuperAdmin: p.IsSuperAdmin,
-              phoneNumber: p.PhoneNumber,
               lid: p.LID
             })),
-            _raw: groupInfo,
-
-            // Métodos do wwebjs
-            setSubject: async (title) => {
-              return await this.apiClient.post(`/group/name`, { groupJid: chatId, name: title });
-            },
-            fetchMessages: async (limit = 30) => {
-              return false;
-            },
-            setMessagesAdminsOnly: async (adminOnly) => {
-              // TODO evogo
-              return false;
-            },
-            setPicture: async (picture) => {
-              this.logger.debug(`[chat] setPicture, não implementado`, { picture });
-              return await this.apiClient.post(`/group/photo`, { groupJid: chatId, image: picture.url });
-            }
+            _raw: groupInfo
           };
         }
       } else {
@@ -1898,137 +1542,33 @@ class WhatsAppBotEvoGo {
         };
       }
     } catch (e) {
-      if (e.status === 500 && e.data?.error === 'that group does not exist') {
-        this.logger.warn(`[getChatDetails] Group ${chatId} does not exist (status 500). Adding to skip list.`);
-        await this.addSkipGroup(chatId);
-        return {
-          id: { _serialized: chatId },
-          name: chatId,
-          isGroup: true,
-          notInGroup: true,
-          participants: []
-        };
-      } else if (e.data?.error?.includes("not participating")) {
-        this.logger.info(`[getChatDetails] Error fetching ${chatId}, bot não está no grupo`);
-        return {
-          id: { _serialized: chatId },
-          name: chatId,
-          isGroup: true,
-          notInGroup: true,
-          participants: []
-        };
-      } else {
-        this.logger.error(`[getChatDetails] Error fetching ${chatId}`, e);
-      }
+      this.logger.error(`[getChatDetails] Error fetching ${chatId}`, e);
     }
     return { id: { _serialized: chatId }, isGroup: chatId.includes('@g.us') };
   }
 
-  async _loadSkipGroupInfo() {
-    try {
-        const data = await readFileAsync(this.skipGroupsPath, 'utf8');
-        const allSkips = JSON.parse(data);
-        this.skipGroupInfo = allSkips[this.id] || [];
-        this.logger.info(`[SkipGroups] Loaded ${this.skipGroupInfo.length} skipped groups for bot ${this.id}.`);
-    } catch (error) {
-        if (error.code === 'ENOENT') {
-            this.logger.info(`[SkipGroups] ${this.skipGroupsPath} not found. Initializing empty skip list.`);
-            this.skipGroupInfo = [];
-            await this._saveSkipGroupInfo();
-        } else {
-            this.logger.error(`[SkipGroups] Error loading skip groups file:`, error);
-        }
-    }
-  }
-
-  async _saveSkipGroupInfo() {
-      let allSkips = {};
-      try {
-          const data = await readFileAsync(this.skipGroupsPath, 'utf8');
-          allSkips = JSON.parse(data);
-      } catch (error) {
-          if (error.code !== 'ENOENT') {
-              this.logger.error(`[SkipGroups] Error reading skip groups file before saving:`, error);
-              return;
-          }
-      }
-      allSkips[this.id] = this.skipGroupInfo;
-      try {
-          await writeFileAsync(this.skipGroupsPath, JSON.stringify(allSkips, null, 2));
-          this.logger.info(`[SkipGroups] Saved ${this.skipGroupInfo.length} skipped groups for bot ${this.id}.`);
-      } catch (error) {
-          this.logger.error(`[SkipGroups] Error saving skip groups file:`, error);
-      }
-  }
-
-  async addSkipGroup(groupId) {
-      if (!this.skipGroupInfo.includes(groupId)) {
-          this.skipGroupInfo.push(groupId);
-          await this._saveSkipGroupInfo();
-          this.logger.info(`[SkipGroups] Added ${groupId} to skip list.`);
-      }
-  }
-
-  async removeSkipGroup(groupId) {
-      const initialLength = this.skipGroupInfo.length;
-      this.skipGroupInfo = this.skipGroupInfo.filter(id => id !== groupId);
-      if (this.skipGroupInfo.length < initialLength) {
-          await this._saveSkipGroupInfo();
-          this.logger.info(`[SkipGroups] Removed ${groupId} from skip list.`);
-      }
-  }
-
-  async fetchPushNameFromCache(id){
-    return await this.cacheManager.getPushnameFromCache(id);
-  }
-
-  async getContactDetails(id, prefetchedName, cacheDurationHours = 12) {
+  async getContactDetails(id, prefetchedName) {
     if (!id) return null;
-
-    if (id === this.phoneNumber) {
-      return {
-        id: { _serialized: id },
-        name: this.instanceName,
-        number: this.phoneNumber,
-        lid: this.phoneNumber,
-        picture: ""
-      };
-    }
-
-    const now = Date.now();
-    const expirationMs = cacheDurationHours * 60 * 60 * 1000;
-
-    let returnData = { id: { _serialized: id }, number: id.split("@")[0], lid: id, name: prefetchedName ?? id.split('@')[0] };
-
-    let cacheName;
     try {
-      cacheName = await this.fetchPushNameFromCache(id);
-      returnData.name = cacheName ?? returnData.name;
-    } catch (e) {
-      // Ignore
-    }
+      // Check cache first (including LID)
+      // ...
 
-    try{
-      if (!cacheName || ((now - cachedContact._cachedAt) < expirationMs)) {
-        // Não tem cache ou expirou
-        const infoResponse = await this.apiClient.post('/user/info', { number: [id] });
-        const info = infoResponse.data?.Users?.[id];
+      const infoResponse = await this.apiClient.post('/user/info', { number: [id] });
+      const info = infoResponse.data?.Users?.[id];
 
-        if (info) {
-          returnData.name = info.VerifiedName ?? returnData.name;
-          returnData.lid =  info.LID;
-          returnData.picture =  info.PictureID;
-
-          this.cacheManager.putPushnameInCache({id: id , pushName: returnData.name});
-        }
+      if (info) {
+        return {
+          id: { _serialized: id },
+          name: info.VerifiedName?.VerifiedName || prefetchedName || id.split('@')[0],
+          number: id.split('@')[0],
+          lid: info.LID,
+          picture: info.PictureID // Note: PictureID is ID, not URL. Use /user/avatar for URL.
+        };
       }
     } catch (e) {
       // Ignore
     }
-
-
-    //this.logger.debug(`[getChatDetails] ${id}, ${prefetchedName}`, { returnData });
-    return returnData;
+    return { id: { _serialized: id }, name: prefetchedName || id.split('@')[0] };
   }
 
   async sendReaction(chatId, messageId, reaction) {
@@ -2047,7 +1587,6 @@ class WhatsAppBotEvoGo {
   }
 
   async deleteMessageByKey(key) {
-    this.logger.debug(`[deleteMessageByKey] `, { key });
     return await this.apiClient.post('/message/delete', {
       chat: key.remoteJid,
       messageId: key.id
@@ -2065,22 +1604,6 @@ class WhatsAppBotEvoGo {
     return (chat?.participants?.find(p => p.id?._serialized.startsWith(lid))?.phoneNumber) ?? lid;
   }
 
-  notInWhitelist(author) { // author is expected to be a JID string
-    const cleanAuthor = author.replace(/\D/g, ''); // Cleans non-digits from JID user part
-    return !(this.whitelist.includes(cleanAuthor))
-  }
-
-  validURL(str) {
-    var pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
-      '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
-      '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
-      '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
-      '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
-      '(\\#[-a-z\\d_]*)?$','i'); // fragment locator
-    return !!pattern.test(str);
-  }
-
-
   _loadDonationsToWhitelist() { }
   _sendStartupNotifications() { }
   shouldDiscardMessage() { return false; }
@@ -2094,10 +1617,6 @@ class WhatsAppBotEvoGo {
     } catch (e) {
       this.logger.warn(`[updateProfileStatus][${this.instanceName}] Erro definindo status '${status}'`, { erro: e, token: this.evolutionInstanceApiKey });
     }
-  }
-
-  async getCurrentGroups() {
-    return await this.apiClient.get(`/group/myall`);
   }
 
   async destroy() {

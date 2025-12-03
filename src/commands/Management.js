@@ -3,7 +3,6 @@ const path = require('path');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
 const AdminUtils = require('../utils/AdminUtils');
-const NSFWPredict = require('../utils/NSFWPredict');
 const ReturnMessage = require('../models/ReturnMessage');
 
 /**
@@ -13,7 +12,6 @@ class Management {
   constructor() {
     this.logger = new Logger('management');
     this.database = Database.getInstance();
-    this.nsfwPredict = NSFWPredict.getInstance();
     this.dataPath = this.database.databasePath;
     this.adminUtils = AdminUtils.getInstance();
     
@@ -111,10 +109,6 @@ class Management {
       'filtro-pessoa': {
         method: 'filterPerson',
         description: 'Detecta e Apaga mensagens desta pessoa (Marcar com @)'
-      },
-      'filtro-nsfw': {
-        method: 'filterNSFW',
-        description: 'Detecta e Apaga mensagens NSFW'
       },
       'apelido': {
         method: 'setUserNickname',
@@ -1081,8 +1075,7 @@ async setWelcomeMessage(bot, message, args, group) {
   *Comandos de Filtro:*
   *!g-filtro-palavra* <palavra> - Adiciona/remove palavra do filtro
   *!g-filtro-links* - Ativa/desativa filtro de links
-  *!g-filtro-pessoa* @MarcarPessoa - Adiciona/remove número do filtro
-  *!g-filtro-nsfw* - Ativa/desativa filtro de conteúdo NSFW
+  *!g-filtro-pessoa* <número> - Adiciona/remove número do filtro
 
   *Variáveis em mensagens:*
   {pessoa} - Nome da pessoa que entrou/saiu do grupo
@@ -1630,11 +1623,7 @@ async setWelcomeMessage(bot, message, args, group) {
       group.filters.people = [];
     }
 
-    // this.logger.debug(`[filtroPesosa] `, { message });
-    
-    const pessoasIgnorar = message.mentions ?? [];  
-
-    if (pessoasIgnorar.length === 0) {
+    if (args.length === 0) {
       // Mostra lista de pessoas filtradas
       const personFilters = group.filters.people.length > 0
         ? group.filters.people.join(', ')
@@ -1642,36 +1631,58 @@ async setWelcomeMessage(bot, message, args, group) {
       
       return new ReturnMessage({
         chatId: group.id,
-        content: `*Pessoas filtradas atualmente:*\n${personFilters}\n\nPara adicionar ou remover uma pessoa do filtro, use: !g-filtro-pessoa @MarcarPessoa`
+        content: `*Pessoas filtradas atualmente:*\n${personFilters}\n\nPara adicionar ou remover uma pessoa do filtro, use: !g-filtro-pessoa <número>`
       });
     }
     
+    // Obtém número do primeiro argumento
+    let numero = args[0].replace(/\D/g, ''); // Remove não-dígitos
     
-    let msgRetorno = "";
-    for(let numero of pessoasIgnorar){
-      numero = numero.split("@")[0];
-      // Verifica se o número já está no filtro
-      const index = group.filters.people.indexOf(numero);
-
-      if (index !== -1) {
-        // Remove o número
-        group.filters.people.splice(index, 1);
-        msgRetorno += `➖ Pessoa removida ao filtro: ${numero}`;
-      } else {
-        group.filters.people.push(numero);
-        msgRetorno += `➕ Pessoa adicionada ao filtro: ${numero}`;
-      }
+    // Verifica se o número tem pelo menos 8 dígitos
+    if (numero.length < 8) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: '❌ O número deve ter pelo menos 8 dígitos.'
+      });
     }
-
-    await this.database.saveGroup(group);
-    // Mostra lista atualizada
-    const personFilters = group.filters.people.length > 0 ? group.filters.people.join(', ') : 'Nenhuma pessoa filtrada';
-
-    return new ReturnMessage({
-      chatId: group.id,
-      content: `${msgRetorno}\n*Pessoas filtradas atualmente:*\n${personFilters}`
-    });
-
+    
+    // Adiciona @c.us ao número se não estiver completo
+    if (!numero.includes('@')) {
+      numero = `${numero}@c.us`;
+    }
+    
+    // Verifica se o número já está no filtro
+    const index = group.filters.people.indexOf(numero);
+    
+    if (index !== -1) {
+      // Remove o número
+      group.filters.people.splice(index, 1);
+      await this.database.saveGroup(group);
+      
+      // Mostra lista atualizada
+      const personFilters = group.filters.people.length > 0
+        ? group.filters.people.join(', ')
+        : 'Nenhuma pessoa filtrada';
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `✅ Pessoa removida do filtro: ${numero}\n\n*Pessoas filtradas atualmente:*\n${personFilters}`
+      });
+    } else {
+      // Adiciona o número
+      group.filters.people.push(numero);
+      await this.database.saveGroup(group);
+      
+      // Mostra lista atualizada
+      const personFilters = group.filters.people.length > 0
+        ? group.filters.people.join(', ')
+        : 'Nenhuma pessoa filtrada';
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `✅ Pessoa adicionada ao filtro: ${numero}\n\n*Pessoas filtradas atualmente:*\n${personFilters}`
+      });
+    }
   }
   
   /**
@@ -1923,1175 +1934,6 @@ async setWelcomeMessage(bot, message, args, group) {
       chatId: group.id,
       content: statusMsg
     });
-  }
-
-  /**
-   * Gets the platform-specific channel configuration from the group
-   * @param {Object} group - The group object
-   * @param {string} platform - The platform ('twitch', 'kick', 'youtube')
-   * @returns {Array} - Array of channel configurations for the platform
-   */
-  getChannelConfig(group, platform) {
-    if (!group[platform]) {
-      group[platform] = [];
-    }
-    return group[platform];
-  }
-
-  /**
-   * Finds a channel configuration in the group
-   * @param {Object} group - The group object
-   * @param {string} platform - The platform ('twitch', 'kick', 'youtube')
-   * @param {string} channelName - The channel name to find
-   * @returns {Object|null} - The channel configuration or null if not found
-   */
-  findChannelConfig(group, platform, channelName) {
-    const channels = this.getChannelConfig(group, platform);
-    return channels.find(c => c.channel.toLowerCase() === channelName.toLowerCase()) || null;
-  }
-
-  /**
-   * Validates and gets the channel name for commands
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @param {string} platform - The platform ('twitch', 'kick', 'youtube')
-   * @returns {Promise<string|null>} - The validated channel name or null if invalid
-   */
-  async validateChannelName(bot, message, args, group, platform) {
-    // If a channel name is provided, use it
-    if (args.length > 0) {
-      return args[0].toLowerCase();
-    }
-    
-    // If no channel name provided, check if there's only one configured channel
-    const channels = this.getChannelConfig(group, platform);
-    
-    if (channels.length === 0) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Nenhum canal de ${platform} configurado. Use !g-${platform}-canal <nome do canal> para configurar.`
-      });
-    }
-    
-    if (channels.length === 1) {
-      return channels[0].channel;
-    }
-    
-    // If multiple channels, show list and instructions
-    const channelsList = channels.map(c => c.channel).join(', ');
-    
-    return new ReturnMessage({
-      chatId: group.id,
-      content: `Múltiplos canais de ${platform} configurados. Especifique o canal:\n` +
-        `!g-${platform}-midia on <canal>\n\n` +
-        `Canais configurados: ${channelsList}`
-    });
-  }
-
-  /**
-   * Creates default notification configuration
-   * @param {string} platform - The platform ('twitch', 'kick', 'youtube')
-   * @param {string} channelName - The channel name
-   * @returns {Object} - Default notification configuration
-   */
-  createDefaultNotificationConfig(platform, channelName) {
-    let defaultText = '';
-    
-    if (platform === 'twitch' || platform === 'kick') {
-      const domain = (platform === 'twitch') ? "tv" : "com";
-      defaultText = `⚠️ ATENÇÃO!⚠️\n\n🌟 *${channelName}* ✨ está *online* streamando *{jogo}*!\n_{titulo}_\n\n` +
-                   `https://${platform}.${domain}/${channelName}`;
-    } else if (platform === 'youtube') {
-      defaultText = `*⚠️ Vídeo novo! ⚠️*\n\n*{author}:* *{title}* \n{link}`;
-    }
-    
-    return {
-      media: [
-        {
-          type: "text",
-          content: defaultText
-        }
-      ]
-    };
-  }
-
-
-    /**
-   * Processes a string to extract and sanitize a Twitch channel name.
-   *
-   * @param {string} inputString - The raw input string, potentially a URL or just a name.
-   * @returns {string} The sanitized Twitch channel name, or an empty string if input is invalid.
-   */
-  sanitizeTwitchChannelName(inputString) {
-    // Check if inputString is actually a string and not null/undefined
-    if (typeof inputString !== 'string') {
-      return "";
-    }
-
-    // 1. Remove common Twitch URL prefixes (http, https, www) case-insensitively.
-    //    The regex ^(https?:\/\/)?(www\.)?twitch\.tv\/ matches:
-    //    - ^             : asserts position at start of the string
-    //    - (https?:\/\/)? : optionally matches "http://" or "https://"
-    //    - (www\.)?      : optionally matches "www."
-    //    - twitch\.tv\/  : matches "twitch.tv/"
-    //    - i             : flag for case-insensitive matching of the URL part
-    const withoutUrl = inputString.replace(/^(https?:\/\/)?(www\.)?twitch\.tv\//i, "");
-
-    // 2. Convert the result to lowercase, as Twitch names are case-insensitive in practice
-    //    and often normalized to lowercase.
-    const lowercased = withoutUrl.toLowerCase();
-
-    // 3. Sanitize the name to keep only characters allowed in Twitch usernames:
-    //    - a-z (lowercase letters)
-    //    - 0-9 (numbers)
-    //    - _   (underscore)
-    //    The regex /[^a-z0-9_]/g matches any character that is NOT in the allowed set.
-    //    - [^...] : is a negated character set
-    //    - g      : flag for global match (replaces all occurrences)
-    const sanitized = lowercased.replace(/[^a-z0-9_]/g, "");
-
-    // Note: Twitch usernames also have length constraints (typically 4-25 characters).
-    // This sanitization step focuses on character validity.
-    // Length validation should be performed separately if needed.
-    // e.g., if (sanitized.length >= 4 && sanitized.length <= 25) { ... }
-
-    return sanitized ?? "";
-  }
-
-  /**
-   * Toggles monitoring of a Twitch channel
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async toggleTwitchChannel(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    args = args.filter(a => !["on", "off"].includes(a.toLowerCase()));
-
-    if (args.length === 0) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: 'Por favor, forneça o nome do canal da Twitch. Exemplo: !g-twitch-canal nomeDoCanal'
-      });
-    }
-    
-    const channelName = this.sanitizeTwitchChannelName(args[0] ?? "") ?? "";
-    
-    // Get current channels
-    const channels = this.getChannelConfig(group, 'twitch');
-    
-    // Check if channel is already configured
-    const existingChannel = this.findChannelConfig(group, 'twitch', channelName);
-    
-    if (existingChannel) {
-      // Remove channel
-      const updatedChannels = channels.filter(c => c.channel.toLowerCase() !== channelName.toLowerCase());
-      group.twitch = updatedChannels;
-      
-      await this.database.saveGroup(group);
-      
-      // Unsubscribe from StreamMonitor if it exists
-      if (bot.streamMonitor) {
-        bot.streamMonitor.unsubscribe(channelName, 'twitch');
-      }
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal da Twitch removido: ${channelName}`
-      });
-    } else {
-      // Check if the channel exists on Twitch before adding
-      if (bot.streamMonitor) {
-        if(channelName.length > 3 && channelName.length < 25){
-          const charsValidos = /^(#)?[a-zA-Z0-9_]{4,25}$/;
-          let channelExists = charsValidos.test(channelName);
-          if(channelExists){ // só verifica se for um nome válido
-           channelExists = await bot.streamMonitor.twitchChannelExists(channelName);
-          }
-          
-          if (!channelExists) {
-            return new ReturnMessage({
-              chatId: group.id,
-              content: `❌ Erro: O canal "${channelName}" não existe na Twitch. Use apenas o nome do seu canal, sem caracteres extras.`
-            });
-          }
-          
-          // Add channel with default configuration
-          const newChannel = {
-            channel: channelName,
-            onConfig: this.createDefaultNotificationConfig('twitch', channelName),
-            offConfig: {
-              "media": []
-            },
-            changeTitleOnEvent: true,
-            useThumbnail: true,
-            useAI: false
-          };
-          
-          channels.push(newChannel);
-          await this.database.saveGroup(group);
-          
-          // Subscribe to the channel in StreamMonitor
-          bot.streamMonitor.subscribe(channelName, 'twitch');
-          
-          return new ReturnMessage({
-            chatId: group.id,
-            content: `Canal da Twitch adicionado: ${channelName}\n\n` +
-              `Configuração padrão de notificação "online" definida. Use !g-twitch-midia on ${channelName} para personalizar.`
-          });
-
-        } else {
-          return new ReturnMessage({
-            chatId: group.id,
-            content: `❌ Erro: O canal "${channelName}" não parece ser válido. Os canais da twitch precisam ter entre _4 e 25 caracteres_.`
-          });
-        }
-      } else {
-        return new ReturnMessage({
-          chatId: group.id,
-          content: `❌ Erro: O monitoramento de streams não está inicializado no bot.`
-        });
-      }
-    }
-  }
-
-
-  /**
-   * Toggles title change on stream events
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async toggleTwitchTitleChange(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    // Validate and get channel name
-    const channelName = await this.validateChannelName(bot, message, args, group, 'twitch');
-    
-    // If validateChannelName returned a ReturnMessage, return it
-    if (channelName instanceof ReturnMessage) {
-      return channelName;
-    }
-    
-    // Find the channel configuration
-    const channelConfig = this.findChannelConfig(group, 'twitch', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`
-      });
-    }
-    
-    // Check if bot is admin in the group
-    const isAdmin = await this.isBotAdmin(bot, group);
-    
-    if (!isAdmin) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: '⚠️ O bot não é administrador do grupo. Para alterar o título do grupo, o bot precisa ser um administrador. ' +
-          'Por favor, adicione o bot como administrador e tente novamente.'
-      });
-    }
-    
-    // Toggle the setting
-    channelConfig.changeTitleOnEvent = !channelConfig.changeTitleOnEvent;
-    
-    await this.database.saveGroup(group);
-    
-    const status = channelConfig.changeTitleOnEvent ? 'ativada' : 'desativada';
-    
-    if (channelConfig.changeTitleOnEvent) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Alteração de título para eventos do canal ${channelName} ${status}.\n\n` +
-          `Você pode definir títulos personalizados com:\n` +
-          `!g-twitch-titulo on ${channelName} [título]\n` +
-          `!g-twitch-titulo off ${channelName} [título]`
-      });
-    } else {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Alteração de título para eventos do canal ${channelName} ${status}.`
-      });
-    }
-  }
-
-  /**
-   * Sets the custom "online" title for a Twitch channel
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async setTwitchOnlineTitle(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    if (args.length === 0) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-twitch-titulo on nomeDoCanal Título Personalizado'
-      });
-    }
-    
-    // Get channel name (first arg) and title (remaining args)
-    let channelName, customTitle;
-    
-    // Check if first argument is a configured channel
-    const firstArg = args[0].toLowerCase();
-    const channels = this.getChannelConfig(group, 'twitch');
-    const isChannelArg = channels.some(c => c.channel.toLowerCase() === firstArg);
-    
-    if (isChannelArg) {
-      channelName = firstArg;
-      customTitle = args.slice(1).join(' ');
-    } else if (channels.length === 1) {
-      // If only one channel is configured, use it
-      channelName = channels[0].channel;
-      customTitle = args.join(' ');
-    } else {
-      // Multiple channels, none specified
-      const channelsList = channels.map(c => c.channel).join(', ');
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Múltiplos canais da Twitch configurados. Especifique o canal:\n` +
-          `!g-twitch-titulo on <canal> <título>\n\n` +
-          `Canais configurados: ${channelsList}`
-      });
-    }
-    
-    // Find the channel configuration
-    const channelConfig = this.findChannelConfig(group, 'twitch', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`
-      });
-    }
-    
-    // If no title provided, remove custom title
-    if (!customTitle) {
-      delete channelConfig.onlineTitle;
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Título personalizado para eventos "online" do canal ${channelName} removido.\n` +
-          `O bot irá substituir automaticamente "OFF" por "ON" no título do grupo quando o canal ficar online.`
-      });
-    }
-    
-    // Set custom title
-    channelConfig.onlineTitle = customTitle;
-    
-    // Make sure title change is enabled
-    if (!channelConfig.changeTitleOnEvent) {
-      channelConfig.changeTitleOnEvent = true;
-      
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Título personalizado para eventos "online" do canal ${channelName} definido: "${customTitle}"\n` +
-          `Alteração de título para eventos foi automaticamente ativada.`
-      });
-    }
-    
-    await this.database.saveGroup(group);
-    
-    return new ReturnMessage({
-      chatId: group.id,
-      content: `Título personalizado para eventos "online" do canal ${channelName} definido: "${customTitle}"`
-    });
-  }
-
-  /**
-   * Sets the custom "offline" title for a Twitch channel
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async setTwitchOfflineTitle(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    if (args.length === 0) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-twitch-titulo off nomeDoCanal Título Personalizado'
-      });
-    }
-    
-    // Get channel name (first arg) and title (remaining args)
-    let channelName, customTitle;
-    
-    // Check if first argument is a configured channel
-    const firstArg = args[0].toLowerCase();
-    const channels = this.getChannelConfig(group, 'twitch');
-    const isChannelArg = channels.some(c => c.channel.toLowerCase() === firstArg);
-    
-    if (isChannelArg) {
-      channelName = firstArg;
-      customTitle = args.slice(1).join(' ');
-    } else if (channels.length === 1) {
-      // If only one channel is configured, use it
-      channelName = channels[0].channel;
-      customTitle = args.join(' ');
-    } else {
-      // Multiple channels, none specified
-      const channelsList = channels.map(c => c.channel).join(', ');
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Múltiplos canais da Twitch configurados. Especifique o canal:\n` +
-          `!g-twitch-titulo off <canal> <título>\n\n` +
-          `Canais configurados: ${channelsList}`
-      });
-    }
-    
-    // Find the channel configuration
-    const channelConfig = this.findChannelConfig(group, 'twitch', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`
-      });
-    }
-    
-    // If no title provided, remove custom title
-    if (!customTitle) {
-      delete channelConfig.offlineTitle;
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Título personalizado para eventos "offline" do canal ${channelName} removido.\n` +
-          `O bot irá substituir automaticamente "ON" por "OFF" no título do grupo quando o canal ficar offline.`
-      });
-    }
-    
-    // Set custom title
-    channelConfig.offlineTitle = customTitle;
-    
-    // Make sure title change is enabled
-    if (!channelConfig.changeTitleOnEvent) {
-      channelConfig.changeTitleOnEvent = true;
-      
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Título personalizado para eventos "offline" do canal ${channelName} definido: "${customTitle}"\n` +
-          `Alteração de título para eventos foi automaticamente ativada.`
-      });
-    }
-    
-    await this.database.saveGroup(group);
-    
-    return new ReturnMessage({
-      chatId: group.id,
-      content: `Título personalizado para eventos "offline" do canal ${channelName} definido: "${customTitle}"`
-    });
-  }
-
-  async toggleTwitchThumbnail(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    // Validate and get channel name
-    const channelName = await this.validateChannelName(bot, message, args, group, 'twitch');
-    
-    // If validateChannelName returned a ReturnMessage, return it
-    if (channelName instanceof ReturnMessage) {
-      return channelName;
-    }
-    
-    // Find the channel configuration
-    const channelConfig = this.findChannelConfig(group, 'twitch', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`
-      });
-    }
-    
-    // Toggle the setting
-    if(!channelConfig.useThumbnail){
-      channelConfig.useThumbnail = true;
-    } else {
-      channelConfig.useThumbnail = false;
-    }
-    
-    await this.database.saveGroup(group);
-    
-    const status = channelConfig.useThumbnail ? 'irá enviar' : 'não irá enviar';
-    
-    
-    return new ReturnMessage({
-      chatId: group.id,
-      content: `O bot agora ${status} junto a thumbnail da stream do canal ${channelName}.\n\n` 
-    });
-  }
-  async toggleKickThumbnail(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    // Validate and get channel name
-    const channelName = await this.validateChannelName(bot, message, args, group, 'kick');
-    
-    // If validateChannelName returned a ReturnMessage, return it
-    if (channelName instanceof ReturnMessage) {
-      return channelName;
-    }
-    
-    // Find the channel configuration
-    const channelConfig = this.findChannelConfig(group, 'kick', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal da Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`
-      });
-    }
-    
-    // Toggle the setting
-    if(!channelConfig.useThumbnail){
-      channelConfig.useThumbnail = true;
-    } else {
-      channelConfig.useThumbnail = false;
-    }
-    
-    await this.database.saveGroup(group);
-    
-    const status = channelConfig.useThumbnail ? 'irá enviar' : 'não irá enviar';
-    
-    
-    return new ReturnMessage({
-      chatId: group.id,
-      content: `O bot agora ${status} junto a thumbnail da stream do canal ${channelName}.\n\n` 
-    });
-  }
-  async toggleYoutubeThumbnail(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    // Validate and get channel name
-    const channelName = await this.validateChannelName(bot, message, args, group, 'youtube');
-    
-    // If validateChannelName returned a ReturnMessage, return it
-    if (channelName instanceof ReturnMessage) {
-      return channelName;
-    }
-    
-    // Find the channel configuration
-    const channelConfig = this.findChannelConfig(group, 'youtube', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal do Youtube não configurado: ${channelName}. Use !g-youtube-canal ${channelName} para configurar.`
-      });
-    }
-    
-    // Toggle the setting
-    if(!channelConfig.useThumbnail){
-      channelConfig.useThumbnail = true;
-    } else {
-      channelConfig.useThumbnail = false;
-    }
-    
-    await this.database.saveGroup(group);
-    
-    const status = channelConfig.useThumbnail ? 'irá enviar' : 'não irá enviar';
-    
-    
-    return new ReturnMessage({
-      chatId: group.id,
-      content: `O bot agora ${status} junto a thumbnail da stream/video do canal ${channelName}.\n\n` 
-    });
-  }
-
-
-  /**
-   * Toggles AI generated messages for stream events
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async toggleTwitchAI(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    // Validate and get channel name
-    const channelName = await this.validateChannelName(bot, message, args, group, 'twitch');
-    
-    // If validateChannelName returned a ReturnMessage, return it
-    if (channelName instanceof ReturnMessage) {
-      return channelName;
-    }
-    
-    // Find the channel configuration
-    const channelConfig = this.findChannelConfig(group, 'twitch', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`
-      });
-    }
-    
-    // Toggle the setting
-    channelConfig.useAI = !channelConfig.useAI;
-    
-    await this.database.saveGroup(group);
-    
-    const status = channelConfig.useAI ? 'ativadas' : 'desativadas';
-    
-    if (channelConfig.useAI) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Mensagens geradas por IA para eventos do canal ${channelName} ${status}.\n\n` +
-          `O bot usará IA para gerar mensagens personalizadas quando o canal ficar online.`
-      });
-    } else {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Mensagens geradas por IA para eventos do canal ${channelName} ${status}.`
-      });
-    }
-  }
-
-  /**
-   * Toggles monitoring of a Kick channel
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async toggleKickChannel(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    if (args.length === 0) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: 'Por favor, forneça o nome do canal do Kick. Exemplo: !g-kick-canal nomeDoCanal'
-      });
-    }
-    
-    const channelName = args[0].toLowerCase();
-    
-    // Get current channels
-    const channels = this.getChannelConfig(group, 'kick');
-    
-    // Check if channel is already configured
-    const existingChannel = this.findChannelConfig(group, 'kick', channelName);
-    
-    if (existingChannel) {
-      // Remove channel
-      // Remove channel
-      const updatedChannels = channels.filter(c => c.channel.toLowerCase() !== channelName.toLowerCase());
-      group.kick = updatedChannels;
-      
-      await this.database.saveGroup(group);
-      
-      // Unsubscribe from StreamMonitor if it exists
-      if (bot.streamMonitor) {
-        bot.streamMonitor.unsubscribe(channelName, 'kick');
-      }
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal do Kick removido: ${channelName}`
-      });
-    } else {
-      // Add channel with default configuration
-      const newChannel = {
-        channel: channelName,
-        onConfig: this.createDefaultNotificationConfig('kick', channelName),
-        offConfig: {
-          media: []
-        },
-        changeTitleOnEvent: true,
-        useAI: false
-      };
-      
-      channels.push(newChannel);
-      await this.database.saveGroup(group);
-      
-      // Subscribe to the channel in StreamMonitor
-      if (bot.streamMonitor) {
-        bot.streamMonitor.subscribe(channelName, 'kick');
-        
-        return new ReturnMessage({
-          chatId: group.id,
-          content: `Canal do Kick adicionado: ${channelName}\n\n` +
-            `Configuração padrão de notificação "online" definida. Use !g-kick-midia on ${channelName} para personalizar.`
-        });
-      } else {
-        return new ReturnMessage({
-          chatId: group.id,
-          content: `Canal do Kick adicionado: ${channelName}\n\n` +
-            `⚠️ Aviso: O monitoramento de streams não está inicializado no bot. Entre em contato com o administrador.`
-        });
-      }
-    }
-  }
-
-  /**
-   * Toggles title change on Kick stream events
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async toggleKickTitleChange(bot, message, args, group) {
-    // Identical to Twitch version with platform name differences
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    // Validate and get channel name
-    const channelName = await this.validateChannelName(bot, message, args, group, 'kick');
-    
-    // If validateChannelName returned a ReturnMessage, return it
-    if (channelName instanceof ReturnMessage) {
-      return channelName;
-    }
-    
-    const channelConfig = this.findChannelConfig(group, 'kick', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`
-      });
-    }
-    
-    const isAdmin = await this.isBotAdmin(bot, group);
-    
-    if (!isAdmin) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: '⚠️ O bot não é administrador do grupo. Para alterar o título do grupo, o bot precisa ser um administrador. ' +
-          'Por favor, adicione o bot como administrador e tente novamente.'
-      });
-    }
-    
-    // Toggle the setting
-    channelConfig.changeTitleOnEvent = !channelConfig.changeTitleOnEvent;
-    
-    await this.database.saveGroup(group);
-    
-    const status = channelConfig.changeTitleOnEvent ? 'ativada' : 'desativada';
-    
-    if (channelConfig.changeTitleOnEvent) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Alteração de título para eventos do canal ${channelName} ${status}.\n\n` +
-          `Você pode definir títulos personalizados com:\n` +
-          `!g-kick-titulo on ${channelName} [título]\n` +
-          `!g-kick-titulo off ${channelName} [título]`
-      });
-    } else {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Alteração de título para eventos do canal ${channelName} ${status}.`
-      });
-    }
-  }
-
-  /**
-   * Sets the custom "online" title for a Kick channel
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async setKickOnlineTitle(bot, message, args, group) {
-    // Identical to Twitch version with platform name differences
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    if (args.length === 0) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-kick-titulo on nomeDoCanal Título Personalizado'
-      });
-    }
-    
-    // Get channel name (first arg) and title (remaining args)
-    let channelName, customTitle;
-    
-    // Check if first argument is a configured channel
-    const firstArg = args[0].toLowerCase();
-    const channels = this.getChannelConfig(group, 'kick');
-    const isChannelArg = channels.some(c => c.channel.toLowerCase() === firstArg);
-    
-    if (isChannelArg) {
-      channelName = firstArg;
-      customTitle = args.slice(1).join(' ');
-    } else if (channels.length === 1) {
-      // If only one channel is configured, use it
-      channelName = channels[0].channel;
-      customTitle = args.join(' ');
-    } else {
-      // Multiple channels, none specified
-      const channelsList = channels.map(c => c.channel).join(', ');
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Múltiplos canais do Kick configurados. Especifique o canal:\n` +
-          `!g-kick-titulo on <canal> <título>\n\n` +
-          `Canais configurados: ${channelsList}`
-      });
-    }
-    
-    // Find the channel configuration
-    const channelConfig = this.findChannelConfig(group, 'kick', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`
-      });
-    }
-    
-    // If no title provided, remove custom title
-    if (!customTitle) {
-      delete channelConfig.onlineTitle;
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Título personalizado para eventos "online" do canal ${channelName} removido.\n` +
-          `O bot irá substituir automaticamente "OFF" por "ON" no título do grupo quando o canal ficar online.`
-      });
-    }
-    
-    // Set custom title
-    channelConfig.onlineTitle = customTitle;
-    
-    // Make sure title change is enabled
-    if (!channelConfig.changeTitleOnEvent) {
-      channelConfig.changeTitleOnEvent = true;
-      
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Título personalizado para eventos "online" do canal ${channelName} definido: "${customTitle}"\n` +
-          `Alteração de título para eventos foi automaticamente ativada.`
-      });
-    }
-    
-    await this.database.saveGroup(group);
-    
-    return new ReturnMessage({
-      chatId: group.id,
-      content: `Título personalizado para eventos "online" do canal ${channelName} definido: "${customTitle}"`
-    });
-  }
-
-  /**
-   * Sets the custom "offline" title for a Kick channel
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async setKickOfflineTitle(bot, message, args, group) {
-    // Identical to Twitch version with platform name differences
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    if (args.length === 0) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-kick-titulo off nomeDoCanal Título Personalizado'
-      });
-    }
-    
-    // Get channel name (first arg) and title (remaining args)
-    let channelName, customTitle;
-    
-    // Check if first argument is a configured channel
-    const firstArg = args[0].toLowerCase();
-    const channels = this.getChannelConfig(group, 'kick');
-    const isChannelArg = channels.some(c => c.channel.toLowerCase() === firstArg);
-    
-    if (isChannelArg) {
-      channelName = firstArg;
-      customTitle = args.slice(1).join(' ');
-    } else if (channels.length === 1) {
-      // If only one channel is configured, use it
-      channelName = channels[0].channel;
-      customTitle = args.join(' ');
-    } else {
-      // Multiple channels, none specified
-      const channelsList = channels.map(c => c.channel).join(', ');
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Múltiplos canais do Kick configurados. Especifique o canal:\n` +
-          `!g-kick-titulo off <canal> <título>\n\n` +
-          `Canais configurados: ${channelsList}`
-      });
-    }
-    
-    // Find the channel configuration
-    const channelConfig = this.findChannelConfig(group, 'kick', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`
-      });
-    }
-    
-    // If no title provided, remove custom title
-    if (!customTitle) {
-      delete channelConfig.offlineTitle;
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Título personalizado para eventos "offline" do canal ${channelName} removido.\n` +
-          `O bot irá substituir automaticamente "ON" por "OFF" no título do grupo quando o canal ficar offline.`
-      });
-    }
-    
-    // Set custom title
-    channelConfig.offlineTitle = customTitle;
-    
-    // Make sure title change is enabled
-    if (!channelConfig.changeTitleOnEvent) {
-      channelConfig.changeTitleOnEvent = true;
-      
-      await this.database.saveGroup(group);
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Título personalizado para eventos "offline" do canal ${channelName} definido: "${customTitle}"\n` +
-          `Alteração de título para eventos foi automaticamente ativada.`
-      });
-    }
-    
-    await this.database.saveGroup(group);
-    
-    return new ReturnMessage({
-      chatId: group.id,
-      content: `Título personalizado para eventos "offline" do canal ${channelName} definido: "${customTitle}"`
-    });
-  }
-
-  /**
-   * Toggles AI generated messages for Kick stream events
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async toggleKickAI(bot, message, args, group) {
-    // Identical to Twitch version with platform name differences
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    // Validate and get channel name
-    const channelName = await this.validateChannelName(bot, message, args, group, 'kick');
-    
-    // If validateChannelName returned a ReturnMessage, return it
-    if (channelName instanceof ReturnMessage) {
-      return channelName;
-    }
-    
-    // Find the channel configuration
-    const channelConfig = this.findChannelConfig(group, 'kick', channelName);
-    
-    if (!channelConfig) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`
-      });
-    }
-    
-    // Toggle the setting
-    channelConfig.useAI = !channelConfig.useAI;
-    
-    await this.database.saveGroup(group);
-    
-    const status = channelConfig.useAI ? 'ativadas' : 'desativadas';
-    
-    if (channelConfig.useAI) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Mensagens geradas por IA para eventos do canal ${channelName} ${status}.\n\n` +
-          `O bot usará IA para gerar mensagens personalizadas quando o canal ficar online.`
-      });
-    } else {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Mensagens geradas por IA para eventos do canal ${channelName} ${status}.`
-      });
-    }
-  }
-
-  /**
-   * Toggles monitoring of a YouTube channel
-   * @param {WhatsAppBot} bot - The bot instance
-   * @param {Object} message - The message object
-   * @param {Array} args - Command arguments
-   * @param {Object} group - The group object
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async toggleYoutubeChannel(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    if (args.length === 0) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: 'Por favor, forneça o nome ou ID do canal do YouTube. Exemplo: !g-youtube-canal nomeDoCanal'
-      });
-    }
-    
-    let channelName = args[0].includes("/") ? args[0].split("/").at(-1) : args[0];
-    channelName = channelName.replace("@", "");
-
-    // Get current channels
-    const channels = this.getChannelConfig(group, 'youtube');
-    
-    // Check if channel is already configured
-    const existingChannel = this.findChannelConfig(group, 'youtube', channelName);
-    
-    if (existingChannel) {
-      // Remove channel
-      const updatedChannels = channels.filter(c => c.channel.toLowerCase() !== channelName.toLowerCase());
-      group.youtube = updatedChannels;
-      
-      await this.database.saveGroup(group);
-      
-      // Unsubscribe from StreamMonitor if it exists
-      if (bot.streamMonitor) {
-        bot.streamMonitor.unsubscribe(channelName, 'youtube');
-      }
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Canal do YouTube removido: ${channelName}`
-      });
-    } else {
-      // Add channel with default configuration
-      const newChannel = {
-        channel: channelName,
-        onConfig: this.createDefaultNotificationConfig('youtube', channelName),
-        offConfig: {
-          media: []
-        },
-        changeTitleOnEvent: false,
-        useAI: false,
-        useThumbnail: true
-      };
-      
-      channels.push(newChannel);
-      await this.database.saveGroup(group);
-      
-      // Subscribe to the channel in StreamMonitor
-      if (bot.streamMonitor) {
-        bot.streamMonitor.subscribe(channelName, 'youtube');
-        
-        return new ReturnMessage({
-          chatId: group.id,
-          content: `Canal do YouTube adicionado: ${channelName}\n\n` +
-            `Configuração padrão de notificação de vídeo definida. Use !g-youtube-midia on ${channelName} para personalizar.`
-        });
-      } else {
-        return new ReturnMessage({
-          chatId: group.id,
-          content: `Canal do YouTube adicionado: ${channelName}\n\n` +
-            `⚠️ Aviso: O monitoramento de canais não está inicializado no bot. Entre em contato com o administrador.`
-        });
-      }
-    }
   }
 
   /**
@@ -3887,33 +2729,23 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     // Verify if this is a reply to a message
-
     const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
     
     const configKey = mode === 'on' ? 'onConfig' : 'offConfig';
     
     if (!quotedMsg && args.length <= 1) {
-      this.logger.debug(`[stream media] no quoted`, {quotedMsg, message});
-
-      if(message.isQuoted){
-        return new ReturnMessage({
-          chatId: group.id,
-          content: `Ocorreu um erro e não consegui buscar a mensagem que você marcou.`
-        });
+      // Reset to default if no quoted message and no additional args
+      if (mode === 'on') {
+        channelConfig[configKey] = this.createDefaultNotificationConfig(platform, channelName);
       } else {
-        // Reset to default if no quoted message and no additional args
-        if (mode === 'on') {
-          channelConfig[configKey] = this.createDefaultNotificationConfig(platform, channelName);
-        } else {
-          channelConfig[configKey] = { media: [] };
-        }
-        await this.database.saveGroup(group);
-        
-        return new ReturnMessage({
-          chatId: group.id,
-          content: `Configuração de notificação "${mode === 'on' ? 'online' : 'offline'}" para o canal ${channelName} redefinida para o padrão.`
-        });
+        channelConfig[configKey] = { media: [] };
       }
+      await this.database.saveGroup(group);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Configuração de notificação "${mode === 'on' ? 'online' : 'offline'}" para o canal ${channelName} redefinida para o padrão.`
+      });
     }
     
     if (!quotedMsg) {
@@ -3934,7 +2766,6 @@ async setWelcomeMessage(bot, message, args, group) {
       // For media messages, add the media type
       let mediaType = "text";
       if (quotedMsg.hasMedia) {
-        this.logger.debug(`[stream] hasMedia`, quotedMsg);
         const media = await quotedMsg.downloadMedia({keep: true});
         mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
         let fileExt = media.mimetype.split('/')[1];
@@ -3958,11 +2789,6 @@ async setWelcomeMessage(bot, message, args, group) {
           mediaType = "voice";
         }
         
-        // Sticker tem mimetype image, corrige
-        if (quotedMsg.type.toLowerCase() === "sticker") {
-          mediaType = "sticker";
-        }
-
         // Save media file
         if (fileExt.includes(";")) {
           fileExt = fileExt.split(";")[0];

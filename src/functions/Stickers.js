@@ -23,7 +23,7 @@ const TEMP_DIR = path.join(__dirname, '../../temp', 'whatsapp-bot-stickers');
  */
 async function stickerCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
-  logger.debug(`Executando comando sticker para ${chatId}`);
+  logger.info(`Executando comando sticker para ${chatId}`);
   
   // Manipula mídia direta
   if (message.type === 'image' || message.type === 'video' || message.type === 'gif') {
@@ -200,7 +200,7 @@ async function makeSquareMedia(mediaBuffer, mimeType, cropType = 'center') {
       const image = sharp(imageBuffer);
       const metadata = await image.metadata();
       
-      logger.debug(`Metadata da imagem: ${JSON.stringify(metadata)}`);
+      logger.info(`Metadata da imagem: ${JSON.stringify(metadata)}`);
       
       // Determinar dimensões para corte quadrado
       const size = Math.min(metadata.width, metadata.height);
@@ -244,7 +244,7 @@ async function makeSquareMedia(mediaBuffer, mimeType, cropType = 'center') {
       const inputPath = await saveTempMedia(videoBuffer, mimeType);
       const outputPath = `${inputPath.split('.')[0]}-square.${inputPath.split('.')[1]}`;
       
-      logger.debug(`Arquivos temporários: input=${inputPath}, output=${outputPath}`);
+      logger.info(`Arquivos temporários: input=${inputPath}, output=${outputPath}`);
       
       // Configurar os filtros baseados no tipo de corte
       let filterCommand = '';
@@ -346,7 +346,7 @@ async function makeSquareMedia(mediaBuffer, mimeType, cropType = 'center') {
           .complexFilter(filterCommand, 'scaled')
           .output(outputPath)
           .on('start', (cmdline) => {
-            logger.debug(`Comando ffmpeg: ${cmdline}`);
+            logger.info(`Comando ffmpeg: ${cmdline}`);
           })
           .on('end', async () => {
             try {
@@ -412,7 +412,7 @@ async function processMediaToSquare(mediaBuffer, mimeType, cropType) {
  */
 async function squareStickerCommand(bot, message, args, group, cropType) {
   const chatId = message.group || message.author;
-  logger.debug(`Executando comando sticker quadrado (${cropType}) para ${chatId}`);
+  logger.info(`Executando comando sticker quadrado (${cropType}) para ${chatId}`);
   
   try {
     let mediaBuffer, mimeType, quotedMessageId;
@@ -420,7 +420,7 @@ async function squareStickerCommand(bot, message, args, group, cropType) {
     // Extrair mídia e informações necessárias da mensagem direta ou citada
     if (message.type === 'image' || message.type === 'video' || message.type === 'gif') {
       // Mídia na mensagem atual
-      logger.debug(`Processando mídia da mensagem atual: ${message.type}`);
+      logger.info(`Processando mídia da mensagem atual: ${message.type}`);
       
       // Verifica se content já está no formato correto
       if (message.content && typeof message.content === 'object') {
@@ -439,7 +439,7 @@ async function squareStickerCommand(bot, message, args, group, cropType) {
       quotedMessageId = message.origin.id._serialized;
     } else {
       // Mídia na mensagem citada
-      logger.debug('Processando mídia da mensagem citada');
+      logger.info('Processando mídia da mensagem citada');
       const quotedMsg = await message.origin.getQuotedMessage();
       
       // Verificar se o tipo de mídia é suportado
@@ -459,8 +459,8 @@ async function squareStickerCommand(bot, message, args, group, cropType) {
       }
     }
     
-    // Log para debug
-    logger.debug(`Mídia obtida: tipo=${mimeType}, mediaBuffer=${typeof mediaBuffer}`);
+    // Log para info
+    logger.info(`Mídia obtida: tipo=${mimeType}, mediaBuffer=${typeof mediaBuffer}`);
     
     // Processar a mídia para torná-la quadrada
     const processedBuffer = await processMediaToSquare(mediaBuffer, mimeType, cropType);
@@ -471,7 +471,7 @@ async function squareStickerCommand(bot, message, args, group, cropType) {
     const tempFileName = `processed-${Date.now()}.${extension}`;
     const tempFilePath = path.join(TEMP_DIR, tempFileName);
     
-    logger.debug(`Salvando mídia processada em: ${tempFilePath}`);
+    logger.info(`Salvando mídia processada em: ${tempFilePath}`);
     await fs.writeFile(tempFilePath, processedBuffer);
     
     // Usar o método do bot para criar a mídia no formato correto
@@ -548,7 +548,7 @@ async function processAutoSticker(bot, message, group) {
     }
     
 
-    logger.debug(`[processAutoSticker] Processando mídia automática para sticker no chat ${message.author}`);
+    logger.info(`[processAutoSticker] Processando mídia automática para sticker no chat ${message.author}`);
     
     // Criar um nome para o sticker (pode ser o nome de quem enviou ou um padrão)
     const stickerName = message.authorName || 'sticker';

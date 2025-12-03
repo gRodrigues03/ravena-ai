@@ -15,6 +15,8 @@ const database = Database.getInstance();
 
 async function aiCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
+  console.log(message)
+  console.log(group)
 
   // Contexto e descrição do bot
   const ctxPath = path.join(database.databasePath, 'textos', 'llm_context.txt');
@@ -131,10 +133,7 @@ async function aiCommand(bot, message, args, group) {
     }
   }
 
-  const promptAutor = message?.evoMessageData?.key?.pushName ?? message?.name ?? message?.authorName ?? message?.pushname;
-  if(promptAutor){
-    completionOptions.systemContext = `Nome de quem enviou o prompt: ${promptAutor}\n\n`+ completionOptions.systemContext;
-  }
+  completionOptions.author = message?.evoMessageData?.key?.pushName ?? message?.name ?? message?.authorName ?? message?.pushname;
   
 
   // Obtém resposta da IA

@@ -17,7 +17,6 @@ const LLMService = require('./services/LLMService');
 const MentionHandler = require('./MentionHandler');
 const AdminUtils = require('./utils/AdminUtils');
 const InviteSystem = require('./InviteSystem');
-const StreamSystem = require('./StreamSystem');
 const Database = require('./utils/Database');
 const LoadReport = require('./LoadReport');
 const Logger = require('./utils/Logger');
@@ -88,7 +87,6 @@ class WhatsAppBotDiscord {
 
     // --- Placeholders para sistemas não aplicáveis ---
     this.inviteSystem = new InviteSystem(this); // Pode ser adaptado no futuro
-    this.streamSystem = null; // new StreamSystem(this);
     
     // --- Client Fake para manter a compatibilidade ---
     this.client = {

@@ -153,7 +153,6 @@ async function processGroupsData() {
         inviteCode: oldGroup.inviteCode || null,
         paused: oldGroup.pausado || false,
         filters: {
-          nsfw: oldGroup.filtros?.nsfw || false,
           links: oldGroup.filtros?.links || false,
           words: oldGroup.filtros?.palavras || [],
           people: []

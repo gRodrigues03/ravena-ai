@@ -11,7 +11,6 @@ const ReactionsHandler = require('./ReactionsHandler');
 const MentionHandler = require('./MentionHandler');
 const AdminUtils = require('./utils/AdminUtils');
 const InviteSystem = require('./InviteSystem');
-const StreamSystem = require('./StreamSystem');
 const Database = require('./utils/Database');
 const LoadReport = require('./LoadReport');
 const Logger = require('./utils/Logger');
@@ -68,7 +67,6 @@ class WhatsAppBotTelegram {
     this.userAgent = options.userAgent;
     this.stabilityMonitor = options.stabilityMonitor;
 
-
     if (!this.telegramBotToken) {
       const errMsg = 'WhatsAppBotTelegram: telegramBotToken is required!';
       this.logger.error(errMsg, {
@@ -89,8 +87,6 @@ class WhatsAppBotTelegram {
     this.loadReport = new LoadReport(this);
     // this.inviteSystem = new InviteSystem(this); // Ignorado no Telegram
     // this.reactionHandler = new ReactionsHandler(); // Ignorado no Telegram
-    //this.streamSystem = new StreamSystem(this);
-    //this.streamSystem.initialize();
     this.adminUtils = AdminUtils.getInstance();
 
     this.webhookApp = null;
@@ -173,7 +169,7 @@ class WhatsAppBotTelegram {
                 this._onInstanceConnected();
               }
             } catch (error) {
-              this.logger.error(`Error during polling for bot ${this.id}`);
+              this.logger.error(`Error during polling for bot ${this.id}:`, error.response ? error.response.body : error.message);
               if (this.isConnected) {
                 this._onInstanceDisconnected('POLLING_ERROR');
               }
@@ -426,7 +422,7 @@ class WhatsAppBotTelegram {
         }
         resolve(formattedMessage);
       } catch (error) {
-        this.logger.error(`Error formatting message from Telegram:`, message);
+        this.logger.error(`Error formatting message from Telegram:`, error, message);
         resolve(null);
       }
     });
@@ -487,7 +483,7 @@ class WhatsAppBotTelegram {
       };
 
     } catch (error) {
-      this.logger.error(`Error sending message to ${chatId} via Telegram:`);
+      this.logger.error(`Error sending message to ${chatId} via Telegram:`, error.response ? error.response.body : error.message);
       throw error;
     }
   }
@@ -673,10 +669,6 @@ class WhatsAppBotTelegram {
 
   async getChatDetails(chatId) {
     try {
-      if(chatId.includes("@")){ // Coisa do zap
-        return;
-      }
-
       const chat = await this.apiClient.getChat(chatId);
       const isGroup = chat.type === 'group' || chat.type === 'supergroup';
 
@@ -700,7 +692,7 @@ class WhatsAppBotTelegram {
       this.cacheManager.putChatInCache(formattedChat);
       return formattedChat;
     } catch (error) {
-      this.logger.error(`Failed to get chat details for ${chatId}`);
+      this.logger.error(`Failed to get chat details for ${chatId}:`, error);
       return null;
     }
   }

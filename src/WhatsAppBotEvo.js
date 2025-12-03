@@ -69,10 +69,7 @@ class WhatsAppBotEvo {
     this.redisTTL = options.redisTTL || 604800;
     this.maxCacheSize = 3000;
 
-    this.skipGroupsPath = path.join(__dirname, '..', 'data', `skip-groups-${this.id}.json`);
-
     this.streamIgnoreGroups = [];
-    this.skipGroupInfo = [];
     this.messageCache = [];
     this.contactCache = [];
     this.sentMessagesCache = [];
@@ -102,7 +99,7 @@ class WhatsAppBotEvo {
     );
 
     this.database = Database.getInstance();
-    this.isConnected = false;
+    this.isConnected = true;
     this.safeMode = options.safeMode !== undefined ? options.safeMode : (process.env.SAFE_MODE === 'true');
     this.otherBots = options.otherBots || [];
 
@@ -136,11 +133,6 @@ class WhatsAppBotEvo {
     this.webhookServer = null; // HTTP server instance
 
     this.blockedContacts = [];
-
-    if (!this.streamSystem) {
-      this.streamSystem = new StreamSystem(this);
-      this.streamMonitor = this.streamSystem.streamMonitor;
-    }
 
     // Client Fake
     this.client = {
@@ -831,7 +823,6 @@ class WhatsAppBotEvo {
   }
 
   async initialize() {
-    await this._loadSkipGroupInfo();
     const wsUrl = `${this.evolutionWS}/${this.instanceName}`;
 
     const instanceDesc = this.websocket ? `Websocket to ${wsUrl}` : `Webhook on ${this.instanceName}:${this.webhookPort}`;
@@ -894,7 +885,7 @@ class WhatsAppBotEvo {
 
         await new Promise((resolve, reject) => {
           this.webhookServer = this.webhookApp.listen(this.webhookPort, () => {
-            this.logger.info(`Webhook listener for bot ${this.instanceName} started on ${this.webhookHost}:${this.webhookPort}${webhookPath}`);
+            this.logger.info(`Webhook listener for bot ${this.instanceName} started on http://${this.webhookHost}:${this.webhookPort}${webhookPath}`);
             resolve();
           }).on('error', (err) => {
             this.logger.error(`Failed to start webhook listener for bot ${this.instanceName}:`, err);
@@ -938,9 +929,8 @@ class WhatsAppBotEvo {
       if (state === 'CONNECTED' || state === 'OPEN') { // open não era pra ser
         this._onInstanceConnected();
         extra.ok = true;
-        this.isConnected = true;
       } else if (state === 'CLOSE' || state === 'CONNECTING' || state === 'PAIRING' || !state) {
-        this.isConnected = false;
+
         if (forceConnect) {
           this.logger.info(`Instance ${this.instanceName} is not connected (state: ${state}). Attempting to connect with num ber ${this.phoneNumber}...`);
           const connectData = await this.apiClient.get(`/instance/connect`, { number: this.phoneNumber });
@@ -983,17 +973,19 @@ class WhatsAppBotEvo {
   }
 
   async _onInstanceConnected() {
-    this.streamSystem.initialize();
-    this._sendStartupNotifications();
-    this.fetchAndPrepareBlockedContacts();
-
-    if (this.isConnected) return;
+    if (this.isConnected) return; // Prevent multiple calls
     this.isConnected = true;
     this.logger.info(`[${this.id}] Successfully connected to WhatsApp via Evolution API for instance ${this.instanceName}.`);
 
     if (this.eventHandler && typeof this.eventHandler.onConnected === 'function') {
       this.eventHandler.onConnected(this);
     }
+
+    setTimeout((snf, blck) => {
+      snf();
+      blck();
+    }, 5000, this._sendStartupNotifications, this.fetchAndPrepareBlockedContacts);
+
   }
 
   _onInstanceDisconnected(reason = 'Unknown') {
@@ -1167,7 +1159,7 @@ class WhatsAppBotEvo {
             author = author.replace("@s.whatsapp.net", "@c.us");
           }
 
-          let authorAlt = key.remoteJidAlt ?? key.remoteJid ?? key.participantAlt;
+
 
           const messageTimestamp = typeof evoMessageData.messageTimestamp === 'number'
             ? evoMessageData.messageTimestamp
@@ -1323,7 +1315,6 @@ class WhatsAppBotEvo {
             group: isGroup ? chatId : null,
             from: isGroup ? chatId : author,
             author: this._normalizeId(author),
-            authorAlt: authorAlt,
             name: authorName,
             authorName: authorName,
             pushname: authorName,
@@ -1338,7 +1329,6 @@ class WhatsAppBotEvo {
             key: key,
             secret: evoMessageData.message?.messageContextInfo?.messageSecret,
             hasMedia: (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)),
-            isNewsletter: chatId.includes("newsletter"),
 
             getContact: async () => {
               const contactIdToFetch = isGroup ? (key.participant || author) : author;
@@ -1646,14 +1636,7 @@ class WhatsAppBotEvo {
         from: this.phoneNumber ? `${this.phoneNumber.replace(/\D/g, '')}@c.us` : this.instanceName,
         to: chatId,
         url: (content && content.url) ? content.url : undefined,
-        _data: response,
-        getInfo: () => { // Usado no StreamSystem pra saber se foi enviada
-          return { delivery: [1], played: [1], read: [1] };
-        },
-        pin: (tempo) =>{
-          this.logger.info(`[${response?.data?.Info?.ID}] message.pin por ${tempo}ms: Não implementado`);
-          return true;
-        }
+        _data: response
       };
 
     } catch (error) {
@@ -1703,13 +1686,7 @@ class WhatsAppBotEvo {
         }
       } catch (sendError) {
         this.logger.error(`[${this.id}] Falha enviando ReturnMessages pra ${message.chatId}:`, sendError);
-        results.push({
-          error: sendError,
-          messageContent: message.content,
-          getInfo: () => { // Usado no StreamSystem pra saber se foi enviada
-            return { delivery: [], played: [], read: [] };
-          }
-        });
+        results.push({ error: sendError, messageContent: message.content }); // Push error for this message
       }
     }
     return results;
@@ -1869,10 +1846,10 @@ class WhatsAppBotEvo {
         this.logger.debug(`[acceptInviteCode][${this.instanceName}] '${inviteCode}'`);
         const resp = await this.apiClient.get(`/group/acceptInviteCode`, { inviteCode });
 
-        resolve({ accepted: resp.accepted });
+        resolve(resp.accepted);
       } catch (e) {
-        this.logger.warn(`[acceptInviteCode][${this.instanceName}] Erro aceitando invite para '${inviteCode}'`, { e });
-        resolve({ accepted: false, error: "Não foi possível aceitar" });
+        this.logger.warn(`[acceptInviteCode] Erro pegando invite info para '${inviteCode}'`);
+        reject(e);
       }
 
     });
@@ -1954,18 +1931,6 @@ class WhatsAppBotEvo {
     if (!chatId) return null;
     let chat;
 
-    if (this.skipGroupInfo && this.skipGroupInfo.includes(chatId)) {
-      this.logger.info(`[getChatDetails] Skipping fetch for ${chatId} as it is in skipGroupInfo list.`);
-      return {
-        id: { _serialized: chatId },
-        name: chatId,
-        isGroup: true,
-        notInGroup: true,
-        participants: [],
-        _isPartial: true
-      };
-    }
-
     try {
 
 
@@ -1988,9 +1953,6 @@ class WhatsAppBotEvo {
             } else {
               return await this.apiClient.post(`/group/updateSetting`, { groupJid: chatId, action: "not_announcement" });
             }
-          },
-          setPicture: (picture) => {
-            this.logger.debug(`[chat] setPicture, não implementado`, { picture });
           },
           id: { _serialized: groupData.id || chatId },
           name: groupData.subject,
@@ -2018,78 +1980,34 @@ class WhatsAppBotEvo {
 
       //this.logger.debug(`[getChatDetails] Grupo '${chatId}' buscando, colocando no cache`, {chat});
       this.cacheManager.putChatInCache(chat);
+
       return chat;
     } catch (error) {
-      if (error.status === 404 && (error.response?.message?.includes('item-not-found') || error.response?.message?.includes('Error: forbidden'))) {
-        this.logger.warn(`[getChatDetails] Group ${chatId} does not exist (status 404). Adding to skip list.`);
-        await this.addSkipGroup(chatId);
-        return {
-          id: { _serialized: chatId },
-          name: chatId,
-          isGroup: true,
-          notInGroup: true,
-          participants: [],
-          _isPartial: true
-        };
-      } else {
-        this.logger.error(`[getChatDetails] Failed to get chat details for ${chatId}:`, error);
-        return { id: { _serialized: chatId }, name: chatId, isGroup: chatId.endsWith('@g.us'), _isPartial: true };
-      }
-    }
-  }
+      try {
+        //this.logger.error(`[getChatDetails] Erro buscando chat ${chatId} na API, tentando cache`);
+        chat = await this.cacheManager.getChatFromCache(chatId);
 
-  async _loadSkipGroupInfo() {
-    try {
-        const data = await readFileAsync(this.skipGroupsPath, 'utf8');
-        const allSkips = JSON.parse(data);
-        this.skipGroupInfo = allSkips[this.id] || [];
-        this.logger.info(`[SkipGroups] Loaded ${this.skipGroupInfo.length} skipped groups for bot ${this.id}.`);
-    } catch (error) {
-        if (error.code === 'ENOENT') {
-            this.logger.info(`[SkipGroups] ${this.skipGroupsPath} not found. Initializing empty skip list.`);
-            this.skipGroupInfo = [];
-            await this._saveSkipGroupInfo();
+        if (chat) {
+          return chat;
         } else {
-            this.logger.error(`[SkipGroups] Error loading skip groups file:`, error);
-        }
-    }
-  }
-
-  async _saveSkipGroupInfo() {
-      let allSkips = {};
-      try {
-          const data = await readFileAsync(this.skipGroupsPath, 'utf8');
-          allSkips = JSON.parse(data);
-      } catch (error) {
-          if (error.code !== 'ENOENT') {
-              this.logger.error(`[SkipGroups] Error reading skip groups file before saving:`, error);
-              return;
+          if (chatId.includes("@g")) {
+            return null;
+          } else {
+            return { id: { _serialized: chatId }, name: chatId.split('@')[0], isGroup: false, _isPartial: true }; // Basic fallback
           }
-      }
-      allSkips[this.id] = this.skipGroupInfo;
-      try {
-          await writeFileAsync(this.skipGroupsPath, JSON.stringify(allSkips, null, 2));
-          this.logger.info(`[SkipGroups] Saved ${this.skipGroupInfo.length} skipped groups for bot ${this.id}.`);
-      } catch (error) {
-          this.logger.error(`[SkipGroups] Error saving skip groups file:`, error);
-      }
-  }
+        }
+      } catch (e) {
+        //this.logger.error(`[getChatDetails] Erro buscando chat ${chatId} ate no cache`, e);
 
-  async addSkipGroup(groupId) {
-      if (!this.skipGroupInfo.includes(groupId)) {
-          this.skipGroupInfo.push(groupId);
-          await this._saveSkipGroupInfo();
-          this.logger.info(`[SkipGroups] Added ${groupId} to skip list.`);
+        // Se estiver buscando grupo, retorna null pra saber que o bot não faz parte
+        // Se for contato, cria um placeholder pra não bugar algumas coisas
+        if (chatId.includes("@g")) {
+          return null;
+        } else {
+          return { id: { _serialized: chatId }, name: chatId.split('@')[0], isGroup: false, _isPartial: true }; // Basic fallback
+        }
       }
-  }
-
-  async removeSkipGroup(groupId) {
-      const initialLength = this.skipGroupInfo.length;
-      this.skipGroupInfo = this.skipGroupInfo.filter(id => id !== groupId);
-      if (this.skipGroupInfo.length < initialLength) {
-          await this._saveSkipGroupInfo();
-          this.logger.info(`[SkipGroups] Removed ${groupId} from skip list.`);
-      }
+    }
   }
 
 
@@ -2258,7 +2176,7 @@ class WhatsAppBotEvo {
           id: { _serialized: botId },
           name: `Other Bot: ${bot}` // Or some identifier
         });
-        //this.logger.info(`[${this.id}] Added other bot '${botId}' to internal ignore list.`);
+        this.logger.info(`[${this.id}] Added other bot '${botId}' to internal ignore list.`);
       }
     }
     this.logger.info(`[${this.id}] Ignored contacts/bots list size: ${this.blockedContacts.length}`);

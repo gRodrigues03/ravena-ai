@@ -383,11 +383,6 @@
             },
             {
               "type": "file",
-              "name": "StreamCommands.js",
-              "path": ".\\ravena-ai\\src\\functions\\StreamCommands.js"
-            },
-            {
-              "type": "file",
               "name": "SummaryCommands.js",
               "path": ".\\ravena-ai\\src\\functions\\SummaryCommands.js"
             },
@@ -471,11 +466,6 @@
               "path": ".\\ravena-ai\\src\\services\\StreamMonitor.js"
             }
           ]
-        },
-        {
-          "type": "file",
-          "name": "StreamSystem.js",
-          "path": ".\\ravena-ai\\src\\StreamSystem.js"
         },
         {
           "type": "directory",

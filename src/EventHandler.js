@@ -8,7 +8,6 @@ const LLMService = require('./services/LLMService');
 const SpeechCommands = require('./functions/SpeechCommands');
 const { aiCommand } = require('./functions/AICommands');
 const SummaryCommands = require('./functions/SummaryCommands');
-const NSFWPredict = require('./utils/NSFWPredict');
 const MuNewsCommands = require('./functions/MuNewsCommands');
 const HoroscopoCommands = require('./functions/HoroscopoCommands');
 const RankingMessages = require('./functions/RankingMessages');
@@ -24,7 +23,6 @@ class EventHandler {
     this.commandHandler = new CommandHandler();
     this.llmService = new LLMService({});
     this.variableProcessor = new CustomVariableProcessor();
-    this.nsfwPredict = NSFWPredict.getInstance();
     this.adminUtils = AdminUtils.getInstance();
     this.rankingMessages = RankingMessages;
     this.userGreetingManager = require('./utils/UserGreetingManager').getInstance();
@@ -151,7 +149,7 @@ class EventHandler {
       // Ignorar: Mensagens do bot e mensagens de broadcast ('status@broadcast')
       if(message.fromMe || message.from?.includes("broadcast") || message.group?.includes("broadcast")) return;
 
-      // Newsletter/Canais: Apenas pra detectar jrmunews, horóscopos, etc. 
+      // Newsletter/Canais: Apenas pra detectar jrmunews, horóscopos, etc.
       if (message.isNewsletter) {
         try {
           const isNewsDetected = await MuNewsCommands.detectNews(message.content, group.id);
@@ -393,19 +391,48 @@ class EventHandler {
       }
     }
 
-    if (!group && message.type === 'text' && bot.pvAI) {
-      this.logger.debug(`[processNonCommandMessage] PV sem comando, chamando LLM com '${message.content}'`);
-      const msgsLLM = await aiCommand(bot, message, [], group);
-      bot.sendReturnMessages(msgsLLM);
-    }
+    if (message.type === 'text') {
+      if(group){
+        // Vê se a mensagem não é um MuNews ou horóscopo
+        try {
+          const isNewsDetected = await MuNewsCommands.detectNews(message.content, group.id);
+          if (isNewsDetected) {
+            // Opcionalmente, envia uma confirmação de que a MuNews foi detectada e salva
+            bot.sendMessage(process.env.GRUPO_LOGS, "📰 *MuNews detectada e salva!*").catch(error => {
+              this.logger.error('Erro ao enviar confirmação de MuNews:', error);
+            });
+            return;
+          }
 
+          const isHoroscopoDetected = await HoroscopoCommands.detectHoroscopo(message.content, group.id);
+          if (isHoroscopoDetected) {
+            // Opcionalmente, envia uma confirmação de que um Horoscopo foi detectado e salvo
+            // bot.sendMessage(process.env.GRUPO_LOGS, "🔮 *Horoscopo detectado e salvo!*").catch(error => {
+            //   this.logger.error('Erro ao enviar confirmação de Horoscopo:', error);
+            // });
+            return;
+          }
+
+        } catch (error) {
+          this.logger.error('Erro ao verificar MuNews ou horóscopo:', error);
+        }
+      } else {
+        // Msg no PV, responder usando IA
+        if(bot.pvAI){
+          this.logger.debug(`[processNonCommandMessage] PV sem comando, chamando LLM com '${message.content}'`);
+          const msgsLLM = await aiCommand(bot, message, [], group);
+          bot.sendReturnMessages(msgsLLM);
+        }
+      }
+    }
+        
     if (group) {
       try {
         // Se o grupo escolheu a opção 'customIgnoresPrefix', pode ser que um comando personalizado esteja sendo executado
         // Gera um comando e manda pro handleCommand, mas com a flag de ser apenas custom
         const textContent = message.type === 'text' ? message.content : message.caption;
 
-        if (group.customIgnoresPrefix) {
+        if(group.customIgnoresPrefix){
           this.commandHandler.processCustomIgnoresPrefix(textContent, bot, message, group);
         }
 
@@ -428,15 +455,15 @@ class EventHandler {
    */
   async applyFilters(bot, message, group) {
     if (!group || !group.filters) return false;
-
-    const textContent = (message.type === 'text' ? message.content : message.caption) ?? "";
-
-    if (textContent.includes("g-filtro")) {
+    
+    const textContent = message.type === 'text' ? message.content : message.caption ?? "";
+    
+    if(textContent.includes("g-filtro")){
       return false; // Não filtrar comandos de filtro
     }
 
     const filters = group.filters;
-
+    
     // Verifica filtro de palavras
     if (filters.words && Array.isArray(filters.words) && filters.words.length > 0) {
       if (textContent) {
@@ -444,98 +471,40 @@ class EventHandler {
         for (const word of filters.words) {
           if (lowerText.includes(word.toLowerCase())) {
             this.logger.info(`Mensagem filtrada no grupo ${group.id} - contém palavra proibida: ${word}`);
-
+            
             // Deleta a mensagem se possível - não bloqueia
             message.origin.delete(true).catch(error => {
               this.logger.error('Erro ao deletar mensagem filtrada:', error);
             });
-
+            
             return true;
           }
         }
       }
     }
-
+    
     // Verifica filtro de links
     if (filters.links && textContent && textContent.match(/https?:\/\/[^\s]+/g)) {
       this.logger.info(`Mensagem filtrada no grupo ${group.id} - contém link`);
-
+      
       // Deleta a mensagem se possível - não bloqueia
       message.origin.delete(true).catch(error => {
         this.logger.error('Erro ao deletar mensagem filtrada:', error);
       });
-
+      
       return true;
     }
-
+    
     // Verifica filtro de pessoas
-    if (filters.people && Array.isArray(filters.people) && filters.people.length > 0) {
-      //this.logger.debug(`[filters][person] Filtrar? ${message.author}|${message.authorAlt} vs ${filters.people.join(", ")}`);
-
-      if(filters.people.some(person => message.author.includes(person) || message.authorAlt.includes(person))){
-        this.logger.info(`Mensagem filtrada no grupo ${group.id} - de usuário banido: ${message.author}`);
-
-        // Deleta a mensagem se possível - não bloqueia
-        message.origin.delete(true).catch(error => {
-          this.logger.error('Erro ao deletar mensagem filtrada:', error);
-        });
-
-        return true;
-      }
-    }
-
-    // Verifica filtro NSFW para imagens e vídeos
-    if (filters.nsfw && (message.type === 'image' || message.type === 'sticker')) { //  || message.type === 'video' removido video por enquanto
-      this.logger.info(`Filtros: ${message.type}`);
-      // Processa a imagem/vídeo para detecção NSFW
-      try {
-        // Primeiro salvamos a mídia temporariamente
-        const tempDir = path.join(__dirname, '../temp');
-
-        // Garante que o diretório temporário exista
-        try {
-          await fs.access(tempDir);
-        } catch (error) {
-          await fs.mkdir(tempDir, { recursive: true });
-        }
-
-        // Gera nome de arquivo temporário único
-        const fileExt = (message.type === 'image' || message.type === 'sticker') ? 'jpg' : 'mp4';
-        const tempFilePath = path.join(tempDir, `nsfw-check-${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`);
-
-        // Salva a mídia
-        const mediaBuffer = Buffer.from(message.content.data, 'base64');
-        await fs.writeFile(tempFilePath, mediaBuffer);
-
-        // Apenas imagens são verificadas para NSFW
-        if (message.type === 'image' || message.type === 'sticker') {
-          // Verifica NSFW
-          const result = await this.nsfwPredict.detectNSFW(message.content.data);
-
-          // Limpa o arquivo temporário
-          fs.unlink(tempFilePath).catch(error => {
-            this.logger.error(`Erro ao excluir arquivo temporário ${tempFilePath}:`, error);
-          });
-
-          if (result.isNSFW) {
-            this.logger.info(`Mensagem filtrada no grupo ${group.id} - conteúdo NSFW detectado, motivo: ${result.reason}`);
-
-            // Deleta a mensagem
-            message.origin.delete(true).catch(error => {
-              this.logger.error('Erro ao deletar mensagem NSFW:', error);
-            });
-
-            return true;
-          }
-        } else {
-          // Para vídeos, apenas limpamos o arquivo temporário
-          fs.unlink(tempFilePath).catch(error => {
-            this.logger.error(`Erro ao excluir arquivo temporário ${tempFilePath}:`, error);
-          });
-        }
-      } catch (nsfwError) {
-        this.logger.error('Erro ao verificar conteúdo NSFW:', nsfwError);
-      }
+    if (filters.people && Array.isArray(filters.people) && filters.people.some(person => message.author.includes(person))) {
+      this.logger.info(`Mensagem filtrada no grupo ${group.id} - de usuário banido: ${message.author}`);
+      
+      // Deleta a mensagem se possível - não bloqueia
+      message.origin.delete(true).catch(error => {
+        this.logger.error('Erro ao deletar mensagem filtrada:', error);
+      });
+      
+      return true;
     }
 
     return false;
@@ -554,12 +523,12 @@ class EventHandler {
     });
   }
 
-  /**
- * Manipula evento de saída no grupo
- * @param {WhatsAppBot} bot - A instância do bot
- * @param {Object} data - Dados do evento
- *
- */
+    /**
+   * Manipula evento de saída no grupo
+   * @param {WhatsAppBot} bot - A instância do bot
+   * @param {Object} data - Dados do evento
+   *
+   */
   onGroupLeave(bot, data) {
     // Processa entrada sem aguardar para evitar bloquear a thread de eventos
     this.processGroupLeave(bot, data).catch(error => {
@@ -567,45 +536,35 @@ class EventHandler {
     });
   }
 
-
-
+  
+  
   /**
    * Processa entrada no grupo
    * @param {WhatsAppBot} bot - A instância do bot
    * @param {Object} data - Dados do evento
    */
   async processGroupJoin(bot, data) {
-    const groupId = data.group.id;
-    if (bot.removeSkipGroup) {
-        await bot.removeSkipGroup(groupId);
-    }
-    //this.logger.info(`[processGroupJoin] `, { data });
-
-    if(this.recentlyJoined.includes(data.user.id)) return;
-    this.recentlyJoined.push(data.user.id);
-    setTimeout((rtlyL,id) => {
-      rtlyL = rtlyL.filter(rt => rt !== id);
-    }, 60000, this.recentlyJoined, data.user.id);
-
+    //this.logger.info(`[processGroupJoin] `, {data});
+    
     //this.logger.info(`Usuário ${data.user.name} (${data.user.id}) entrou no grupo ${data.group.name} (${data.group.id}). Quem adicionou: ${data.responsavel.name}/${data.responsavel.id}`);
-
+    
     try {
       // Obtém os dados completos do chat
       const chat = await data.origin.getChat();
-
+      
       // Verifica se o próprio bot é quem está entrando
-      const isBotJoining = data.isBotJoining || data?.user?.id?.startsWith(bot.phoneNumber);
-      //this.logger.debug(`[processGroupJoin] isBotJoining (${data.isBotJoining} / ${isBotJoining}}) = data.user.id (${data.user.id}) -startsWith- bot.phoneNumber ${bot.phoneNumber}`);
-
+      const isBotJoining = data?.user?.id?.startsWith(bot.phoneNumber);
+      this.logger.debug(`[processGroupJoin] isBotJoining (${isBotJoining}}) = data.user.id (${data.user.id}) -startsWith- bot.phoneNumber ${bot.phoneNumber}`);
+      
       // Obtém ou cria grupo
       const nomeGrupo = data.group?.name?.replace(/[^a-zA-Z0-9 ]/g, '').replace(/(?:^\w|[A-Z]|\b\w)/g, (w, i) => i === 0 ? w.toLowerCase() : w.toUpperCase()).replace(/\s+/g, '') ?? null;
       const group = await this.getOrCreateGroup(data.group.id, nomeGrupo, bot.prefix);
-      //this.logger.debug(`Informações do grupo: ${JSON.stringify(group)}`);
-
+      this.logger.debug(`Informações do grupo: ${JSON.stringify(group)}`);
+      
       // Envia notificação para o grupo de logs
       if (bot.grupoLogs) {
         try {
-          if (isBotJoining) {
+          if(isBotJoining){
             const msgJoin = `🚪 Bot ${bot.id} entrou no grupo: ${data.group.name} (${nomeGrupo}/${data.group.id})\nQuem add: ${data.responsavel.name}/${data.responsavel.id}`;
             this.logger.info(`[processGroupJoin] ${msgJoin}`);
             bot.sendMessage(bot.grupoLogs, msgJoin);
@@ -614,21 +573,21 @@ class EventHandler {
           this.logger.error('Erro ao enviar notificação de entrada no grupo para o grupo de logs:', error);
         }
       }
-
+      
       if (isBotJoining) {
         // Caso 1: Bot entrou no grupo
         this.logger.info(`Bot entrou no grupo ${data.group.name} (${nomeGrupo}/${data.group.id})`);
         group.paused = false; // Sempre que o bot entra no grupo, tira o pause (para grupos em que saiu/foi removido)
         await this.database.saveGroup(group);
-
+        
         // Busca pendingJoins para ver se esse grupo corresponde a um convite pendente
         const pendingJoins = await this.database.getPendingJoins();
         let foundInviter = null;
-
+        
         // Obtém todos os membros do grupo para verificação
         const members = chat.participants.map(p => p.id._serialized);
         const stringifiedData = JSON.stringify(data);
-
+        
         for (const pendingJoin of pendingJoins) {
           // Verifica se o autor do convite está no grupo (duas abordagens)
           if (members.includes(pendingJoin.authorId) || stringifiedData.includes(pendingJoin.authorId)) {
@@ -639,13 +598,13 @@ class EventHandler {
 
         // Envia uma mensagem de boas-vindas padrão sobre o bot
         let botInfoMessage = `🦇 Olá, grupo! Eu sou a *ravenabot*, um bot de WhatsApp. Use "${group.prefix}cmd" para ver os comandos disponíveis.`;
-
+      
         try {
           const groupJoinPath = path.join(this.database.databasePath, 'textos', 'groupJoin.txt');
-
+          
           // Verifica se o arquivo existe
           const fileExists = await fs.access(groupJoinPath).then(() => true).catch(() => false);
-
+          
           if (fileExists) {
             const fileContent = await fs.readFile(groupJoinPath, 'utf8');
             if (fileContent && fileContent.trim() !== '') {
@@ -657,7 +616,7 @@ class EventHandler {
         } catch (readError) {
           this.logger.error('Erro ao ler groupJoin.txt, usando mensagem padrão:', readError);
         }
-
+        
         let llm_inviterInfo = "";
 
         // Adiciona informações do convidador se disponíveis
@@ -676,30 +635,30 @@ class EventHandler {
           if (!group.additionalAdmins) {
             group.additionalAdmins = [];
           }
-
+          
           // Adiciona o autor como admin adicional se ainda não estiver na lista
           if (!group.additionalAdmins.includes(foundInviter.authorId)) {
             group.additionalAdmins.push(foundInviter.authorId);
-            await this.database.saveGroup(group);
+            await this.database.saveGroup(group);   
           }
-
+      
           // Remove o join pendente
           await this.database.removePendingJoin(foundInviter.code);
         }
 
-        if (bot.comunitario) {
-          if (bot.supportMsg && bot.supportMsg.length > 0) {
+        if(bot.comunitario){
+          if(bot.supportMsg && bot.supportMsg.length > 0){
             botInfoMessage += `\n---☭---☭---☭---☭---☭---☭---☭---☭---\n${bot.supportMsg}`;
           } else {
             botInfoMessage += `\n\n⭕ Este é um número da ☭ *ravena comunitária* ☭, onde a pessoa que fornece o chip pode ter acesso às suas mensagens (assim como qualquer outro bot ilegal do whats). Se você não concorda com isto, fique lire para removê-la do grupo.⭕\n_Saiba mais enviando !comunitaria ou acessando o site oficial! Ou no !grupao_`;
           }
         }
-
+        
         this.logger.debug(`[groupJoin] botInfoMessage: ${botInfoMessage}`);
         bot.sendMessage(group.id, botInfoMessage).catch(error => {
           this.logger.error('Erro ao enviar mensagem de boas-vindas do grupo:', error);
         });
-
+        
         // Gera e envia uma mensagem com informações sobre o grupo usando LLM
         try {
           // Extrai informações do grupo para o LLM
@@ -708,9 +667,9 @@ class EventHandler {
             description: chat.groupMetadata?.desc || "",
             memberCount: chat.participants?.length || 0
           };
-
+          
           const llmPrompt = `Você é um bot de WhatsApp chamado ravenabot e foi adicionado em um grupo de whatsapp chamado '${groupInfo.name}'${llm_inviterInfo}, este grupo é sobre '${groupInfo.description}' e tem '${groupInfo.memberCount}' participantes. Gere uma mensagem agradecendo a confiança e fazendo de conta que entende do assunto do grupo enviando algo relacionado junto pra se enturmar, seja natural. Não coloque coisas placeholder, pois a mensagem que você retornar, vai ser enviada na íntegra e sem ediçoes.`;
-
+          
           // Obtém conclusão do LLM sem bloquear
           this.llmService.getCompletion({ prompt: llmPrompt }).then(groupWelcomeMessage => {
             // Envia a mensagem de boas-vindas gerada
@@ -752,40 +711,27 @@ class EventHandler {
    * @param {Object} data - Dados do evento
    */
   async processGroupLeave(bot, data) {
-    //this.logger.info(`[processGroupLeave] `, { data });
-
-    if(this.recentlyLeft.includes(data.user.id)) return;
-    this.recentlyLeft.push(data.user.id);
-    setTimeout((rtlyL,id) => {
-      rtlyL = rtlyL.filter(rt => rt !== id);
-    }, 60000, this.recentlyLeft, data.user.id);
-
-    this.logger.info(`Usuário ${data.user.name} (${data.user.id}) saiu do grupo ${data.group.name} (${data.group.id}). Quem removeu: ${data.responsavel.name}/${data.responsavel.id}`, { quemRemoveu: data.responsavel.name });
-
+    this.logger.info(`Usuário ${data.user.name} (${data.user.id}) saiu do grupo ${data.group.name} (${data.group.id}). Quem removeu: ${data.responsavel.name}/${data.responsavel.id}`);
+    
     try {
       // Obtém grupo
       const group = this.groups[data.group.id];
-
+      
 
       // Por enquanto, a única maneira é pegar a info do grupo pra descobrir o LID do bot nele
       const chatInfo = await bot.getChatDetails(data.group.id);
-
+    
       // 1° passo: descobrir o lid do bot nesse grupo (obrigado evo 2.3.5)
       const botNumber = bot.getLidFromPn(bot.phoneNumber, chatInfo);
 
-      // notInGroup é solução nova que coloquei da EvoGo, quando falha ao retornar info do grupo pois o bot não participa
-      const isBotLeaving = data.group.notInGroup || data?.user?.id?.startsWith(botNumber);
+      const isBotLeaving = data?.user?.id?.startsWith(botNumber);
 
-      //this.logger.debug(`[processGroupLeave] isBotLeaving (${isBotLeaving}}) = data.user.id (${data.user.id}) -startsWith- bot.phoneNumber ${botNumber} | not in group? ${data.group.notInGroup}`, { data, chatInfo });
-
+      this.logger.debug(`[processGroupLeave] isBotLeaving (${isBotLeaving}}) = data.user.id (${data.user.id}) -startsWith- bot.phoneNumber ${botNumber}`, {data, chatInfo});
+      
       // Envia notificação para o grupo de logs
       if (bot.grupoLogs) {
         try {
-          if (isBotLeaving) {
-            const groupId = data.group.id;
-            if (bot.addSkipGroup) {
-                await bot.addSkipGroup(groupId);
-            }
+          if(isBotLeaving){
             //group.paused = true; // Sempre que o bot sai do grupo, pausa o mesmo
             await this.database.saveGroup(group);
             bot.sendMessage(bot.grupoLogs, `🚪 Bot ${bot.id} saiu do grupo: ${data.group.name} (${data.group.id})})\nQuem removeu: ${data.responsavel.name}/${data.responsavel.id}`).catch(error => {
@@ -797,7 +743,7 @@ class EventHandler {
           this.logger.error('Erro ao enviar notificação de saída do grupo para o grupo de logs:', error);
         }
       }
-
+      
       if (group && group.farewells && !isBotLeaving) {
         const farewell = await this.processFarewellMessage(group, data.user, bot);
         if (farewell) {
@@ -821,7 +767,7 @@ class EventHandler {
   async generateGreetingMessage(bot, group, user, chatData = null) {
     try {
       if (!group.greetings) return null;
-
+      
       // MENTIONS QUEBRADOS POR CAUSA DE LID
       //this.logger.info(`[generateGreetingMessage] `, {group, user, chatData});
 
@@ -834,7 +780,7 @@ class EventHandler {
           this.logger.error('Erro ao obter dados do chat para saudação:', error);
         }
       }
-
+      
       // Se houver múltiplos usuários, prepara os nomes
       let nomesPessoas = "";
       let numeroPessoas = "";
@@ -842,7 +788,7 @@ class EventHandler {
       let isPlural = false;
       let mentions = [];
 
-      if (Array.isArray(user)) {
+       if (Array.isArray(user)) {
         numeroPessoas = user.map(u => `@${u.id.split('@')[0]}` || "@123456780").join(", ");
         quantidadePessoas = user.length;
         isPlural = quantidadePessoas > 1;
@@ -856,17 +802,17 @@ class EventHandler {
       if (group.greetings.text) {
         // Substitui variáveis
         let message = group.greetings.text;
-
+        
         // Variáveis básicas
         //message = message.replace(/{pessoa}/g, nomesPessoas);
         message = message.replace(/{pessoa}/g, numeroPessoas); // Usa o numero pra marcar
-
+        
         // Variáveis de grupo
         message = message.replace(/{tituloGrupo}/g, chatData?.name || "Grupo");
         message = message.replace(/{nomeGrupo}/g, group?.name || "Grupo");
         message = message.replace(/{nomePessoas}/g, numeroPessoas);
         message = message.replace(/{numeroPessoas}/g, numeroPessoas);
-
+        
         // Variáveis de pluralidade
         if (isPlural) {
           message = message.replace(/{plural_S}/g, "s");
@@ -881,29 +827,29 @@ class EventHandler {
           message = message.replace(/{plural_m}/g, "");
           message = message.replace(/{plural_esao}/g, "é");
         }
-
+        
         // Processa variáveis
         const options = {};
-        message = await this.variableProcessor.process(message, { message: false, group, options, bot });
-
-        if (options.mentions && options.mentions.length > 0) {
+        message = await this.variableProcessor.process(message, {message: false, group, options, bot});
+        
+        if(options.mentions && options.mentions.length > 0){
           mentions = mentions.concat(options.mentions);
         }
 
         mentions = [...new Set(mentions)]; // deixa unicos
         return { message, mentions };
       }
-
+      
       // Se saudação de sticker
       if (group.greetings.sticker) {
         // TODO: Implementar saudação de sticker
       }
-
+      
       // Se saudação de imagem
       if (group.greetings.image) {
         // TODO: Implementar saudação de imagem
       }
-
+      
       // Saudação padrão
       //return `Bem-vindo ao grupo, ${user.name}!`;
       return false;
@@ -922,7 +868,7 @@ class EventHandler {
   async processFarewellMessage(group, user, bot, chatData) {
     try {
       if (!group.farewells) return null;
-
+      
       // Se despedida de texto
       if (group.farewells.text) {
 
@@ -940,13 +886,13 @@ class EventHandler {
         let message = group.farewells.text;
         message = message.replace(/{pessoa}/g, `@${user.id.split('@')[0]}`);
         message = message.replace(/{tituloGrupo}/g, chatData?.name || "Grupo");
-
+        
         // Processa variáveis
         const options = {};
-        message = await this.variableProcessor.process(message, { message: false, group, options, bot });
-
+        message = await this.variableProcessor.process(message, {message: false, group, options, bot});
+        
         let mentions = [user.id];
-        if (options.mentions && options.mentions.length > 0) {
+        if(options.mentions && options.mentions.length > 0){
           mentions = mentions.concat(options.mentions);
         }
 
@@ -954,7 +900,7 @@ class EventHandler {
 
         return { message, mentions };
       }
-
+      
       // Despedida padrão
       //return `Adeus, ${user.name}!`;
       return false;
@@ -963,7 +909,7 @@ class EventHandler {
       return null;
     }
   }
-
+  
   /**
    * Manipula notificações gerais
    * @param {WhatsAppBot} bot - A instância do bot
@@ -973,35 +919,35 @@ class EventHandler {
     // Implementação opcional para tratar outros tipos de notificações
   }
 
-  /**
- * Exemplo de método que verifica permissões administrativas
- * @param {WhatsAppBot} bot - A instância do bot
- * @param {Object} message - A mensagem formatada
- * @param {string} action - A ação a ser realizada
- * @param {Group} group - O objeto do grupo
- * @returns {Promise<boolean>} - True se a ação for permitida
- */
+    /**
+   * Exemplo de método que verifica permissões administrativas
+   * @param {WhatsAppBot} bot - A instância do bot
+   * @param {Object} message - A mensagem formatada
+   * @param {string} action - A ação a ser realizada
+   * @param {Group} group - O objeto do grupo
+   * @returns {Promise<boolean>} - True se a ação for permitida
+   */
   async checkPermission(bot, message, action, group) {
     try {
       // Obtém o chat diretamente da mensagem original
       const chat = await message.origin.getChat();
-
+      
       // Usa o AdminUtils para verificar permissões
       const isAdmin = await this.adminUtils.isAdmin(message.author, group, chat, bot.client);
-
+      
       if (!isAdmin) {
         this.logger.warn(`Usuário ${message.author} tentou realizar a ação "${action}" sem permissão`);
-
+        
         // Notifica o usuário (opcional)
         const returnMessage = new ReturnMessage({
           chatId: message.group || message.author,
           content: `⛔ Você não tem permissão para realizar esta ação: ${action}`
         });
         await bot.sendReturnMessages(returnMessage);
-
+        
         return false;
       }
-
+      
       return true;
     } catch (error) {
       this.logger.error(`Erro ao verificar permissões para ação "${action}":`, error);
