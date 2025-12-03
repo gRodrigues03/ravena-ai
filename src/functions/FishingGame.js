@@ -323,6 +323,7 @@ async function getRandomFish(fishArray, isMultiCatch = false, userData = null) {
           name: rareFish.name,
           weight: totalWeight,
           timestamp: Date.now(),
+          chance: rareFish.chance,
           isRare: true,
           emoji: rareFish.emoji,
           baseWeight: baseWeight,
@@ -670,6 +671,7 @@ function applyBuffs(userData, fish) {
 async function generateRareFishImage(bot, userName, fishName) {
   try {
     const prompt = `${userName} fishing an epic enormous fish named '${fishName}' using only a wooden fishing rod`;
+    logger.info(`[fishing] generateRareFishImage: ${prompt}`);
     if (!sdModule || !sdModule.commands || !sdModule.commands[0] || !sdModule.commands[0].method) return null;
     
     const mockMessage = { author: 'SYSTEM', authorName: 'Sistema', content: prompt, origin: { getQuotedMessage: () => Promise.resolve(null) } };
@@ -705,7 +707,7 @@ async function fishCommand(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
     const userId = message.author;
-    const userName = message.pushName ?? message.origin?.pushName ?? message.evoMessageData?.pushName ?? message.authorName ?? "Pescador";
+    const userName = message.name ?? message.pushName ?? message.pushname ?? message.authorName ?? "Pescador";
     const groupId = message.group; 
     const mentionPessoa = [];
     
@@ -853,7 +855,7 @@ async function fishCommand(bot, message, args, group) {
     } else {
       const fish = caughtFishes[0];
       if (fish.isRare) {
-        fishMessage = `🏆 INCRÍVEL! ${userName} capturou um(a) *${fish.name}* GIGANTE de _${fish.weight.toFixed(2)} kg_! (${fish.emoji})`;
+        fishMessage = `🏆 INCRÍVEL! _${userName}_ capturou um(a) _raríssimo_ *${fish.name}* de _${fish.weight.toFixed(2)} kg_! (${fish.emoji} ${fish.chance*100}% de chance)`;
       } else {
         fishMessage = `🎣 ${userName} ${extraMsg}pescou um *${fish.name}* de _${fish.weight.toFixed(2)} kg_!`;
       }
@@ -871,25 +873,50 @@ async function fishCommand(bot, message, args, group) {
 
     // Se for peixe raro, tentar gerar imagem
     if (caughtFishes.length === 1 && caughtFishes[0].isRare) {
-      const rareFishImage = await generateRareFishImage(bot, userName, caughtFishes[0].name);
-      
-      // Se gerar imagem com sucesso, retorna mensagem com imagem
-      if (rareFishImage) {
-          const savedImageName = await saveRareFishImage(rareFishImage, userId, caughtFishes[0].name);
-          if (!fishingData.legendaryFishes) fishingData.legendaryFishes = [];
-          
-          fishingData.legendaryFishes.push({
-            fishName: caughtFishes[0].name, weight: caughtFishes[0].weight, userId: userId,
-            userName: userName, groupId: groupId || null, groupName: group ? group.name : "chat privado",
-            timestamp: Date.now(), imageName: savedImageName
-          });
-          return new ReturnMessage({
-            chatId, content: rareFishImage,
-            options: { caption: fishMessage, quotedMessageId: message.origin.id._serialized, mentions: mentionPessoa, evoReply: message.origin },
-            reactions: { after: "🎣" }
-          });
+      let rareFishImage = await generateRareFishImage(bot, userName, caughtFishes[0].name);
+
+      if(!rareFishImage){
+        // Placeholder
+        const pchPescaRara = path.join(database.databasePath, "rare-fish.jpg");
+        logger.error(`[fishing] Erro gerando imagem de peixe raro, usando placeholder '${pchPescaRara}'`);
+        rareFishImage = await bot.createMedia(pchPescaRara, "image/jpeg");
       }
-      // Se rareFishImage for null (falha), o código continua para o return final (texto apenas)
+      
+      const savedImageName = await saveRareFishImage(rareFishImage, userId, caughtFishes[0].name);
+      if (!fishingData.legendaryFishes) fishingData.legendaryFishes = [];
+      
+      fishingData.legendaryFishes.push({
+        fishName: caughtFishes[0].name, weight: caughtFishes[0].weight, userId: userId,
+        userName: userName, groupId: groupId || null, groupName: group ? group.name : "chat privado",
+        timestamp: Date.now(), imageName: savedImageName
+      });
+
+      const groupName = group ? group.name : "chat privado";
+      const notificacaoPeixeRaro = new ReturnMessage({
+        content: rareFishImage,
+        options: {
+          caption: `🏆 ${userName} capturou um(a) *${caughtFishes[0].name}* LENDÁRIO(A) de *${caughtFishes[0].weight.toFixed(2)} kg* no grupo "${groupName}"!`
+        }
+      });
+
+      if (bot.grupoInteracao) {
+        notificacaoPeixeRaro.chatId = bot.grupoInteracao;
+        const msgsEnviadas = await bot.sendReturnMessages(notificacaoPeixeRaro);
+        msgsEnviadas[0].pin(260000);
+      }
+      
+      if (bot.grupoAvisos) {
+        notificacaoPeixeRaro.chatId = bot.grupoAvisos;
+        const msgsEnviadas = await bot.sendReturnMessages(notificacaoPeixeRaro);
+        msgsEnviadas[0].pin(260000);
+      }
+
+      return new ReturnMessage({
+        chatId, content: rareFishImage,
+        options: { caption: fishMessage, quotedMessageId: message.origin.id._serialized, mentions: mentionPessoa, evoReply: message.origin },
+        reactions: { after: "🎣" }
+      });
+
     }
     
     return new ReturnMessage({
@@ -906,7 +933,7 @@ async function myFishCommand(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
     const userId = message.author;
-    const userName = message.authorName || "Pescador";
+    const userName = message.name ?? message.pushName ?? message.pushname ?? message.authorName ?? "Pescador";
     
     const fishingData = await getFishingData();
     
@@ -956,31 +983,261 @@ async function myFishCommand(bot, message, args, group) {
   }
 }
 
-// Mantendo os outros comandos simplificados para caber, mas com a mesma lógica de getFishingData()
-async function fishingRankingCommand(bot, message, args, group) {
-    // Mesma lógica anterior, apenas chamando await getFishingData()
-    try {
-        const chatId = message.group || message.author;
-        const groupId = message.group;
-        if (!groupId) return new ReturnMessage({ chatId, content: '🎣 Apenas em grupos.' });
-        
-        const fishingData = await getFishingData();
-        if (!fishingData.groupData?.[groupId]) return new ReturnMessage({ chatId, content: '🎣 Sem dados neste grupo.' });
-        
-        const players = Object.entries(fishingData.groupData[groupId]).map(([id, data]) => ({ id, ...data }));
-        players.sort((a, b) => {
-            if (!a.biggestFish) return 1;
-            if (!b.biggestFish) return -1;
-            return b.biggestFish.weight - a.biggestFish.weight;
-        });
+/**
+ * Mostra os peixes lendários que foram pescados
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} Mensagem(ns) de retorno
+ */
+async function legendaryFishCommand(bot, message, args, group) {
+  try {
+    // Obtém ID do chat
+    const chatId = message.group || message.author;
+    
+    // Obtém dados de pesca
+    const fishingData = await getFishingData();
+    
+    // Verifica se há peixes lendários
+    if (!fishingData.legendaryFishes || fishingData.legendaryFishes.length === 0) {
+      return new ReturnMessage({
+        chatId,
+        content: '🐉 Ainda não foram pescados peixes lendários. Continue pescando e você pode ser o primeiro a encontrar um!'
+      });
+    }
+    
+    // Ordena os peixes lendários por data (mais recente primeiro)
+    const sortedLegendaryFishes = [...fishingData.legendaryFishes].sort((a, b) => b.timestamp - a.timestamp);
+    
+    const rareFishListItems = await Promise.all(RARE_FISH.map(async f => {
+        const count = await getNumberOfFishesByName(f.name, fishingData);
+        return `\t${f.emoji} ${f.name} _(${f.weightBonus}kg, ${count} pescados até hoje)_`;
+    }));
+    const rareFishList = rareFishListItems.join("\n");
 
-        let rankingMessage = `🏆 *Ranking (Maior Peixe)*\n\n`;
-        players.slice(0, 10).forEach((p, i) => {
-             if(p.biggestFish) rankingMessage += `${i+1}. ${p.name}: ${p.biggestFish.name} (${p.biggestFish.weight.toFixed(2)}kg)\n`;
-        });
-        return new ReturnMessage({ chatId, content: rankingMessage });
-    } catch (e) { return new ReturnMessage({ chatId: message.author, content: 'Erro.' }); }
+    // Prepara a mensagem com a lista completa de todos os peixes lendários
+    let textMessage = `🌊 *Lista de Peixes Lendários* 🎣\n${rareFishList}\n\n🏆 *REGISTRO DE PEIXES LENDÁRIOS* 🎖️\n\n`;
+    
+    // Adiciona todos os peixes lendários na mensagem de texto
+    for (let i = 0; i < sortedLegendaryFishes.length; i++) {
+      const legendary = sortedLegendaryFishes[i];
+      
+      // Formata data para um formato legível
+      const date = new Date(legendary.timestamp).toLocaleDateString('pt-BR');
+      
+      // Adiciona emoji especial para os 3 primeiros
+      const medal = i === 0 ? '🥇 ' : i === 1 ? '🥈 ' : i === 2 ? '🥉 ' : `${i+1}. `;
+      
+      textMessage += `${medal}*${legendary.fishName}* (${legendary.weight.toFixed(2)} kg)\n`;
+      textMessage += `   Pescador: ${legendary.userName}\n`;
+      textMessage += `   Local: ${legendary.groupName || 'desconhecido'}\n`;
+      textMessage += `   Data: ${date}\n\n`;
+    }
+    
+    // Adiciona mensagem sobre as imagens
+    if (sortedLegendaryFishes.length > 0) {
+      textMessage += `📷 *Mostrando imagens das ${Math.min(5, sortedLegendaryFishes.length)} lendas mais recentes...*`;
+    }
+    
+    // Mensagens a serem enviadas
+    const messages = [];
+    
+    // Adiciona a mensagem de texto inicial
+    messages.push(new ReturnMessage({
+      chatId,
+      content: textMessage
+    }));
+    
+    // Limita a 5 peixes para as imagens
+    const legendaryToShow = sortedLegendaryFishes.slice(0, 5);
+    
+    // Cria uma mensagem para cada peixe lendário (apenas os 5 mais recentes)
+    for (const legendary of legendaryToShow) {
+      try {
+        let content;
+        let options = {};
+        
+        // Tenta carregar a imagem se existir
+        if (legendary.imageName) {
+          const imagePath = path.join(database.databasePath, 'media', legendary.imageName);
+          try {
+            await fs.access(imagePath);
+            // Imagem existe, cria média
+            const media = await bot.createMedia(imagePath);
+            content = media;
+            
+            // Prepara a legenda
+            const date = new Date(legendary.timestamp).toLocaleDateString('pt-BR');
+            options.caption = `🏆 *Peixe Lendário*\n\n*${legendary.fishName}* de ${legendary.weight.toFixed(2)} kg\nPescado por: ${legendary.userName}\nLocal: ${legendary.groupName || 'desconhecido'}\nData: ${date}`;
+          } catch (imageError) {
+            // Imagem não existe, pula para o próximo
+            logger.error(`Imagem do peixe lendário não encontrada: ${imagePath}`, imageError);
+            continue;
+          }
+        } else {
+          // Sem imagem, pula para o próximo
+          continue;
+        }
+        
+        // Adiciona a mensagem à lista
+        messages.push(new ReturnMessage({
+          chatId,
+          content,
+          options,
+          // Adiciona delay para evitar envio muito rápido
+          delay: messages.length * 1000 
+        }));
+        
+      } catch (legendaryError) {
+        logger.error('Erro ao processar peixe lendário:', legendaryError);
+      }
+    }
+    
+    if (messages.length === 1) {
+      return messages[0]; // Retorna apenas a mensagem de texto se não houver imagens
+    }
+    
+    return messages;
+  } catch (error) {
+    logger.error('Erro no comando de peixes lendários:', error);
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: '❌ Ocorreu um erro ao mostrar os peixes lendários. Por favor, tente novamente.'
+    });
+  }
 }
+
+/**
+ * Mostra o ranking de pescaria do grupo atual
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} Mensagem de retorno
+ */
+async function fishingRankingCommand(bot, message, args, group) {
+  try {
+    // Obtém ID do chat
+    const chatId = message.group || message.author;
+    const groupId = message.group;
+    
+    // Verifica se o comando foi executado em um grupo
+    if (!groupId) {
+      return new ReturnMessage({
+        chatId,
+        content: '🎣 Este comando só funciona em grupos. Use-o em um grupo para ver o ranking desse grupo específico.'
+      });
+    }
+    
+    // Obtém dados de pesca
+    const fishingData = await getFishingData();
+    
+    // Verifica se há dados para este grupo
+    if (!fishingData.groupData || 
+        !fishingData.groupData[groupId] || 
+        Object.keys(fishingData.groupData[groupId]).length === 0) {
+      return new ReturnMessage({
+        chatId,
+        content: '🎣 Ainda não há dados de pescaria neste grupo. Use !pescar para começar.'
+      });
+    }
+    
+    // Obtém os dados dos jogadores deste grupo
+    const players = Object.entries(fishingData.groupData[groupId]).map(([id, data]) => ({
+      id,
+      ...data
+    }));
+    
+    // Determina o tipo de ranking
+    let rankingType = 'biggest'; // Padrão: maior peixe (sem argumentos)
+    
+    if (args.length > 0) {
+      const arg = args[0].toLowerCase();
+      if (arg === 'quantidade') {
+        rankingType = 'count';
+      } else if (arg === 'pesado') {
+        rankingType = 'weight';
+      }
+    }
+    
+    // Ordena jogadores com base no tipo de ranking
+    if (rankingType === 'weight') {
+      // Ordena por peso total
+      players.sort((a, b) => b.totalWeight - a.totalWeight);
+    } else if (rankingType === 'count') {
+      // Ordena por quantidade total de peixes
+      players.sort((a, b) => b.totalCatches - a.totalCatches);
+    } else {
+      // Ordena por tamanho do maior peixe
+      players.sort((a, b) => {
+        // Se algum jogador não tiver um maior peixe, coloca-o no final
+        if (!a.biggestFish) return 1;
+        if (!b.biggestFish) return -1;
+        return b.biggestFish.weight - a.biggestFish.weight;
+      });
+    }
+    
+    // Prepara o título do ranking de acordo com o tipo
+    let rankingTitle = '';
+    if (rankingType === 'weight') {
+      rankingTitle = 'Peso Total';
+    } else if (rankingType === 'count') {
+      rankingTitle = 'Quantidade Total';
+    } else {
+      rankingTitle = 'Maior Peixe';
+    }
+    
+    // Prepara a mensagem de ranking
+    let rankingMessage = `🏆 *Ranking de Pescaria deste Grupo* (${rankingTitle})\n\n`;
+    
+    // Lista os jogadores
+    const topPlayers = players.slice(0, 10);
+    topPlayers.forEach((player, index) => {
+      const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+      
+      if (rankingType === 'weight') {
+        rankingMessage += `${medal} ${player.name}: ${player.totalWeight.toFixed(2)} kg (${player.totalCatches} peixes)\n`;
+      } else if (rankingType === 'count') {
+        rankingMessage += `${medal} ${player.name}: ${player.totalCatches} peixes (${player.totalWeight.toFixed(2)} kg)\n`;
+      } else {
+        // Se o jogador não tiver um maior peixe, mostra uma mensagem apropriada
+        if (!player.biggestFish) {
+          rankingMessage += `${medal} ${player.name}: Ainda não pescou nenhum peixe\n`;
+        } else {
+          const rareMark = player.biggestFish.isRare ? ` ${player.biggestFish.emoji}` : '';
+          rankingMessage += `${medal} ${player.name}: ${player.biggestFish.name} de ${player.biggestFish.weight.toFixed(2)} kg${rareMark}\n`;
+        }
+      }
+    });
+    
+    // Informações sobre os outros rankings
+    rankingMessage += `\nOutros rankings disponíveis:`;
+    if (rankingType !== 'biggest') {
+      rankingMessage += `\n- !pesca-ranking (sem argumentos): Ranking por maior peixe`;
+    }
+    if (rankingType !== 'weight') {
+      rankingMessage += `\n- !pesca-ranking pesado: Ranking por peso total`;
+    }
+    if (rankingType !== 'count') {
+      rankingMessage += `\n- !pesca-ranking quantidade: Ranking por quantidade de peixes`;
+    }
+    
+    return new ReturnMessage({
+      chatId,
+      content: rankingMessage
+    });
+  } catch (error) {
+    logger.error('Erro ao mostrar ranking de pescaria:', error);
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: '❌ Ocorreu um erro ao mostrar o ranking. Por favor, tente novamente.'
+    });
+  }
+}
+
 
 async function saveRareFishImage(mediaContent, userId, fishName) {
   try {
@@ -992,13 +1249,418 @@ async function saveRareFishImage(mediaContent, userId, fishName) {
   } catch (e) { return null; }
 }
 
+/**
+ * Mostra todas as informações sobre o jogo de pescaria.
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @returns {Promise<ReturnMessage>} Mensagem de retorno
+ */
+async function fishingInfoCommand(bot, message) {
+    const chatId = message.group || message.author;
+    try {
+        const stats = await getFishingStats();
+        const customVariables = await database.getCustomVariables();
+        const fishVariety = customVariables.peixes?.length || 0;
+
+        let infoMessage = "🎣 *Informações & Estatísticas do Jogo da Pesca* 🎣\n\n";
+
+        infoMessage += "📜 *Regras e Informações Gerais*\n";
+        infoMessage += `- *Iscas Máximas:* \`${MAX_BAITS}\`\n`;
+        infoMessage += `- *Recarga de Isca:* 1 a cada ${BAIT_REGEN_TIME / 60} minutos. _(Não é possível alterar este tempo)_\n`;
+        infoMessage += `-  *Peso dos Peixes:* de \`${MIN_FISH_WEIGHT}kg\` a \`${MAX_FISH_WEIGHT}kg\`\n`;
+        infoMessage += `- *Peixes:* \`${fishVariety}\` tipos (\`!pesca-peixes\` para ver)\n\n`;
+
+        const fishingData = await getFishingData(); // pseudo cache
+        infoMessage += "🐲 *Peixes Lendários*\n_Chance de encontrar um destes seres místicos:_\n";
+        for (const fish of RARE_FISH) {
+            const count = await getNumberOfFishesByName(fish.name, fishingData);
+            infoMessage += `  ${fish.emoji} *${fish.name}*: \`${(fish.chance * 100).toFixed(4 )}%\` de chance, ${count} pescados até hoje\n`;
+        }
+        infoMessage += "\n";
+
+        infoMessage += "✨ *Buffs*\n_Itens que te ajudam na pescaria:_\n";
+        UPGRADES.forEach(item => {
+            infoMessage += `  ${item.emoji} *${item.name}*: ${item.description}\n`;
+        });
+        infoMessage += "\n";
+
+        infoMessage += "🔥 *Debuffs*\n_Cuidado com o que você fisga!_\n";
+        DOWNGRADES.forEach(item => {
+            infoMessage += `  ${item.emoji} *${item.name}*: ${item.description}\n`;
+        });
+        infoMessage += "\n";
+
+        infoMessage += "🧹 *Lixos Pescáveis*\n_Nem tudo que reluz é peixe..._\n";
+        infoMessage += `\`${TRASH_ITEMS.map(item => item.emoji + " " + item.name).join(', ')}\`\n\n`;
+
+        infoMessage += "📊 *Estatísticas Globais de Pesca*\n";
+        infoMessage += `🐟 *Total de Peixes Pescados:* ${stats.totalFishCaught}\n`;
+        infoMessage += `🐛 *Total de Iscas Usadas:* ${stats.totalBaitsUsed}\n`;
+        infoMessage += `🧹 *Total de Lixo Coletado:* ${stats.totalTrashCaught}\n`;
+        infoMessage += `🐲 *Total de Lendas Encontradas:* ${stats.totalLegendaryCaught}\n`;
+        if (stats.heaviestFishEver.weight > 0) {
+            infoMessage += `🏆 *Maior Peixe da História:* ${stats.heaviestFishEver.name} com \`${stats.heaviestFishEver.weight.toFixed(2)} kg\`, pescado por _${stats.heaviestFishEver.userName}_\n`;
+        }
+        if (stats.mostFishCaughtByUser.totalCatches > 0) {
+            infoMessage += `🥇 *Pescador Mais Dedicado:* _${stats.mostFishCaughtByUser.userName}_ com \`${stats.mostFishCaughtByUser.totalCatches}\` peixes pescados\n`;
+        }
+
+        infoMessage += "\n\n> Se você deseja contribuir com novos buffs, lixos, peixes, etc. fique à vontade para mandar sugestões no `!grupao` ou um _PR_ direto no `!codigo`";
+
+        return new ReturnMessage({ chatId, content: infoMessage });
+
+    } catch (error) {
+        logger.error('Erro no comando pesca-info:', error);
+        return new ReturnMessage({
+            chatId,
+            content: '❌ Ocorreu um erro ao buscar as informações da pescaria.'
+        });
+    }
+}
+/**
+ * Conta quantos peixes de um determinado tipo já foram pescados.
+ * Para peixes raros, usa o histórico de lendas.
+ * Para peixes comuns, usa os inventários atuais.
+ * @param {string} fishName 
+ */
+async function getNumberOfFishesByName(fishName, fishingData = null) {
+  if(!fishingData){
+    fishingData = await getFishingData();
+  }
+  const rareFishNames = RARE_FISH.map(r => r.name);
+  
+  if (rareFishNames.includes(fishName)) {
+      if (!fishingData.legendaryFishes) return 0;
+      return fishingData.legendaryFishes.filter(l => l.fishName === fishName).length;
+  } else {
+      let count = 0;
+      const allUsers = Object.values(fishingData.fishingData || {});
+      for (const user of allUsers) {
+          if (user.fishes) {
+              count += user.fishes.filter(f => f.name === fishName).length;
+          }
+      }
+      return count;
+  }
+}
+
+/**
+ * Gera e retorna um objeto com as estatísticas globais de pesca.
+ * @returns {Promise<Object>} Objeto com as estatísticas.
+ */
+async function getFishingStats() {
+    const fishingData = await getFishingData();
+    const allUsersData = Object.values(fishingData.fishingData || {});
+
+    let totalFishCaught = 0;
+    let totalBaitsUsed = 0;
+    let totalTrashCaught = 0;
+    let heaviestFishEver = { weight: 0 };
+    let mostFishCaughtByUser = { totalCatches: 0 };
+
+    for (const userData of allUsersData) {
+        totalFishCaught += userData.totalCatches || 0;
+        totalBaitsUsed += (userData.totalBaitsUsed || 0);
+        totalTrashCaught += (userData.totalTrashCaught || 0);
+
+        if (userData.biggestFish && userData.biggestFish.weight > heaviestFishEver.weight) {
+            heaviestFishEver = {
+                ...userData.biggestFish,
+                userName: userData.name,
+            };
+        }
+
+        if (userData.totalCatches > mostFishCaughtByUser.totalCatches) {
+            mostFishCaughtByUser = {
+                totalCatches: userData.totalCatches,
+                userName: userData.name,
+            };
+        }
+    }
+
+    totalBaitsUsed += Math.floor(totalFishCaught*1.2);
+    totalTrashCaught += (totalBaitsUsed - totalFishCaught);
+
+    const totalLegendaryCaught = fishingData.legendaryFishes?.length || 0;
+
+    return {
+        totalFishCaught,
+        totalBaitsUsed,
+        totalTrashCaught,
+        totalLegendaryCaught,
+        heaviestFishEver,
+        mostFishCaughtByUser,
+    };
+}
+/**
+ * Lista todos os tipos de peixes disponíveis
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} Mensagem de retorno
+ */
+async function listFishTypesCommand(bot, message, args, group) {
+  try {
+    // Obtém ID do chat
+    const chatId = message.group || message.author;
+    
+    // Obtém peixes das custom-variables
+    let fishArray = [];
+    try {
+      const customVariables = await database.getCustomVariables();
+      if (customVariables?.peixes && Array.isArray(customVariables.peixes) && customVariables.peixes.length > 0) {
+        fishArray = customVariables.peixes;
+      } else {
+        return new ReturnMessage({
+          chatId,
+          content: '🎣 Ainda não há tipos de peixes definidos nas variáveis personalizadas. O sistema usará peixes padrão ao pescar.'
+        });
+      }
+    } catch (error) {
+      logger.error('Erro ao obter peixes de custom-variables:', error);
+      return new ReturnMessage({
+        chatId,
+        content: '❌ Ocorreu um erro ao buscar os tipos de peixes. Por favor, tente novamente.'
+      });
+    }
+
+    // Ordena alfabeticamente
+    const sortedFishes = [...fishArray].sort();
+    
+    // Prepara a mensagem
+    let fishMessage = '🐟 *Lista de Peixes Disponíveis*\n_(número de pescados entre parêntese)_\n\n';
+    
+    // Agrupa em colunas
+    const columns = 2;
+    const rows = Math.ceil(sortedFishes.length / columns);
+      
+
+    const fishingData = await getFishingData(); // pseudo cache
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < columns; j++) {
+        const index = i + j * rows;
+        if (index < sortedFishes.length) {
+          const count = await getNumberOfFishesByName(sortedFishes[index], fishingData);
+          fishMessage += `${sortedFishes[index]} (${count})`;
+          // Adiciona espaço ou quebra de linha
+          if (j < columns - 1 && i + (j + 1) * rows < sortedFishes.length) {
+            fishMessage += ' | ';
+          }
+        }
+      }
+      fishMessage += '\n';
+    }
+    
+    // Adiciona informações sobre peixes raros
+    fishMessage += `\n*Peixes Raríssimos*:\n`;
+    for (const fish of RARE_FISH) {
+      const chancePercent = fish.chance * 100;
+      const count = await getNumberOfFishesByName(fish.name, fishingData);
+      fishMessage += `${fish.emoji} ${fish.name}: ${fish.weightBonus}kg extra (${chancePercent.toFixed(5)}% de chance, ${count} pescados até hoje)\n`;
+    }
+    
+
+    fishMessage += `\n🐛 Use \`!pesca-info\` para mais informações`;
+    
+    return new ReturnMessage({
+      chatId,
+      content: fishMessage
+    });
+  } catch (error) {
+    logger.error('Erro ao listar tipos de peixes:', error);
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: '❌ Ocorreu um erro ao listar os tipos de peixes. Por favor, tente novamente.'
+    });
+  }
+}
+
+/**
+ * Mostra as iscas do jogador
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} Mensagem de retorno
+ */
+async function showBaitsCommand(bot, message, args, group) {
+  try {
+    // Obtém IDs do chat e do usuário
+    const chatId = message.group || message.author;
+    const userId = message.author;
+    const userName = message.authorName || "Pescador";
+    
+    // Obtém dados de pesca
+    const fishingData = await getFishingData();
+    
+    // Verifica se o usuário tem dados
+    if (!fishingData.fishingData[userId]) {
+      fishingData.fishingData[userId] = {
+        name: userName,
+        fishes: [],
+        totalWeight: 0,
+        inventoryWeight: 0,
+        biggestFish: null,
+        totalCatches: 0,
+        baits: MAX_BAITS,
+        lastBaitRegen: Date.now(),
+        buffs: [],
+        debuffs: []
+      };
+    }
+    
+    // Regenera iscas
+    fishingData.fishingData[userId] = regenerateBaits(fishingData.fishingData[userId]);
+    
+    // Calcula tempo para regeneração
+    const regenInfo = getNextBaitRegenTime(fishingData.fishingData[userId]);
+    
+    // Formata o tempo
+    const nextBaitTime = regenInfo.nextBaitTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const allBaitsTime = regenInfo.allBaitsTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    
+    // Salva os dados atualizados
+    await saveFishingData(fishingData);
+    
+    // Prepara a mensagem
+    let baitMessage = `🐛 *Iscas de ${userName}*\n\n`;
+    
+    // Adiciona emojis de isca para representar visualmente
+    const baitEmojis = Array(MAX_BAITS).fill('⚪').fill('🐛', 0, fishingData.fishingData[userId].baits).join(' ');
+    
+    baitMessage += `${baitEmojis}\n\n`;
+    baitMessage += `Você tem ${fishingData.fishingData[userId].baits}/${MAX_BAITS} iscas.\n`;
+    
+    // Adiciona mensagem sobre regeneração
+    if (fishingData.fishingData[userId].baits < MAX_BAITS) {
+      baitMessage += `Próxima isca em: ${formatTimeString(regenInfo.secondsUntilNextBait)} (${nextBaitTime})\n`;
+      if (fishingData.fishingData[userId].baits < MAX_BAITS - 1) {
+        baitMessage += `Todas as iscas em: ${formatTimeString(regenInfo.secondsUntilAllBaits)} (${allBaitsTime})\n`;
+      }
+    } else {
+      baitMessage += `Suas iscas estão no máximo!\n`;
+    }
+
+    baitMessage += `\n*Sobre Iscas*:\n`;
+    baitMessage += `• Você precisa de iscas para pescar\n`;
+    baitMessage += `• Regenera 1 isca a cada ${Math.floor(BAIT_REGEN_TIME/60)} minutos (${Math.floor(BAIT_REGEN_TIME/60/60)} hora e ${Math.floor((BAIT_REGEN_TIME/60) % 60)} minutos)\n`;
+    baitMessage += `• Máximo de ${MAX_BAITS} iscas\n`;
+    baitMessage += `• Você pode encontrar pacotes de iscas enquanto pesca\n`;
+    
+    return new ReturnMessage({
+      chatId,
+      content: baitMessage,
+      options: {
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
+      }
+    });
+  } catch (error) {
+    logger.error('Erro ao mostrar iscas do jogador:', error);
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: '❌ Ocorreu um erro ao mostrar suas iscas. Por favor, tente novamente.'
+    });
+  }
+}
+/**  
+ * Reseta os dados de pesca para o grupo atual  
+ * @param {WhatsAppBot} bot - Instância do bot  
+ * @param {Object} message - Dados da mensagem  
+ * @param {Array} args - Argumentos do comando  
+ * @param {Object} group - Dados do grupo  
+ * @returns {Promise<ReturnMessage>} Mensagem de retorno  
+ */  
+async function resetFishingDataCommand(bot, message, args, group) {  
+  try {  
+    // Verifica se é um grupo  
+    if (!message.group) {  
+      return new ReturnMessage({  
+        chatId: message.author,  
+        content: "❌ Este comando só pode ser usado em grupos.",  
+        options: {  
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
+        }  
+      });  
+    }  
+  
+    // Verifica se o usuário é admin  
+    const isAdmin = await bot.adminUtils.isAdmin(message.author, group, null, bot.client);  
+    if (!isAdmin) {  
+      return new ReturnMessage({  
+        chatId: message.group || message.author,  
+        content: "❌ Este comando só pode ser usado por administradores do grupo.",  
+        options: {  
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
+        }  
+      });  
+    }  
+  
+    // Obtém dados de pesca  
+    const fishingData = await getFishingData();  
+      
+    // Verifica se há dados para este grupo  
+    if (!fishingData.groupData || !fishingData.groupData[message.group]) {  
+      return new ReturnMessage({  
+        chatId: message.group,  
+        content: "ℹ️ Não há dados de pesca para este grupo.",  
+        options: {  
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
+        }  
+      });  
+    }  
+  
+    // Faz backup dos dados antes de resetar  
+    const backupData = { ...fishingData.groupData[message.group] };  
+    const numPlayers = Object.keys(backupData).length;  
+      
+    // Reseta os dados do grupo  
+    fishingData.groupData[message.group] = {};  
+      
+    // Salva os dados atualizados  
+    await saveFishingData(fishingData);  
+      
+    return new ReturnMessage({  
+      chatId: message.group,  
+      content: `✅ Dados de pesca resetados com sucesso!\n\n${numPlayers} jogadores tiveram seus dados de pesca neste grupo apagados.`,  
+      options: {  
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
+      }  
+    });  
+  } catch (error) {  
+    logger.error('Erro ao resetar dados de pesca:', error);  
+      
+    return new ReturnMessage({  
+      chatId: message.group || message.author,  
+      content: '❌ Ocorreu um erro ao resetar os dados de pesca. Por favor, tente novamente.',  
+      options: {  
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
+      }  
+    });  
+  }  
+}
+
 // Exportação
 const commands = [
-  new Command({ name: 'pescar', description: 'Pesque um peixe', category: "jogos", cooldown: 0, reactions: { before: "🎣", after: "🐟", error: "❌" }, method: fishCommand }),
-  new Command({ name: 'pesca', hidden: true, description: 'Pesque um peixe', category: "jogos", cooldown: 0, reactions: { before: "🎣", after: "🐟", error: "❌" }, method: fishCommand }),
-  new Command({ name: 'meus-pescados', description: 'Seus peixes', category: "jogos", cooldown: 5, reactions: { after: "🐠", error: "❌" }, method: myFishCommand }),
-  new Command({ name: 'pesca-ranking', description: 'Ranking do grupo', category: "jogos", group: "pescrank", cooldown: 5, reactions: { after: "🏆", error: "❌" }, method: fishingRankingCommand }),
-  new Command({ name: 'psc-addBaits', description: 'Add Iscas', category: "jogos", adminOnly: true, hidden: true, cooldown: 0, reactions: { after: "➕", error: "❌" }, method: addBaitsCmd })
+  new Command({name: 'pescar', description: 'Pesque um peixe', category: "jogos", cooldown: 0, reactions: { before: "🎣", after: "🐟", error: "❌" }, method: fishCommand }),
+  new Command({name: 'pesca', hidden: true, description: 'Pesque um peixe', category: "jogos", cooldown: 0, reactions: { before: "🎣", after: "🐟", error: "❌" }, method: fishCommand }),
+  new Command({name: 'meus-pescados', description: 'Seus peixes', category: "jogos", cooldown: 5, reactions: { after: "🐠", error: "❌" }, method: myFishCommand }),
+  new Command({name: 'pesca-ranking',description: 'Mostra o ranking de pescaria do grupo atual',category: "jogos",group: "pescrank",cooldown: 5,reactions: {after: "🏆",error: "❌"},method: fishingRankingCommand}),
+  new Command({name: 'pescados',hidden: true, description: 'Mostra o ranking de pescaria do grupo atual',category: "jogos",group: "pescrank",cooldown: 5,reactions: {after: "🐋",error: "❌"},method: fishingRankingCommand}),
+  new Command({name: 'pesca-info',  description: 'Informações do jogo',  category: "jogos",  adminOnly: true,  cooldown: 60,  reactions: {  after: "📕",  error: "❌"  },  method: fishingInfoCommand  }),
+  new Command({name: 'pesca-reset',  description: 'Reseta os dados de pesca para o grupo atual',  category: "jogos",  adminOnly: true,  cooldown: 10,  reactions: {  before: process.env.LOADING_EMOJI ?? "🌀",  after: "✅",  error: "❌"  },  method: resetFishingDataCommand  }),
+  new Command({name: 'pesca-lendas',description: 'Mostra os peixes lendários que foram pescados',category: "jogos",cooldown: 10,reactions: {after: "🐉",error: "❌"},method: legendaryFishCommand}),
+  new Command({name: 'pesca-peixes',description: 'Lista todos os tipos de peixes disponíveis',category: "jogos",cooldown: 5,reactions: {after: "📋",error: "❌"},method: listFishTypesCommand}),
+  new Command({name: 'pesca-iscas',description: 'Mostra suas iscas de pesca',category: "jogos",cooldown: 5,reactions: {after: "🐛",error: "❌"},method: showBaitsCommand}),
+  new Command({name: 'psc-addBaits', description: 'Add Iscas', category: "jogos", adminOnly: true, hidden: true, cooldown: 0, reactions: { after: "➕", error: "❌" }, method: addBaitsCmd })
 ];
 
 module.exports = { 

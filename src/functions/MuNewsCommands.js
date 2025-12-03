@@ -18,7 +18,7 @@ const logger = new Logger('munews-commands');
  */
 function extractDate(text) {
   const regex = /(\d{1,2})\s+de\s+([\wÇç]+)\s+de\s+(\d{4})/i;
-  const match = text.match(regex);
+  const match = text?.match(regex);
   
   if (match) {
     const [, day, month, year] = match;

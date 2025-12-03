@@ -5,13 +5,15 @@ class CacheManager {
   constructor(redisURL, redisDB, redisTTL, maxCacheSize) {
     this.logger = new Logger(`redis`);
     this.redisURL = redisURL;
-    this.redisDB = redisDB;
+    this.redisDB = (redisDB ?? 0) % 15;
     this.redisTTL = parseInt(redisTTL, 10) || 3600;
     this.maxCacheSize = parseInt(maxCacheSize, 10) || 100;
 
-    this.messageCache = []; // For in-memory fallback
-    this.contactCache = []; // For in-memory fallback
-    this.chatCache = []; // For in-memory fallback
+    // in-memory fallback
+    this.messageCache = [];
+    this.contactCache = [];
+    this.chatCache = [];
+    this.pushnameCache = [];
 
     this.redisClient = null;
 
@@ -30,6 +32,45 @@ class CacheManager {
       this.logger.info('CacheManager: No redisURL provided. Using in-memory cache only.');
     }
   }
+
+  async putPushnameInCache(data) {
+    if (!data || typeof data.id === 'undefined' || typeof data.pushName !== "string" || data.pushName?.length < 1) {
+      this.logger.debug('CacheManager (putPushnameInCache): Invalid pushName data.', { data });
+      return;
+    }
+    const userId = data.id;
+    const pushName = data.pushName;
+    const redisKey = `pushName:${userId}`;
+
+    if (this.redisClient) {
+      try {
+        await this.redisClient.set(redisKey, JSON.stringify(data), 'EX', this.redisTTL);
+        return;
+      } catch (err) {
+        this.logger.error(`CacheManager (putPushnameInCache): Error caching pushName ${userId} in Redis: ${err.message}. Falling back.`);
+      }
+    }
+    this.pushnameCache.push(data);
+    if (this.pushnameCache.length > this.maxCacheSize) {
+      this.pushnameCache.shift();
+    }
+  }
+
+  async getPushnameFromCache(id) {
+    if (typeof id === 'undefined' || id === null) return null;
+    const redisKey = `pushName:${id}`;
+
+    if (this.redisClient) {
+      try {
+        const cachedData = await this.redisClient.get(redisKey);
+        if (cachedData) return JSON.parse(cachedData);
+      } catch (err) {
+        this.logger.error(`CacheManager (getPushnameFromCache): Error retrieving pushName ${id} from Redis: ${err.message}. Falling back.`);
+      }
+    }
+    return this.pushnameCache.find(m => m.id == id) || null;
+  }
+
 
   async putChatInCache(data) {
     if (!data || !data.id || typeof data.id?._serialized === 'undefined') {

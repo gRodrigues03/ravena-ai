@@ -22,6 +22,7 @@ const LLMService = require('./services/LLMService');
 const MentionHandler = require('./MentionHandler');
 const AdminUtils = require('./utils/AdminUtils');
 const InviteSystem = require('./InviteSystem');
+const StreamSystem = require('./StreamSystem');
 const Database = require('./utils/Database');
 const LoadReport = require('./LoadReport');
 const Logger = require('./utils/Logger');
@@ -121,6 +122,8 @@ class WhatsAppBotEvo {
     this.inviteSystem = new InviteSystem(this);
     this.reactionHandler = new ReactionsHandler();
 
+    this.streamSystem = null;
+    this.streamMonitor = null;
     this.stabilityMonitor = options.stabilityMonitor ?? false;
 
     this.llmService = new LLMService({});

@@ -108,7 +108,7 @@ class Management {
       },
       'filtro-pessoa': {
         method: 'filterPerson',
-        description: 'Detecta e Apaga mensagens desta pessoa'
+        description: 'Detecta e Apaga mensagens desta pessoa (Marcar com @)'
       },
       'apelido': {
         method: 'setUserNickname',
@@ -1134,6 +1134,10 @@ async setWelcomeMessage(bot, message, args, group) {
         ? group.filters.people.join(', ')
         : 'Nenhuma pessoa filtrada';
       
+      const nsfwFiltering = group.filters && group.filters.nsfw 
+        ? 'Sim' 
+        : 'Não';
+      
       // Formata data de criação
       const creationDate = new Date(group.createdAt).toLocaleString("pt-BR");
       
@@ -1234,6 +1238,7 @@ async setWelcomeMessage(bot, message, args, group) {
       infoMessage += `- *Palavras:* ${wordFilters}\n`;
       infoMessage += `- *Links:* ${linkFiltering}\n`;
       infoMessage += `- *Pessoas:* ${personFilters}\n`;
+      infoMessage += `- *NSFW:* ${nsfwFiltering}\n\n`;
       
       
        // Números e strings ignorados
@@ -1617,7 +1622,7 @@ async setWelcomeMessage(bot, message, args, group) {
     if (!group.filters.people || !Array.isArray(group.filters.people)) {
       group.filters.people = [];
     }
-    
+
     if (args.length === 0) {
       // Mostra lista de pessoas filtradas
       const personFilters = group.filters.people.length > 0
@@ -1676,6 +1681,50 @@ async setWelcomeMessage(bot, message, args, group) {
       return new ReturnMessage({
         chatId: group.id,
         content: `✅ Pessoa adicionada ao filtro: ${numero}\n\n*Pessoas filtradas atualmente:*\n${personFilters}`
+      });
+    }
+  }
+  
+  /**
+   * Ativa ou desativa filtro de conteúdo NSFW
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async filterNSFW(bot, message, args, group) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    // Verifica se o bot é admin para filtros efetivos
+    const isAdmin = await this.isBotAdmin(bot, group);
+    if (!isAdmin) {
+      await bot.sendMessage(group.id, '⚠️ Atenção: O bot não é administrador do grupo. Ele não poderá apagar mensagens filtradas. Para usar filtros efetivamente, adicione o bot como administrador.');
+    }
+    
+    // Inicializa filtros se não existirem
+    if (!group.filters) {
+      group.filters = {};
+    }
+    
+    // Alterna estado do filtro
+    group.filters.nsfw = !group.filters.nsfw;
+    await this.database.saveGroup(group);
+    
+    if (group.filters.nsfw) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: '✅ Filtro de conteúdo NSFW ativado. Imagens e vídeos detectados como conteúdo adulto serão automaticamente removidos.'
+      });
+    } else {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: '❌ Filtro de conteúdo NSFW desativado. Imagens e vídeos não serão filtrados para conteúdo adulto.'
       });
     }
   }
