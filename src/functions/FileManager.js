@@ -258,7 +258,6 @@ async function listFiles(bot, message, args, group) {
       for (const [filePath, fileInfo] of Object.entries(db.chats[chatId].files)) {
         if (filePath === targetDir) {
           // É a própria pasta, ignora
-          continue;
         } else if (filePath.startsWith(`${targetDir}/`)) {
           // Está dentro da pasta alvo
           const relativePath = filePath.substring(targetDir.length + 1);

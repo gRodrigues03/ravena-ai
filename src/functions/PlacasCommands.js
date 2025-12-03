@@ -107,7 +107,7 @@ async function buscarPlaca(bot, message, args, group) {
     }
     
     // Configura parâmetros para a apiPlacas
-    const isPremium = process.env.API_PLACAS_USAR_PREMIUM ? true : false;
+    const isPremium = !!process.env.API_PLACAS_USAR_PREMIUM;
     
     // Define uma Promise para capturar o resultado da função apiPlacas
     const placaPromise = new Promise((resolve) => {

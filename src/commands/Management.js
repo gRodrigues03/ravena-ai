@@ -3382,11 +3382,7 @@ async setWelcomeMessage(bot, message, args, group) {
     const customCommand = customCommands.find(cmd => cmd.startsWith === commandName && !cmd.deleted);
     
     if (customCommand) {
-      if (customCommand.ignoreInteract) {
-        customCommand.ignoreInteract = false;
-      } else {
-        customCommand.ignoreInteract = true;
-      }
+      customCommand.ignoreInteract = !customCommand.ignoreInteract;
       
       // Atualiza o comando
       this.database.updateCustomCommand(group.id, customCommand);
@@ -3440,11 +3436,7 @@ async setWelcomeMessage(bot, message, args, group) {
     const customCommand = customCommands.find(cmd => cmd.startsWith === commandName && !cmd.deleted);
     
     if (customCommand) {
-      if (!customCommand.adminOnly) {
-        customCommand.adminOnly = true;
-      } else {
-        customCommand.adminOnly = false;
-      }
+      customCommand.adminOnly = !customCommand.adminOnly;
       
       // Atualiza o comando
       this.database.updateCustomCommand(group.id, customCommand);

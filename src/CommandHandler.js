@@ -932,10 +932,8 @@ class CommandHandler {
     
     // Se não encontrar uma correspondência exata, procura uma correspondência parcial
     const partialMatch = commands.find(cmd => {
-      if (cmd.startsWith && commandName.toLowerCase().startsWith(cmd.startsWith.toLowerCase())) {
-        return true;
-      }
-      return false;
+      return !!(cmd.startsWith && commandName.toLowerCase().startsWith(cmd.startsWith.toLowerCase()));
+
     });
     
     //this.logger.debug(`Buscando comando personalizado '${commandName}': ${partialMatch ? 'encontrado' : 'não encontrado'}`);

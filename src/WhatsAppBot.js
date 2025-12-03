@@ -211,8 +211,6 @@ class WhatsAppBot {
       // Schedule a retry or notify admin?
       return { instanceDetails: {}, error };
     }
-
-    return { instanceDetails: {} };
   }
 
 
