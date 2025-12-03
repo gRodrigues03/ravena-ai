@@ -47,7 +47,6 @@ class WhatsAppBotEvo {
     this.instanceName = options.evoInstanceName ?? options.id;
     this.webhookHost = options.webhookHost; // e.g., from cloudflared tunnel
     this.webhookPort = options.webhookPort || process.env.WEBHOOK_PORT_EVO || 3000;
-    this.notificarDonate = options.notificarDonate;
     this.pvAI = options.pvAI;
     this.version = "Evolution";
     this.wwebversion = "0";
@@ -608,9 +607,6 @@ class WhatsAppBotEvo {
     } catch (error) {
       this.logger.error(`Error during webhook setup for instance ${this.instanceName}:`, error);
     }
-
-    // 3. Donates podem usar o PV do bot livre (whitelist)
-    this._loadDonationsToWhitelist();
 
     // 4. Check instance status and connect if necessary
     this._checkInstanceStatusAndConnect();
@@ -1810,20 +1806,6 @@ class WhatsAppBotEvo {
     this.logger.info(`[${this.id}] Blocked contacts list management needs verification with Evolution API capabilities.`);
 
     this.prepareOtherBotsBlockList(); // From original bot
-  }
-
-  async _loadDonationsToWhitelist() {
-    try {
-      const donations = this.database.getDonations();
-      for (let don of donations) {
-        if (don.numero && don.numero?.length > 5) {
-          this.whitelist.push(don.numero.replace(/\D/g, ''));
-        }
-      }
-      this.logger.info(`[${this.id}] [whitelist] ${this.whitelist.length} números na whitelist do PV.`);
-    } catch (error) {
-      this.logger.error(`[${this.id}] Error loading donations to whitelist:`, error);
-    }
   }
 
   async _sendStartupNotifications() {

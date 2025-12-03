@@ -304,53 +304,6 @@ class BotAPI {
       }
     });
 
-    // Webhook de doação do Tipa.ai
-    this.app.post('/donate_tipa', async (req, res) => {
-      try {
-        this.logger.info('Recebido webhook de doação do Tipa.ai');
-
-        // Registra a requisição completa para depuração
-        const donateData = {
-          headers: req.headers,
-          body: req.body
-        };
-
-        this.logger.debug('Dados da doação:', donateData);
-
-        // Verifica o segredo do webhook
-        const headerTipa = req.headers["x-tipa-webhook-secret-token"] || false;
-        const expectedToken = process.env.TIPA_TOKEN;
-
-        if (!headerTipa || headerTipa !== expectedToken) {
-          this.logger.warn('Token webhook inválido:', headerTipa);
-          return res.status(403).send('-');
-        }
-
-        // Extrai detalhes da doação
-        let nome = req.body.payload.tip.name || "Alguém";
-        const valor = parseFloat(req.body.payload.tip.amount) || 0;
-        const msg = req.body.payload.tip.message || "";
-
-        nome = nome.trim();
-
-        if (valor <= 0) {
-          this.logger.warn(`Valor de doação inválido: ${valor}`);
-          return res.send('ok');
-        }
-
-        // Adiciona doação ao banco de dados
-        const donationTotal = this.database.addDonation(nome, valor);
-
-        // Notifica grupos sobre a doação
-        await this.notifyGroupsAboutDonation(nome, valor, msg, donationTotal);
-
-        res.send('ok');
-      } catch (error) {
-        this.logger.error('Erro ao processar webhook de doação:', error);
-        res.status(500).send('error');
-      }
-    });
-
     // Endpoint para obter relatórios de carga
     this.app.post('/getLoad', async (req, res) => {
       try {
@@ -425,36 +378,6 @@ class BotAPI {
         });
       }
     });
-
-    // Endpoint para Top Donates
-    this.app.get('/top-donates', async (req, res) => {
-      const donationsPath = path.join(this.database.databasePath, 'donations.json');
-
-      try {
-        await fs.access(donationsPath);
-
-        // Se a linha acima não lançar um erro, o arquivo existe.
-        const donationsData = await fs.readFile(donationsPath, 'utf8');
-        const donations = JSON.parse(donationsData);
-
-        // Mapeia para remover o campo 'numero' por privacidade
-        const publicDonations = donations.map(({ nome, valor }) => ({ nome, valor }));
-
-        res.json(publicDonations);
-
-      } catch (error) {
-        // O bloco catch lida com qualquer erro, seja o arquivo não encontrado ou um erro de processamento.
-        if (error.code === 'ENOENT') {
-          // Se o erro for 'ENOENT', o arquivo não foi encontrado.
-          res.status(404).json({ error: 'Arquivo de doações não encontrado' });
-        } else {
-          // Para outros erros, como falha ao ler ou processar o JSON.
-          this.logger.error('Erro ao ler ou processar o arquivo de doações:', error);
-          res.status(500).json({ error: 'Erro ao processar doações' });
-        }
-      }
-    });
-
 
     // Serve management page
     this.app.get('/manage/:token', (req, res) => {
@@ -1360,84 +1283,6 @@ class BotAPI {
         message: 'Erro ao filtrar dados analíticos',
         timestamp: Date.now()
       };
-    }
-  }
-
-  /**
-   * Notifica grupos sobre uma doação
-   * @param {string} name - Nome do doador
-   * @param {number} amount - Valor da doação
-   * @param {string} message - Mensagem da doação
-   */
-  async notifyGroupsAboutDonation(name, amount, message, donationTotal = 0) {
-    try {
-
-      const ignorar = message.includes("#ravprivate") ?? false;
-
-      // Prepara a mensagem de notificação
-      const totalMsg = (donationTotal > 0) ? `> _${name}_ já doou um total de R$${donationTotal.toFixed(2)}\n\n` : "";
-
-      const donationMsg =
-        `💸 Recebemos um DONATE no tipa.ai! 🥳\n\n` +
-        `*MUITO obrigado* pelos R$${amount.toFixed(2)}, ${name}! 🥰\n` +
-        `Compartilho aqui com todos sua mensagem:\n` +
-        `💬 ${message}\n\n${totalMsg}` +
-        `\`\`\`!doar ou !donate pra conhecer os outros apoiadores e doar também\`\`\``;
-
-      // Calcula tempo extra de fixação com base no valor da doação (300 segundos por 1 unidade de moeda)
-      const extraPinTime = Math.floor(amount * 300);
-      const pinDuration = 600 + extraPinTime; // Base de 10 minutos + tempo extra
-
-      // Apenas um dos bots devem enviar msg sobre donate
-      const bot = this.bots.find(b => b.notificarDonate) ?? this.bots[Math.floor(Math.random() * this.bots.length)];
-
-      // Primeiro notifica o grupo de logs
-      if (bot.grupoLogs) {
-        try {
-          await bot.sendMessage(bot.grupoLogs, donationMsg, { marcarTodos: true });
-        } catch (error) {
-          this.logger.error(`Erro ao enviar notificação de doação para grupoLogs (${bot.grupoLogs}):`, error);
-        }
-      }
-
-      // Notifica o grupo de avisos
-      if (bot.grupoAvisos && !ignorar) {
-        try {
-          const sentMsg = await bot.sendMessage(bot.grupoAvisos, donationMsg, { marcarTodos: true });
-
-          // Tenta fixar a mensagem
-          try {
-            if (sentMsg && sentMsg.pin) {
-              await sentMsg.pin(pinDuration);
-            }
-          } catch (pinError) {
-            this.logger.error('Erro ao fixar mensagem no grupoAvisos:', pinError);
-          }
-        } catch (error) {
-          this.logger.error(`Erro ao enviar notificação de doação para grupoAvisos (${bot.grupoAvisos}):`, error);
-        }
-
-
-        // Notifica o grupo de interação
-        if (bot.grupoInteracao && !ignorar) {
-          try {
-            const sentMsg = await bot.sendMessage(bot.grupoInteracao, donationMsg, { marcarTodos: true });
-
-            // Tenta fixar a mensagem
-            try {
-              if (sentMsg && sentMsg.pin) {
-                await sentMsg.pin(pinDuration);
-              }
-            } catch (pinError) {
-              this.logger.error('Erro ao fixar mensagem no grupoInteracao:', pinError);
-            }
-          } catch (error) {
-            this.logger.error(`Erro ao enviar notificação de doação para grupoInteracao (${bot.grupoInteracao}):`, error);
-          }
-        }
-      }
-    } catch (error) {
-      this.logger.error('Erro ao notificar grupos sobre doação:', error);
     }
   }
 

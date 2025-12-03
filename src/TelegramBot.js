@@ -36,7 +36,6 @@ class WhatsAppBotTelegram {
     this.ignorePV = options.ignorePV || false;
     this.grupoLogs = parseInt(options.grupoLogs || process.env.TELEGRAM_GRUPO_LOGS);
     this.grupoAvisos = parseInt(options.grupoAvisos || process.env.TELEGRAM_GRUPO_AVISOS);
-    this.notificarDonate = options.notificarDonate;
     this.webhookHost = options.webhookHost; // ex: ravena.moothz.win
     this.webhookPort = options.webhookPort || 9001;
     this.pollingInterval = null; // Para armazenar o ID do intervalo de polling

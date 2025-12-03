@@ -46,7 +46,6 @@ class WhatsAppBotDiscord {
     this.ignorePV = options.ignorePV || false;
     this.grupoLogs = options.grupoLogs; // Espera-se um Channel ID
     this.grupoAvisos = options.grupoAvisos; // Espera-se um Channel ID
-    this.notificarDonate = options.notificarDonate;
 
     this.version = "Discord";
 

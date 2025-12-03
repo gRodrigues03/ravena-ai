@@ -29,7 +29,6 @@ class Database {
       groups: false,
       commands: {},
       loadReports: false,
-      donations: false,
       pendingJoins: false,
       softblocks: false
     };
@@ -39,7 +38,6 @@ class Database {
       groups: null,
       commands: {},
       loadReports: null,
-      donations: null,
       pendingJoins: null,
       softblocks: null
     };
@@ -417,14 +415,6 @@ class Database {
         this.saveJSONToFile(reportsPath, this.cache.loadReports);
         this.dirtyFlags.loadReports = false;
         this.logger.info('Relatórios de carga persistidos no arquivo');
-      }
-      
-      // Doações
-      if ((this.dirtyFlags.donations || force) && this.cache.donations) {
-        const donationsPath = path.join(this.databasePath, 'donations.json');
-        this.saveJSONToFile(donationsPath, this.cache.donations);
-        this.dirtyFlags.donations = false;
-        this.logger.info('Doações persistidas no arquivo');
       }
       
       // Joins pendentes
@@ -852,7 +842,6 @@ class Database {
         groups: null,
         commands: {},
         loadReports: null,
-        donations: null,
         pendingJoins: null
       };
     }
@@ -912,223 +901,6 @@ class Database {
     } catch (error) {
       this.logger.error('Erro ao salvar relatórios de carga:', error);
       return false;
-    }
-  }
-
-  /**
-   * Obtém doações
-   * @returns {Array} - Array de objetos de doação
-   */
-  async getDonations() {
-    try {
-      // Retorna do cache se disponível
-      if (this.cache.donations) {
-        return this.cache.donations;
-      }
-      
-      const donationsPath = path.join(this.databasePath, 'donations.json');
-      const donations = this.loadJSON(donationsPath) || [];
-      
-      // Atualiza cache
-      this.cache.donations = donations;
-      
-      return donations;
-    } catch (error) {
-      this.logger.error('Erro ao obter doações:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Adiciona uma doação (apenas em cache)
-   * @param {string} name - Nome do doador
-   * @param {number} amount - Valor da doação
-   * @param {string} [numero] - Número do WhatsApp (opcional)
-   * @returns {boolean} - Status de sucesso
-   */
-  async addDonation(name, amount, numero = undefined) {
-    try {
-        const donations = this.getDonations();
-        const existingIndex = donations.findIndex(d => d.nome.toLowerCase() === name.toLowerCase());
-        const now = Date.now();
-        const historyEntry = { ts: now, valor: amount };
-
-        let donationTotal;
-        if (existingIndex !== -1) {
-            const donor = donations[existingIndex];
-            donor.valor += amount;
-            donor.timestamp = now;
-            
-            if (!donor.historico || !Array.isArray(donor.historico)) {
-                donor.historico = [];
-            }
-            donor.historico.push(historyEntry);
-
-            if (numero) {
-                donor.numero = numero;
-            }
-            donationTotal = donor.valor;
-        } else {
-            donations.push({
-                nome: name,
-                valor: amount,
-                numero,
-                timestamp: now,
-                historico: [historyEntry]
-            });
-            donationTotal = amount;
-        }
-
-        this.cache.donations = donations;
-        this.dirtyFlags.donations = true;
-
-        return donationTotal === 0 ? true : donationTotal;
-    } catch (error) {
-        this.logger.error('Erro ao adicionar doação:', error);
-        return false;
-    }
-  }
-
-  /**
-   * Atualiza número do doador (apenas em cache)
-   * @param {string} name - Nome do doador
-   * @param {string} numero - Número do WhatsApp
-   * @returns {boolean} - Status de sucesso
-   */
-  async updateDonorNumber(name, numero) {
-    try {
-      // Obtém doações existentes
-      const donations = this.getDonations();
-      
-      // Encontra doador
-      const donor = donations.find(d => d.nome.toLowerCase() === name.toLowerCase());
-      
-      if (!donor) {
-        this.logger.warn(`Doador "${name}" não encontrado`);
-        return false;
-      }
-      
-      // Atualiza número
-      donor.numero = numero;
-      
-      // Atualiza cache
-      this.cache.donations = donations;
-      
-      // Marca como modificado
-      this.dirtyFlags.donations = true;
-      
-      return true;
-    } catch (error) {
-      this.logger.error('Erro ao atualizar número do doador:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Atualiza valor da doação (apenas em cache)
-   * @param {string} name - Nome do doador
-   * @param {number} amount - Valor a adicionar (pode ser negativo)
-   * @returns {boolean} - Status de sucesso
-   */
-  async updateDonationAmount(name, amount) {
-    try {
-        const donations = this.getDonations();
-        let donor = donations.find(d => d.nome.toLowerCase() === name.toLowerCase());
-        const now = Date.now();
-        const historyEntry = { ts: now, valor: amount };
-
-        if (!donor) {
-            if (amount > 0) {
-                this.logger.warn(`Doador "${name}" não encontrado, criando...`);
-                donor = {
-                    nome: name,
-                    valor: amount,
-                    timestamp: now,
-                    historico: [historyEntry]
-                };
-                donations.push(donor);
-            } else {
-                this.logger.warn(`Doador "${name}" não encontrado, não é possível adicionar valor negativo.`);
-                return false;
-            }
-        } else {
-            donor.valor += amount;
-            donor.timestamp = now;
-            if (!donor.historico || !Array.isArray(donor.historico)) {
-                donor.historico = [];
-            }
-            donor.historico.push(historyEntry);
-        }
-
-        if (donor.valor <= 0) {
-            const donorIndex = donations.findIndex(d => d.nome.toLowerCase() === name.toLowerCase());
-            if (donorIndex > -1) {
-                donations.splice(donorIndex, 1);
-            }
-            this.logger.warn(`Doador "${name}" foi removido da lista.`);
-        }
-        
-        this.cache.donations = donations;
-        this.dirtyFlags.donations = true;
-        
-        return true;
-    } catch (error) {
-        this.logger.error('Erro ao atualizar valor da doação:', error);
-        return false;
-    }
-  }
-
-  /**
-   * Une dois doadores (apenas em cache)
-   * @param {string} targetName - Nome do doador a manter
-   * @param {string} sourceName - Nome do doador a fundir
-   * @returns {boolean} - Status de sucesso
-   */
-  async mergeDonors(targetName, sourceName) {
-    try {
-        const donations = this.getDonations();
-        const targetIndex = donations.findIndex(d => d.nome.toLowerCase() === targetName.toLowerCase());
-        const sourceIndex = donations.findIndex(d => d.nome.toLowerCase() === sourceName.toLowerCase());
-
-        if (targetIndex === -1 || sourceIndex === -1) {
-            this.logger.warn(`Um ou ambos os doadores não encontrados para união: "${targetName}", "${sourceName}"`);
-            return false;
-        }
-
-        const targetDonor = donations[targetIndex];
-        const sourceDonor = donations[sourceIndex];
-
-        // Une valores
-        targetDonor.valor += sourceDonor.valor;
-
-        // Une históricos e ordena por data
-        const sourceHistory = sourceDonor.historico || [];
-        const targetHistory = targetDonor.historico || [];
-        targetDonor.historico = [...targetHistory, ...sourceHistory].sort((a, b) => a.ts - b.ts);
-        
-        // Mantém número de origem se o alvo não tiver um
-        if (!targetDonor.numero && sourceDonor.numero) {
-            targetDonor.numero = sourceDonor.numero;
-        }
-
-        // Atualiza para o timestamp mais recente do histórico combinado
-        if (targetDonor.historico.length > 0) {
-            targetDonor.timestamp = targetDonor.historico[targetDonor.historico.length - 1].ts;
-        } else if (sourceDonor.timestamp && (!targetDonor.timestamp || sourceDonor.timestamp > targetDonor.timestamp)) {
-             // Fallback para dados antigos sem histórico
-            targetDonor.timestamp = sourceDonor.timestamp;
-        }
-        
-        // Remove doador de origem
-        donations.splice(sourceIndex, 1);
-        
-        this.cache.donations = donations;
-        this.dirtyFlags.donations = true;
-        
-        return true;
-    } catch (error) {
-        this.logger.error('Erro ao unir doadores:', error);
-        return false;
     }
   }
 

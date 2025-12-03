@@ -168,38 +168,6 @@ function formatPhoneNumber(number) {
   return number;
 }
 
-// Função para buscar e renderizar top doações
-async function fetchTopDonates() {
-    try {
-        const response = await fetch('/top-donates');
-        if (!response.ok) {
-            throw new Error('Erro ao buscar doações');
-        }
-        let donations = await response.json();
-        const donatesTextElement = document.getElementById('topDonatesText');
-
-        if (donations.length > 0) {
-            // Ordena por valor e pega os top 15
-            donations = donations
-                .sort((a, b) => b.valor - a.valor)
-                .slice(0, 15);
-
-            const text = donations
-                .map(d => `${d.nome}: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(d.valor)}`)
-                .join('  •  ');
-            
-            // Repete o texto para garantir o preenchimento do banner
-            donatesTextElement.textContent = `🏆 TOP DONATES:  •  ${text}  •  `.repeat(5);
-        } else {
-            donatesTextElement.textContent = '🏆 TOP DONATES: Nenhuma doação registrada ainda.';
-        }
-    } catch (error) {
-        console.error('Erro ao carregar top doações:', error);
-        const donatesTextElement = document.getElementById('topDonatesText');
-        donatesTextElement.textContent = '🏆 TOP DONATES: Erro ao carregar.';
-    }
-}
-
 // Função para renderizar os bots
 function renderBots(data) {
     const botContainer = document.getElementById('botContainer');
@@ -293,13 +261,6 @@ function renderBots(data) {
         separator.className = 'bot-separator';
         botContainer.appendChild(separator);
     }
-
-
-
-    // const vipInfoText = document.createElement('p');
-    // vipInfoText.className = 'vip-info-text';
-    // vipInfoText.innerHTML = 'Estas são ravenas que hospedo em agradecimento aos primeiros donates que ajudaram a solidificar a ravena, não estão mais disponíveis - estão aqui apenas para que os membros acompanhem o status.<br>⚠️ Os bots <i>vips</i> não recebem convites e nem respondem mensagens no pv!<br><br>';
-    // botContainer.appendChild(vipInfoText);
 }
 
 function openQRModal(botId){
@@ -668,7 +629,6 @@ function renderYearlyChart(data, commonOptions) {
 
 document.addEventListener('DOMContentLoaded', () => {
     checkAdminMode();
-    fetchTopDonates();
     fetchHealthData();
     
     const timeFilters = document.querySelectorAll('.time-filter');
@@ -696,6 +656,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     setInterval(fetchHealthData, 30000);
-    setInterval(fetchTopDonates, 5 * 60 * 1000); // Atualiza doações a cada 5 minutos
 });
 

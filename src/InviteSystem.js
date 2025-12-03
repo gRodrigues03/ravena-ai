@@ -186,56 +186,12 @@ class InviteSystem {
         }
         
         try {
-          // Verifica se o autor está na lista de doadores
-          let isDonator = false;
           let infoMessage;
-          let donateValue = 0;
-          
-          try {
-            // Obtém todas as doações
-            const donations = this.database.getDonations();
-            
-            if (donations && donations.length > 0) {
-              // Remove caracteres especiais e espaços do número do autor para comparação
-              const cleanAuthorId = authorId.replace(/[^0-9]/g, "");
-              
-              // Verifica se o autor está na lista de doadores
-              isDonator = donations.some(donation => {
-                // Se o doador tem um número de telefone
-                if (donation.numero) {
-                  // Remove caracteres especiais e espaços do número do doador
-                  const cleanDonorNumber = donation.numero.replace(/[^0-9]/g, "");
-                  //this.logger.debug(`[donate-invite] ${cleanDonorNumber} vs ${cleanAuthorId} =  ${cleanDonorNumber.includes(cleanAuthorId)} || ${ cleanAuthorId.includes(cleanDonorNumber)}`);
-                  if(cleanDonorNumber.length > 10){
-                    if(cleanDonorNumber.includes(cleanAuthorId) || cleanAuthorId.includes(cleanDonorNumber)){
-                      donateValue = donation.valor;
-                      return true;
-                    }
-                  }
-                }
-                return false;
-              });
-            }
-          } catch (donationError) {
-            this.logger.error('Erro ao verificar se o autor é doador:', donationError);
-          }
-          
-          // Constrói a mensagem de informações, adicionando emojis de dinheiro se for doador
-          if (isDonator) {
-            infoMessage = 
-              `💸💸 R$${donateValue} 💸💸\n` +
-              `📩 *Nova Solicitação de Convite de Grupo*\n\n` +
-              `🔗 *Link*: chat.whatsapp.com/${inviteCode}\n`+
-              `👤 *De:* ${userName} (${authorId.split("@")[0]}) 💰\n\n` +
-              `💬 *Motivo:*\n${reason}\n` +
-              `💸💸${this.rndString()}💸💸`;
-          } else {
-            infoMessage = 
-              `📩 *Nova Solicitação de Convite de Grupo*\n\n` +
+          infoMessage = `📩 *Nova Solicitação de Convite de Grupo*\n\n` +
               `🔗 *Link*: chat.whatsapp.com/${inviteCode}\n`+
               `👤 *De:* ${userName} (${authorId.split("@")[0]})\n\n` +
               `💬 *Motivo:*\n${reason}\n\n${this.rndString()}`;
-          }
+
           
           await this.bot.sendMessage(this.bot.grupoInvites, infoMessage);
           

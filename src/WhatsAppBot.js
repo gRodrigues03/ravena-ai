@@ -41,7 +41,6 @@ class WhatsAppBot {
     this.safeMode = options.safeMode !== undefined ? options.safeMode : (process.env.SAFE_MODE === 'true');
     this.puppeteerOptions = options.puppeteerOptions || {};
     this.otherBots = options.otherBots || [];
-    this.notificarDonate = options.notificarDonate;
     this.pvAI = options.pvAI;
     this.banido = options.banido;
     
@@ -111,13 +110,6 @@ class WhatsAppBot {
       userAgent: this.userAgent
     });
 
-    // Coloca doadores na whitelist do PV
-    const donations = this.database.getDonations();
-    for(let don of donations){
-      if(don.numero && don.numero?.length > 5){
-        this.whitelist.push(don.numero.replace(/\D/g, ''));
-      }
-    }
     this.logger.info(`[whitelist][${this.id}] ${this.whitelist.length} números na whitelist do PV.`);
 
     // Registra manipuladores de eventos

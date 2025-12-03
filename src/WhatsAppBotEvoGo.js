@@ -48,7 +48,6 @@ class WhatsAppBotEvoGo {
     this.instanceName = options.evoInstanceName ?? options.id;
     this.webhookHost = options.webhookHost;
     this.webhookPort = options.webhookPort || process.env.WEBHOOK_PORT_EVO || 3000;
-    this.notificarDonate = options.notificarDonate;
     this.pvAI = options.pvAI;
     this.version = "EvolutionGO";
     this.wwebversion = "0";
@@ -932,8 +931,6 @@ class WhatsAppBotEvoGo {
     } catch (error) {
       this.logger.error(`Error during webhook setup for instance ${this.instanceName}:`, error);
     }
-
-    this._loadDonationsToWhitelist();
     this._checkInstanceStatusAndConnect();
 
     return this;
@@ -1585,12 +1582,6 @@ class WhatsAppBotEvoGo {
     return (chat?.participants?.find(p => p.phoneNumber?.startsWith(pn))?.id?._serialized) ?? pn;
   }
 
-  getPnFromLid(lid, chat) {
-    //this.logger.debug(`[getPnFromLid] `, {lid, chat});
-    return (chat?.participants?.find(p => p.id?._serialized.startsWith(lid))?.phoneNumber) ?? lid;
-  }
-
-  _loadDonationsToWhitelist() { }
   _sendStartupNotifications() { }
   shouldDiscardMessage() { return false; }
   getCurrentTimestamp() { return Math.round(Date.now() / 1000); }
