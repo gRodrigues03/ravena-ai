@@ -150,31 +150,6 @@ async function getStringMunewsDisponiveis(){
 }
 
 /**
- * Obtém todas as datas de MuNews disponíveis
- * @returns {Promise<Array<string>>} - Array de datas no formato YYYY-MM-DD, ordenadas cronologicamente
- */
-async function getAllNewsDates() {
-  try {
-    // Caminho para o diretório de MuNews
-    const munewsDir = path.join(database.databasePath, 'munews');
-    
-    // Lista todos os arquivos no diretório
-    const files = await fs.readdir(munewsDir);
-    
-    // Filtra apenas os arquivos .news e extrai as datas (YYYY-MM-DD)
-    const dates = files
-      .filter(file => file.endsWith('.news'))
-      .map(file => file.replace('.news', ''))
-      .sort(); // Ordena cronologicamente
-    
-    return dates;
-  } catch (error) {
-    logger.error('Erro ao obter datas de MuNews:', error);
-    return [];
-  }
-}
-
-/**
  * Obtém MuNews para uma data específica
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Mensagem recebida

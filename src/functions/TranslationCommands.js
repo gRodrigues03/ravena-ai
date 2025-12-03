@@ -381,10 +381,8 @@ async function handleTranslation(bot, message, args, group) {
         }
       });
     }
-
     
     let textToTranslate;
-    let quotedText = '';
     
     // Verificar se é uma resposta a uma mensagem
     if (args.length === 2) {

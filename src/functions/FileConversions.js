@@ -5,8 +5,6 @@ const Command = require('../models/Command');
 const Logger = require('../utils/Logger');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs').promises;
-const crypto = require('crypto');
-const axios = require('axios');
 const path = require('path');
 
 const logger = new Logger('file-conversions');

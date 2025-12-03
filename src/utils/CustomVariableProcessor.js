@@ -90,7 +90,7 @@ class CustomVariableProcessor {
       
       // Processa variáveis específicas de contexto
       if (context) {
-        processedText = await this.processContextVariables(processedText, context);
+        processedText = this.processContextVariables(processedText, context);
       }
       
       // Processa variáveis dinâmicas de API
@@ -243,8 +243,7 @@ class CustomVariableProcessor {
       const randomParticipant = filteredParticipants[randomIndex];
 
       // Obtém o objeto de contato
-      const contact = await bot.client.getContactById(randomParticipant.id._serialized);
-      return contact;
+      return await bot.client.getContactById(randomParticipant.id._serialized);
     } catch (error) {
       this.logger.error('Erro ao obter membro aleatório do grupo:', error);
       return null;

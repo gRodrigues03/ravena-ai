@@ -90,8 +90,7 @@ Resumo:`;
       chatId: message.group,
       content: `📋 *Resumo da conversa:*\n\n${summary}`
     });
-    
-    logger.info(`[${group.id}]Resumo de conversa enviado com sucesso para ${message.group}`);
+
   } catch (error) {
     logger.error('Erro ao resumir conversa:', error);
     return new ReturnMessage({

@@ -8,7 +8,6 @@ const SuperAdmin = require('./commands/SuperAdmin');
 const CustomVariableProcessor = require('./utils/CustomVariableProcessor');
 const ReturnMessage = require('./models/ReturnMessage');
 const AdminUtils = require('./utils/AdminUtils');
-const CacheManager = require('./services/CacheManager');
 
 class CommandHandler {
   constructor() {
@@ -52,7 +51,7 @@ class CommandHandler {
       this.logger.debug('Comandos fixos:', this.fixedCommands.getAllCommands().map(cmd => cmd.name).join(", "));
       
       // Carrega comandos personalizados para todos os grupos
-      const groups = await this.database.getGroups();
+      const groups = this.database.getGroups();
       if (groups && Array.isArray(groups)) {
         for (const group of groups) {
           await this.loadCustomCommandsForGroup(group.id);
@@ -80,7 +79,7 @@ class CommandHandler {
    */
   async loadCustomCommandsForGroup(groupId) {
     try {
-      const customCommands = await this.database.getCustomCommands(groupId);
+      const customCommands = this.database.getCustomCommands(groupId);
       if (customCommands && Array.isArray(customCommands)) {
         this.customCommands[groupId] = customCommands.filter(cmd => cmd.active && !cmd.deleted);
         if(this.customCommands[groupId].length > 0){
@@ -481,7 +480,7 @@ class CommandHandler {
           if(args.length > 0){
             // Tem argumento, está tentando definir um grupo no PV
             const groupName = args[0].toLowerCase();
-            const groups = await this.database.getGroups();
+            const groups = this.database.getGroups();
             const targetGroup = groups.find(g => g.name.toLowerCase() === groupName);
             
             if (targetGroup) {
@@ -567,26 +566,18 @@ class CommandHandler {
       
       // Verifica se o grupo está pausado e se o comando NÃO é g-pausar
       // No privado não existe !pausar
-      if (group && group.paused && command !== 'g-pausar' & !isManagingFromPrivate) {
+      if (group && group.paused && command !== 'g-pausar' && !isManagingFromPrivate) {
         this.logger.info(`Ignorando comando de gerenciamento em grupo pausado: ${command}`);
         return;
       }
       
       // Modifica a mensagem para forçar o envio da resposta para o chatId correto
-      const originalMessage = { ...message };
       if (isManagingFromPrivate) {
         // Cria um objeto temporário para usar no processamento
         message.managementResponseChatId = replyToChat;
       }
-      
-      const result = await this.processManagementCommand(bot, message, command, args, group);
-      
-      // Restaura a mensagem original se necessário
-      if (isManagingFromPrivate) {
-        message = originalMessage;
-      }
-      
-      return result;
+
+      return await this.processManagementCommand(bot, message, command, args, group);
     }
     
     // Verifica se o grupo está pausado (para outros tipos de comandos)
@@ -641,7 +632,6 @@ class CommandHandler {
    */
   async processManagementCommand(bot, message, command, args, group) {
     try {
-      const gidDebug = group?.name ?? 'pv';
      
       // Determina o chatId correto para a resposta
       // Se estamos gerenciando via PV, a resposta deve ir para o PV
@@ -652,7 +642,7 @@ class CommandHandler {
         // Usa emoji de reação padrão
         await message.origin.react(this.defaultReactions.before);
       } catch (reactError) {
-        this.logger.error('Erro ao aplicar reação "antes":', reactError.message ?? "xxx");;
+        this.logger.error('Erro ao aplicar reação "antes":', reactError.message ?? "xxx");
       }
       
       // Comandos de gerenciamento regulares requerem um grupo
@@ -740,7 +730,7 @@ class CommandHandler {
       try {
         await message.origin.react(this.defaultReactions.after);
       } catch (reactError) {
-        this.logger.error('Erro ao aplicar reação "depois":', reactError.message ?? "xxx");;
+        this.logger.error('Erro ao aplicar reação "depois":', reactError.message ?? "xxx");
       }
       
     } catch (error) {
@@ -832,7 +822,7 @@ class CommandHandler {
         try {
           await message.origin.react("🕒");
         } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação "indisponível":', reactError.message ?? "xxx");;
+          this.logger.error('Erro ao aplicar reação "indisponível":', reactError.message ?? "xxx");
         }
         
         const chatId = message.group || message.author;
@@ -860,7 +850,7 @@ class CommandHandler {
         try {
           await message.origin.react(command.reactions?.before);
         } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação "antes":', reactError.message ?? "xxx");;
+          this.logger.error('Erro ao aplicar reação "antes":', reactError.message ?? "xxx");
         }
       }
       
@@ -903,7 +893,7 @@ class CommandHandler {
         try {
           await message.origin.react(afterEmoji);
         } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação "depois":', reactError.message ?? "xxx");;
+          this.logger.error('Erro ao aplicar reação "depois":', reactError.message ?? "xxx");
         }
       }
     } catch (error) {
@@ -981,13 +971,8 @@ class CommandHandler {
           try {
             await message.origin.react("⛔️");
           } catch (reactError) {
-            this.logger.error('Erro ao aplicar reação "indisponível":', reactError.message ?? "xxx");;
+            this.logger.error('Erro ao aplicar reação "indisponível":', reactError.message ?? "xxx");
           }
-          
-          const returnMessage = new ReturnMessage({
-            chatId: message.group,
-            content: `o comando *${command.startsWith}* só pode ser usado por _administradores_.`
-          });
 
           return;
         }  
@@ -1000,7 +985,7 @@ class CommandHandler {
         try {
           await message.origin.react("🕒");
         } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação "indisponível":', reactError.message ?? "xxx");;
+          this.logger.error('Erro ao aplicar reação "indisponível":', reactError.message ?? "xxx");
         }
         
         const returnMessage = new ReturnMessage({
@@ -1026,14 +1011,14 @@ class CommandHandler {
         try {
           await message.origin.react(command.reactions?.before);
         } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação "antes":', reactError.message ?? "xxx");;
+          this.logger.error('Erro ao aplicar reação "antes":', reactError.message ?? "xxx");
         }
       }
       
       // Atualiza estatísticas de uso do comando
       command.count = (command.count || 0) + 1;
       command.lastUsed = Date.now();
-      await this.database.updateCustomCommand(group.id, command);
+      this.database.updateCustomCommand(group.id, command);
       //this.logger.debug(`Atualizadas estatísticas de uso para o comando *${command.startsWith}*, contagem: ${command.count}`);
       
       // Reage à mensagem se especificado (esta é a reação específica do comando)
@@ -1082,7 +1067,7 @@ class CommandHandler {
           await message.origin.react(afterEmoji);
         }
       } catch (reactError) {
-        this.logger.error('Erro ao aplicar reação "depois":', reactError.message ?? "xxx");;
+        this.logger.error('Erro ao aplicar reação "depois":', reactError.message ?? "xxx");
       }
       
     } catch (error) {
@@ -1380,22 +1365,7 @@ class CommandHandler {
       this.logger.error('Erro ao verificar comandos auto-acionados:', error.message ?? "xxx");
     }
   }
-  
-  /**
-   * Recarrega comandos de arquivos e banco de dados
-   */
-  async reloadCommands() {
-    this.logger.info('Recarregando todos os comandos...');
-    
-    // Limpa cache de comandos
-    this.customCommands = {};
-    this.database.clearCache('commands');
-    
-    // Recarrega comandos
-    await this.loadAllCommands();
-    
-    this.logger.info('Todos os comandos recarregados');
-  }
+
 }
 
 module.exports = CommandHandler;

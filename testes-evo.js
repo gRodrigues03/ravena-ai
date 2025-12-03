@@ -9,17 +9,6 @@ const apiClient = new EvolutionApiClient(
   "ravena-testes"
 );
 
-function testarText(){
-	const evoPayload = {
-      number: process.env.NUMERO_TESTES,
-      delay: 0,
-      linkPreview: false,
-      text: "bzzzz"
-    };
-
-	apiClient.post('/message/sendText', evoPayload);
-}
-
 function testarSticker(){
 	const evoPayload = {
       number: process.env.NUMERO_TESTES,

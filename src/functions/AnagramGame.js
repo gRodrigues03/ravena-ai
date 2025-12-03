@@ -394,9 +394,6 @@ async function guessCommand(bot, message, args, group) {
     };
     const similarity = 1 - (distance(guess, game.word) / Math.max(guess.length, game.word.length));
 
-    let reaction = '🥶'; // Frio
-    if (similarity > 0.80) reaction = '🔥'; // Quente
-    else if (similarity > 0.50) reaction = '🥵'; // Morno
   }
   return null;
 }

@@ -122,17 +122,6 @@ class AdminUtils {
     //this.logger.info(`[isSuperAdmin] ${normalizedUserId}`, this.superAdmins);
     return (normalizedUserId.length > 10) && (this.superAdmins.some(sA => sA.startsWith(normalizedUserId)));
   }
-
-  /**
-   * Verifica se um usuário é dono do grupo
-   * @param {string} userId - ID do usuário a verificar 
-   * @param {Object} group - Objeto do grupo do banco de dados
-   * @returns {boolean} - True se o usuário for dono do grupo
-   */
-  isGroupOwner(userId, group) {
-    if (!group || !group.addedBy) return false;
-    return group.addedBy === userId;
-  }
 }
 
 // Singleton para reutilização

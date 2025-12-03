@@ -5,7 +5,6 @@ const { AttachmentBuilder, PermissionsBitField } = require('discord.js');
 const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
 const { randomBytes } = require('crypto');
 const { promisify } = require('util');
 
@@ -23,9 +22,7 @@ const Logger = require('./utils/Logger');
 
 // Utils
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const writeFileAsync = promisify(fs.writeFile);
 const readFileAsync = promisify(fs.readFile);
-const unlinkAsync = promisify(fs.unlink);
 
 class WhatsAppBotDiscord {
   constructor(options) {
@@ -52,7 +49,6 @@ class WhatsAppBotDiscord {
     this.notificarDonate = options.notificarDonate;
 
     this.version = "Discord";
-    this.wwebversion = require('discord.js').version;
 
     // --- Caches e Handlers (mantidos para compatibilidade) ---
     this.redisURL = options.redisURL;
@@ -60,9 +56,6 @@ class WhatsAppBotDiscord {
     this.redisTTL = options.redisTTL || 604800;
     this.maxCacheSize = 3000;
 
-    this.messageCache = [];
-    this.contactCache = [];
-    this.sentMessagesCache = [];
     this.cacheManager = new CacheManager(
       this.redisURL,
       this.redisDB,
@@ -73,20 +66,11 @@ class WhatsAppBotDiscord {
     this.database = Database.getInstance();
     this.isConnected = false;
     this.safeMode = options.safeMode !== undefined ? options.safeMode : (process.env.SAFE_MODE === 'true');
-    
-    this.whitelist = options.whitelistPV || [];
-    
-    this.mentionHandler = new MentionHandler();
+
     this.lastMessageReceived = Date.now();
-    this.startupTime = Date.now();
     
     this.loadReport = new LoadReport(this);
-    this.reactionHandler = new ReactionsHandler();
-    this.llmService = new LLMService({});
     this.adminUtils = AdminUtils.getInstance();
-
-    // --- Placeholders para sistemas não aplicáveis ---
-    this.inviteSystem = new InviteSystem(this); // Pode ser adaptado no futuro
     
     // --- Client Fake para manter a compatibilidade ---
     this.client = {
@@ -112,7 +96,6 @@ class WhatsAppBotDiscord {
   async initialize() {
     this.logger.info(`[${this.id}] Initializing Discord bot...`);
     this.database.registerBotInstance(this);
-    this.startupTime = Date.now();
 
     this.logger.info('Registering Discord event listeners...');
 
@@ -617,55 +600,7 @@ https://www.google.com/maps/search/?api=1&query=${content.latitude},${content.lo
   }
 
   async logout() { return this._unimplemented('logout'); }
-  async deleteInstance() { return this._unimplemented('deleteInstance'); }
-  async createInstance() { return this._unimplemented('createInstance'); }
   async recreateInstance() { return this._unimplemented('recreateInstance'); }
-
-  async sendReaction(chatId, messageId, emoji) {
-    try {
-        const channel = await this.discordClient.channels.fetch(chatId);
-        const msg = await channel.messages.fetch(messageId);
-        
-        this.removeReaction(chatId, messageId, process.env.LOADING_EMOJI);
-
-        await msg.react(emoji);
-
-        return true;
-    } catch (e) {
-        this.logger.error(`[sendReaction] Falha ao reagir à mensagem ${messageId} em ${chatId}`, e);
-        return false;
-    }
-  }
-  async removeReaction(chatId, messageId, emojiString) {
-    try {
-      // 1. Parse the emoji string to get its 'identifier'
-      // For '👍', identifier is '👍'
-      // For '<:myemoji:12345>', identifier is '12345'
-      const customEmojiMatch = emojiString.match(/<a?:.*?:(\d+)>/);
-      const emojiIdentifier = customEmojiMatch ? customEmojiMatch[1] : emojiString;
-
-      // 2. Fetch the message
-      const channel = await this.discordClient.channels.fetch(chatId);
-      const msg = await channel.messages.fetch(messageId);
-
-      // 3. Find the specific reaction from the cache
-      const reaction = msg.reactions.cache.get(emojiIdentifier);
-
-      // 4. If the reaction exists AND the bot is one of the users ('me'), remove it.
-      if (reaction && reaction.me) {
-        await reaction.users.remove(this.discordClient.user.id);
-      }
-      
-      // Return true because the operation succeeded (even if no removal was needed)
-      return true;
-
-    } catch (e) {
-      // This will catch permissions errors, or if the channel/message is deleted
-      this.logger.error(`[removeReaction] Falha ao tentar remover reação ${emojiString} de ${messageId}`, e);
-      return false;
-    }
-  }
-
 
   async updateProfileStatus(status) {
     try {
@@ -679,10 +614,6 @@ https://www.google.com/maps/search/?api=1&query=${content.latitude},${content.lo
   
   
   // --- Métodos de Grupo/Instância (Não aplicáveis) ---
-  async getBase64FromMediaMessage(msg) { return this._unimplemented('getBase64FromMediaMessage'); }
-  async sendContact(chatId, contact) { return this._unimplemented('sendContact'); }
-  async sendPoll(chatId, poll) { return this._unimplemented('sendPoll'); }
-  async updateGroupSubject(chatId, title) { return this._unimplemented('updateGroupSubject'); }
   async leaveGroup(groupId) { return this._unimplemented('leaveGroup'); }
   async acceptInviteCode(code) { return this._unimplemented('acceptInviteCode'); }
   async inviteInfo(code) { return this._unimplemented('inviteInfo'); }

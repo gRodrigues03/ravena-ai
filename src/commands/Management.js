@@ -310,15 +310,6 @@ class Management {
     
     return commands;
   }
-  
-  /**
-   * Substituto para hasMedia
-   * @param {Message} message - Objeto msg do wwebjs
-   * @returns {bool|null} - Tem ou não
-   */
-  isMediaMsg(message) {
-    return ["audio","voice","image","video","document","sticker"].some(t => message.type.toLowerCase() == t);
-  }
 
   /**
    * Define nome do grupo
@@ -357,7 +348,7 @@ class Management {
 
     // Atualiza nome do grupo no banco de dados
     group.name = newName.toLowerCase().replace(/\s+/g, '').substring(0, 16);
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     return new ReturnMessage({
       chatId: group.id,
@@ -503,7 +494,7 @@ class Management {
     };
     
     // Salva o comando personalizado
-    await this.database.saveCustomCommand(group.id, customCommand);
+    this.database.saveCustomCommand(group.id, customCommand);
     
     // Limpa cache de comandos para garantir que o novo comando seja carregado
     this.database.clearCache(`commands:${group.id}`);
@@ -575,7 +566,7 @@ class Management {
     // MELHORIA: Usa o comando completo como gatilho em vez de apenas a primeira palavra
     
     // Obtém comandos personalizados para este grupo
-    const commands = await this.database.getCustomCommands(group.id);
+    const commands = this.database.getCustomCommands(group.id);
     const command = commands.find(cmd => cmd.startsWith === commandTrigger && !cmd.deleted);
     
     if (!command) {
@@ -641,7 +632,7 @@ class Management {
     command.responses.push(responseContent);
     
     // Atualiza o comando
-    await this.database.updateCustomCommand(group.id, command);
+    this.database.updateCustomCommand(group.id, command);
     
     // Limpa cache de comandos para garantir que o comando atualizado seja carregado
     this.database.clearCache(`commands:${group.id}`);
@@ -681,7 +672,7 @@ class Management {
     const commandTrigger = args.join(' ');
     
     // Obtém comandos personalizados para este grupo
-    const commands = await this.database.getCustomCommands(group.id);
+    const commands = this.database.getCustomCommands(group.id);
     const command = commands.find(cmd => cmd.startsWith === commandTrigger && !cmd.deleted);
     
     if (!command) {
@@ -696,7 +687,7 @@ class Management {
     command.active = false;
     
     // Atualiza o comando
-    await this.database.updateCustomCommand(group.id, command);
+    this.database.updateCustomCommand(group.id, command);
     
     // Limpa cache de comandos para garantir que o comando atualizado seja carregado
     this.database.clearCache(`commands:${group.id}`);
@@ -736,7 +727,7 @@ class Management {
     const commandTrigger = args.join(' ');
     
     // Obtém comandos personalizados para este grupo
-    const commands = await this.database.getCustomCommands(group.id);
+    const commands = this.database.getCustomCommands(group.id);
     const command = commands.find(cmd => cmd.startsWith === commandTrigger && !cmd.deleted);
     
     if (!command) {
@@ -750,7 +741,7 @@ class Management {
     command.active = true;
     
     // Atualiza o comando
-    await this.database.updateCustomCommand(group.id, command);
+    this.database.updateCustomCommand(group.id, command);
     
     // Limpa cache de comandos para garantir que o comando atualizado seja carregado
     this.database.clearCache(`commands:${group.id}`);
@@ -790,7 +781,7 @@ class Management {
     const commandTrigger = args.join(' ');
     
     // Obtém comandos personalizados para este grupo
-    const commands = await this.database.getCustomCommands(group.id);
+    const commands = this.database.getCustomCommands(group.id);
     const command = commands.find(cmd => cmd.startsWith === commandTrigger && !cmd.deleted);
     
     if (!command) {
@@ -804,7 +795,7 @@ class Management {
     command.active = false;
     
     // Atualiza o comando
-    await this.database.updateCustomCommand(group.id, command);
+    this.database.updateCustomCommand(group.id, command);
     
     // Limpa cache de comandos para garantir que o comando atualizado seja carregado
     this.database.clearCache(`commands:${group.id}`);
@@ -830,7 +821,7 @@ class Management {
     group.customIgnoresPrefix = !group.customIgnoresPrefix;
     
     // Atualiza grupo no banco de dados
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     // Envia mensagem de confirmação
     const statusMsg = group.customIgnoresPrefix ? 
@@ -867,7 +858,7 @@ class Management {
     
     // Atualiza prefixo do grupo
     group.prefix = newPrefix;
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     // Mensagem especial para prefixo vazio
     if (newPrefix === '') {
@@ -910,7 +901,7 @@ async setWelcomeMessage(bot, message, args, group) {
       group.greetings = {};
     }
     group.greetings.text = quotedText;
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     return new ReturnMessage({
       chatId: group.id,
@@ -929,7 +920,7 @@ async setWelcomeMessage(bot, message, args, group) {
       if (group.greetings) {
         delete group.greetings.text;
       }
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       return new ReturnMessage({
         chatId: group.id,
@@ -942,7 +933,7 @@ async setWelcomeMessage(bot, message, args, group) {
       group.greetings = {};
     }
     group.greetings.text = texto;
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     return new ReturnMessage({
       chatId: group.id,
@@ -992,7 +983,7 @@ async setWelcomeMessage(bot, message, args, group) {
         group.farewells = {};
       }
       group.farewells.text = quotedText;
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       return new ReturnMessage({
         chatId: group.id,
@@ -1011,7 +1002,7 @@ async setWelcomeMessage(bot, message, args, group) {
         if (group.farewells) {
           delete group.farewells.text;
         }
-        await this.database.saveGroup(group);
+        this.database.saveGroup(group);
         
         return new ReturnMessage({
           chatId: group.id,
@@ -1024,7 +1015,7 @@ async setWelcomeMessage(bot, message, args, group) {
         group.farewells = {};
       }
       group.farewells.text = texto;
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       return new ReturnMessage({
         chatId: group.id,
@@ -1046,50 +1037,6 @@ async setWelcomeMessage(bot, message, args, group) {
       }
     }
   }
-  
-  /**
-   * Mostra mensagem de ajuda de gerenciamento
-   * @param {WhatsAppBot} bot - Instância do bot
-   * @param {Object} message - Dados da mensagem
-   * @param {Array} args - Argumentos do comando
-   * @param {Object} group - Dados do grupo
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async showManagementHelp(bot, message, args, group) {
-    const chatId = group ? group.id : message.author;
-    
-    const helpText = `*Comandos de Gerenciamento de Grupo:*
-
-  *!g-setName* <nome> - Define um nome personalizado para o grupo
-  *!g-addCmd* <gatilho> - Adiciona um comando personalizado (deve ser usado como resposta)
-  *!g-addCmdReply* <comando> - Adiciona outra resposta a um comando existente
-  *!g-delCmd* <comando> - Exclui um comando personalizado
-  *!g-enableCmd* <comando> - Habilita um comando desabilitado
-  *!g-disableCmd* <comando> - Desabilita um comando
-  *!g-setPrefixo* <prefixo> - Altera o prefixo de comando
-  *!g-setBoasvindas* <mensagem> - Define mensagem de boas-vindas para novos membros
-  *!g-setDespedida* <mensagem> - Define mensagem de despedida para membros que saem
-  *!g-info* - Mostra informações detalhadas do grupo
-  *!g-manage* <nomeGrupo> - Gerencia um grupo a partir de chat privado
-
-  *Comandos de Filtro:*
-  *!g-filtro-palavra* <palavra> - Adiciona/remove palavra do filtro
-  *!g-filtro-links* - Ativa/desativa filtro de links
-  *!g-filtro-pessoa* <número> - Adiciona/remove número do filtro
-
-  *Variáveis em mensagens:*
-  {pessoa} - Nome da pessoa que entrou/saiu do grupo
-  {day} - Dia atual
-  {date} - Data atual
-  {time} - Hora atual
-  {cmd-!comando arg} - Executa outro comando (criando um alias)`;
-
-    return new ReturnMessage({
-      chatId: chatId,
-      content: helpText
-    });
-  }
-
 
   /**
    * Mostra informações detalhadas do grupo
@@ -1109,7 +1056,7 @@ async setWelcomeMessage(bot, message, args, group) {
     
     try {
       // Obtém comandos personalizados para este grupo
-      const customCommands = await this.database.getCustomCommands(group.id);
+      const customCommands = this.database.getCustomCommands(group.id);
       const activeCommands = customCommands.filter(cmd => cmd.active && !cmd.deleted);
       
       // Formata mensagem de boas-vindas e despedida
@@ -1520,7 +1467,7 @@ async setWelcomeMessage(bot, message, args, group) {
     if (index !== -1) {
       // Remove a palavra
       group.filters.words.splice(index, 1);
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       // Mostra lista atualizada
       const wordFilters = group.filters.words.length > 0
@@ -1534,7 +1481,7 @@ async setWelcomeMessage(bot, message, args, group) {
     } else {
       // Adiciona a palavra
       group.filters.words.push(word);
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       // Mostra lista atualizada
       const wordFilters = group.filters.words.length > 0
@@ -1577,7 +1524,7 @@ async setWelcomeMessage(bot, message, args, group) {
     
     // Alterna estado do filtro
     group.filters.links = !group.filters.links;
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     if (group.filters.links) {
       return new ReturnMessage({
@@ -1657,7 +1604,7 @@ async setWelcomeMessage(bot, message, args, group) {
     if (index !== -1) {
       // Remove o número
       group.filters.people.splice(index, 1);
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       // Mostra lista atualizada
       const personFilters = group.filters.people.length > 0
@@ -1671,7 +1618,7 @@ async setWelcomeMessage(bot, message, args, group) {
     } else {
       // Adiciona o número
       group.filters.people.push(numero);
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       // Mostra lista atualizada
       const personFilters = group.filters.people.length > 0
@@ -1684,51 +1631,6 @@ async setWelcomeMessage(bot, message, args, group) {
       });
     }
   }
-  
-  /**
-   * Ativa ou desativa filtro de conteúdo NSFW
-   * @param {WhatsAppBot} bot - Instância do bot
-   * @param {Object} message - Dados da mensagem
-   * @param {Array} args - Argumentos do comando
-   * @param {Object} group - Dados do grupo
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async filterNSFW(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    // Verifica se o bot é admin para filtros efetivos
-    const isAdmin = await this.isBotAdmin(bot, group);
-    if (!isAdmin) {
-      await bot.sendMessage(group.id, '⚠️ Atenção: O bot não é administrador do grupo. Ele não poderá apagar mensagens filtradas. Para usar filtros efetivamente, adicione o bot como administrador.');
-    }
-    
-    // Inicializa filtros se não existirem
-    if (!group.filters) {
-      group.filters = {};
-    }
-    
-    // Alterna estado do filtro
-    group.filters.nsfw = !group.filters.nsfw;
-    await this.database.saveGroup(group);
-    
-    if (group.filters.nsfw) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: '✅ Filtro de conteúdo NSFW ativado. Imagens e vídeos detectados como conteúdo adulto serão automaticamente removidos.'
-      });
-    } else {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: '❌ Filtro de conteúdo NSFW desativado. Imagens e vídeos não serão filtrados para conteúdo adulto.'
-      });
-    }
-  }
-
   
   /**
    * Define uma personalidade customizada para os comandos de IA
@@ -1759,7 +1661,7 @@ async setWelcomeMessage(bot, message, args, group) {
     
     
     // Alterna estado do filtro
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     if (group.customAIPrompt.length > 0) {
       return new ReturnMessage({
@@ -1806,7 +1708,7 @@ async setWelcomeMessage(bot, message, args, group) {
     
 
     // Verifica se é um comando personalizado
-    const customCommands = await this.database.getCustomCommands(group.id);
+    const customCommands = this.database.getCustomCommands(group.id);
     const customCommand = customCommands.find(cmd => cmd.startsWith === commandName && !cmd.deleted);
     
     if (customCommand) {
@@ -1821,7 +1723,7 @@ async setWelcomeMessage(bot, message, args, group) {
       }
       
       // Atualiza o comando
-      await this.database.updateCustomCommand(group.id, customCommand);
+      this.database.updateCustomCommand(group.id, customCommand);
       
       // Limpa cache de comandos para garantir que o comando atualizado seja carregado
       this.database.clearCache(`commands:${group.id}`);
@@ -1868,7 +1770,7 @@ async setWelcomeMessage(bot, message, args, group) {
     const emoji = args[1];
     
     // Verifica se é um comando personalizado
-    const customCommands = await this.database.getCustomCommands(group.id);
+    const customCommands = this.database.getCustomCommands(group.id);
     const customCommand = customCommands.find(cmd => cmd.startsWith === commandName && !cmd.deleted);
     
     if (customCommand) {
@@ -1883,7 +1785,7 @@ async setWelcomeMessage(bot, message, args, group) {
       }
       
       // Atualiza o comando
-      await this.database.updateCustomCommand(group.id, customCommand);
+      this.database.updateCustomCommand(group.id, customCommand);
       
       // Limpa cache de comandos para garantir que o comando atualizado seja carregado
       this.database.clearCache(`commands:${group.id}`);
@@ -1923,7 +1825,7 @@ async setWelcomeMessage(bot, message, args, group) {
     group.autoStt = !group.autoStt;
     
     // Atualiza grupo no banco de dados
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     // Envia mensagem de confirmação
     const statusMsg = group.autoStt ? 
@@ -2002,7 +1904,7 @@ async setWelcomeMessage(bot, message, args, group) {
       }
       
       // Save group data
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       return new ReturnMessage({
         chatId: group.id,
@@ -2092,7 +1994,7 @@ async setWelcomeMessage(bot, message, args, group) {
       if (index !== -1) {
         // Remove number from ignored list
         group.ignoredNumbers.splice(index, 1);
-        await this.database.saveGroup(group);
+        this.database.saveGroup(group);
         
         return new ReturnMessage({
           chatId: group.id,
@@ -2101,7 +2003,7 @@ async setWelcomeMessage(bot, message, args, group) {
       } else {
         // Add number to ignored list
         group.ignoredNumbers.push(number);
-        await this.database.saveGroup(group);
+        this.database.saveGroup(group);
         
         return new ReturnMessage({
           chatId: group.id,
@@ -2156,7 +2058,7 @@ async setWelcomeMessage(bot, message, args, group) {
     if (index !== -1) {  
       // Remove category from muted list  
       group.mutedCategories.splice(index, 1);  
-      await this.database.saveGroup(group);  
+      this.database.saveGroup(group);
         
       return new ReturnMessage({  
         chatId: group.id,  
@@ -2165,7 +2067,7 @@ async setWelcomeMessage(bot, message, args, group) {
     } else {  
       // Add category to muted list  
       group.mutedCategories.push(category);  
-      await this.database.saveGroup(group);  
+      this.database.saveGroup(group);
         
       return new ReturnMessage({  
         chatId: group.id,  
@@ -2231,7 +2133,7 @@ async setWelcomeMessage(bot, message, args, group) {
         if (index !== -1) {
           // Remove string from muted list
           group.mutedStrings.splice(index, 1);
-          await this.database.saveGroup(group);
+          this.database.saveGroup(group);
           
           return new ReturnMessage({
             chatId: group.id,
@@ -2240,7 +2142,7 @@ async setWelcomeMessage(bot, message, args, group) {
         } else {
           // Add string to muted list
           group.mutedStrings.push(muteString);
-          await this.database.saveGroup(group);
+          this.database.saveGroup(group);
           
           return new ReturnMessage({
             chatId: group.id,
@@ -2324,7 +2226,7 @@ async setWelcomeMessage(bot, message, args, group) {
     if (index !== -1) {
       // Remove o número
       group.additionalAdmins.splice(index, 1);
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       // Exibe a lista atualizada
       const admins = group.additionalAdmins || [];
@@ -2350,7 +2252,7 @@ async setWelcomeMessage(bot, message, args, group) {
     } else {
       // Adiciona o número
       group.additionalAdmins.push(numero);
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       // Exibe a lista atualizada
       let adminList = '*Administradores adicionais:*\n';
@@ -2401,7 +2303,7 @@ async setWelcomeMessage(bot, message, args, group) {
       group.paused = !group.paused;
       
       // Salva a configuração atualizada
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       if (group.paused) {
         return new ReturnMessage({
@@ -2455,7 +2357,7 @@ async setWelcomeMessage(bot, message, args, group) {
     group.interact.enabled = !group.interact.enabled;
     
     // Salva mudanças
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     // Constrói mensagem de resposta
     let response = group.interact.enabled
@@ -2506,7 +2408,7 @@ async setWelcomeMessage(bot, message, args, group) {
     group.interact.useCmds = !group.interact.useCmds;
     
     // Salva mudanças
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
 
     // Constrói mensagem de resposta
     let response = group.interact.useCmds
@@ -2569,7 +2471,7 @@ async setWelcomeMessage(bot, message, args, group) {
     group.interact.cooldown = cooldown;
     
     // Salva mudanças
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     return new ReturnMessage({
       chatId: group.id,
@@ -2625,7 +2527,7 @@ async setWelcomeMessage(bot, message, args, group) {
     group.interact.chance = chance;
     
     // Salva mudanças
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     return new ReturnMessage({
       chatId: group.id,
@@ -2740,7 +2642,7 @@ async setWelcomeMessage(bot, message, args, group) {
       } else {
         channelConfig[configKey] = { media: [] };
       }
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       return new ReturnMessage({
         chatId: group.id,
@@ -2833,7 +2735,7 @@ async setWelcomeMessage(bot, message, args, group) {
         channelConfig[configKey].media.push(mediaConfig);
       }
       
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       const mediaTypeDesc = {
         "text": "texto",
@@ -2946,7 +2848,7 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     // Salva a configuração atualizada
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     return new ReturnMessage({
       chatId: group.id,
@@ -3046,7 +2948,7 @@ async setWelcomeMessage(bot, message, args, group) {
         delete channelConfig.groupPhotoOffline;
       }
       
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       return new ReturnMessage({
         chatId: group.id,
@@ -3074,7 +2976,7 @@ async setWelcomeMessage(bot, message, args, group) {
       channelConfig.changeTitleOnEvent = true;
     }
     
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     return new ReturnMessage({
       chatId: group.id,
@@ -3197,7 +3099,7 @@ async setWelcomeMessage(bot, message, args, group) {
     if (mode === 'on') {
       if (customTitle === null || customTitle === '') {
         delete channelConfig.onlineTitle;
-        await this.database.saveGroup(group);
+        this.database.saveGroup(group);
         
         return new ReturnMessage({
           chatId: group.id,
@@ -3210,7 +3112,7 @@ async setWelcomeMessage(bot, message, args, group) {
     } else {
       if (customTitle === null || customTitle === '') {
         delete channelConfig.offlineTitle;
-        await this.database.saveGroup(group);
+        this.database.saveGroup(group);
         
         return new ReturnMessage({
           chatId: group.id,
@@ -3227,7 +3129,7 @@ async setWelcomeMessage(bot, message, args, group) {
       channelConfig.changeTitleOnEvent = true;
     }
     
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     return new ReturnMessage({
       chatId: group.id,
@@ -3474,10 +3376,9 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     const commandName = args[0].toLowerCase();
-    const emoji = args[1];
         
     // Verifica se é um comando personalizado
-    const customCommands = await this.database.getCustomCommands(group.id);
+    const customCommands = this.database.getCustomCommands(group.id);
     const customCommand = customCommands.find(cmd => cmd.startsWith === commandName && !cmd.deleted);
     
     if (customCommand) {
@@ -3488,7 +3389,7 @@ async setWelcomeMessage(bot, message, args, group) {
       }
       
       // Atualiza o comando
-      await this.database.updateCustomCommand(group.id, customCommand);
+      this.database.updateCustomCommand(group.id, customCommand);
       
       // Limpa cache de comandos para garantir que o comando atualizado seja carregado
       this.database.clearCache(`commands:${group.id}`);
@@ -3533,10 +3434,9 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     const commandName = args[0].toLowerCase();
-    const emoji = args[1];
         
     // Verifica se é um comando personalizado
-    const customCommands = await this.database.getCustomCommands(group.id);
+    const customCommands = this.database.getCustomCommands(group.id);
     const customCommand = customCommands.find(cmd => cmd.startsWith === commandName && !cmd.deleted);
     
     if (customCommand) {
@@ -3547,7 +3447,7 @@ async setWelcomeMessage(bot, message, args, group) {
       }
       
       // Atualiza o comando
-      await this.database.updateCustomCommand(group.id, customCommand);
+      this.database.updateCustomCommand(group.id, customCommand);
       
       // Limpa cache de comandos para garantir que o comando atualizado seja carregado
       this.database.clearCache(`commands:${group.id}`);
@@ -3611,7 +3511,7 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     // Busca o comando personalizado
-    const commands = await this.database.getCustomCommands(group.id);
+    const commands = this.database.getCustomCommands(group.id);
     const command = commands.find(cmd => cmd.startsWith === commandName && !cmd.deleted);
     
     if (!command) {
@@ -3639,7 +3539,7 @@ async setWelcomeMessage(bot, message, args, group) {
       }
       
       // Atualiza o comando
-      await this.database.updateCustomCommand(group.id, command);
+      this.database.updateCustomCommand(group.id, command);
       
       // Limpa cache de comandos
       this.database.clearCache(`commands:${group.id}`);
@@ -3656,7 +3556,7 @@ async setWelcomeMessage(bot, message, args, group) {
     command.allowedTimes.end = endTime;
     
     // Atualiza o comando
-    await this.database.updateCustomCommand(group.id, command);
+    this.database.updateCustomCommand(group.id, command);
     
     // Limpa cache de comandos
     this.database.clearCache(`commands:${group.id}`);
@@ -3712,7 +3612,7 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     // Busca o comando personalizado
-    const commands = await this.database.getCustomCommands(group.id);
+    const commands = this.database.getCustomCommands(group.id);
     const command = commands.find(cmd => cmd.startsWith === commandName && !cmd.deleted);
     
     if (!command) {
@@ -3739,7 +3639,7 @@ async setWelcomeMessage(bot, message, args, group) {
       }
       
       // Atualiza o comando
-      await this.database.updateCustomCommand(group.id, command);
+      this.database.updateCustomCommand(group.id, command);
       
       // Limpa cache de comandos
       this.database.clearCache(`commands:${group.id}`);
@@ -3755,7 +3655,7 @@ async setWelcomeMessage(bot, message, args, group) {
     command.allowedTimes.daysOfWeek = days;
     
     // Atualiza o comando
-    await this.database.updateCustomCommand(group.id, command);
+    this.database.updateCustomCommand(group.id, command);
     
     // Limpa cache de comandos
     this.database.clearCache(`commands:${group.id}`);
@@ -3918,7 +3818,7 @@ async setWelcomeMessage(bot, message, args, group) {
       }
       
       // Salva o grupo atualizado
-      await this.database.saveGroup(group);
+      this.database.saveGroup(group);
       
       // Tenta obter o nome do contato
       let contactName = "usuário";
@@ -3987,7 +3887,7 @@ async setWelcomeMessage(bot, message, args, group) {
     channelConfig.mentionAllMembers = !channelConfig.mentionAllMembers;
     
     // Salva a configuração atualizada
-    await this.database.saveGroup(group);
+    this.database.saveGroup(group);
     
     // Retorna uma mensagem informando o novo estado
     const novoEstado = channelConfig.mentionAllMembers ? 'ativada' : 'desativada';

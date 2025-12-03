@@ -1,6 +1,3 @@
-const { Contact, LocalAuth, MessageMedia, Location, Poll } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
-const qrimg = require('qr-image');
 const { randomBytes } = require('crypto');
 const imagemagick = require('imagemagick');
 const ffmpeg = require('fluent-ffmpeg');
@@ -16,17 +13,14 @@ const WebSocket = require('ws');
 
 const EvolutionGoClient = require('./services/EvolutionGoClient');
 const CacheManager = require('./services/CacheManager');
-const ReturnMessage = require('./models/ReturnMessage');
 const ReactionsHandler = require('./ReactionsHandler');
 const LLMService = require('./services/LLMService');
 const MentionHandler = require('./MentionHandler');
 const AdminUtils = require('./utils/AdminUtils');
 const InviteSystem = require('./InviteSystem');
-const StreamSystem = require('./StreamSystem');
 const Database = require('./utils/Database');
 const LoadReport = require('./LoadReport');
 const Logger = require('./utils/Logger');
-const { toOpus, toMp3 } = require('./utils/Conversions');
 
 // Utils
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -823,7 +817,7 @@ class WhatsAppBotEvoGo {
           mimetype = options.customMime ? options.customMime : (headResponse.headers['content-type']?.split(';')[0] || 'application/octet-stream');
         } catch (e) { /* ignore */ }
       }
-      return { url, mimetype, filename, source: 'url', url, isMessageMedia: true }; // MessageMedia compatible for URL sending
+      return { url, mimetype, filename, source: 'url', isMessageMedia: true }; // MessageMedia compatible for URL sending
     } catch (error) {
       this.logger.error(`[${this.id}] Evo: Error creating media from URL ${url}:`, error);
       throw error;
@@ -952,7 +946,6 @@ class WhatsAppBotEvoGo {
 
       const statusData = response?.data;
       const isConnected = statusData?.Connected && statusData?.LoggedIn;
-      const state = isConnected ? 'CONNECTED' : 'DISCONNECTED';
       const extra = {};
 
       const instanceDetails = {
@@ -1051,11 +1044,6 @@ class WhatsAppBotEvoGo {
         case 'SendMessage': // V3 separa enviadas?
           this.lastMessageReceived = Date.now();
           // V3 payload examples mostram "Message" com "IsFromMe": true/false dentro de Info
-          const msgData = payload.data;
-
-          // Verificar se é array ou objeto (exemplos mostram array em alguns casos no JSON raiz, mas webhook geralmente manda um por vez)
-          // Se vier array:
-          const messages = Array.isArray(msgData) ? msgData : [msgData]; // Ajustar conforme payload real
 
           // No exemplo payload-examples.json:
           // "Message": [ { "data": { "Info": ..., "Message": ... }, "event": "Message", ... } ]
@@ -1154,7 +1142,6 @@ class WhatsAppBotEvoGo {
 
         const mentions = contextInfo?.mentionedJID || [];
         const quotedMessageId = contextInfo?.quotedMessage ? contextInfo.stanzaID : null;
-        const quotedParticipant = contextInfo?.participant;
 
         //this.logger.debug(`[formatMessageFromEvo] `, {evoMessageData, contextInfo, quotedMessageId});
 
@@ -1440,7 +1427,6 @@ class WhatsAppBotEvoGo {
     } catch (error) {
       this.logger.error(`[${this.id}] Error sending message:`, error);
       throw error;
-      return false;
     }
   }
 

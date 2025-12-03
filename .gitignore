@@ -102,7 +102,6 @@ dist
 
 # vuepress v2.x temp and cache directory
 .temp
-.cache
 
 # Docusaurus cache and generated files
 .docusaurus
@@ -134,7 +133,6 @@ dist
 /.wwebjs_cache
 /data/media
 /data/conversations
-/data/custom-cmd
 data/pending-invites.json
 data/files-db.json
 data/monitoramento.json
@@ -143,7 +141,6 @@ data/twitch-token.json
 data/www.youtube.com_cookies.txt
 data/youtube-cache.json
 /media
-data/pending-invites.json
 data/load-reports.json
 data/groups.json
 /data/vosk-model-ptbr
@@ -161,7 +158,6 @@ data/cooldowns.json
 data/donations.json
 /baileys_auth
 data/pending-joins.json
-data/cooldowns.json
 data/custom-variables.json
 data/pinto.json
 data/fishing.json
@@ -193,16 +189,13 @@ data/qrcode_ravena1.png
 data/qrcode_ravenavip.png
 data/qrcode_ravena5.png
 data/textos/archive.txt
-data/cooldowns.json
 data/geoguesser.json
 data/qrcode_ravena2.png
-data/qrcode_ravenagold.png
 data/qrcode_ravenagold.png
 .baileys_auth/ravenatestes/auth_info_baileys/app-state-sync-key-AAAAAJ32.json
 /.baileys_auth
 /data/data-share
 data/kick-token.json
-data/cooldowns.json
 data/soft-blocks.json
 data/yt-channelsID-cache.json
 /public/gifs
@@ -221,7 +214,6 @@ data/soundcloud-cache.json
 /data/horoscopo
 data/donations.json.bck
 data/youtube-cache-old.json
-data/yt-channelsID-cache.json
 /old
 *.swp
 data/cooldowns.js

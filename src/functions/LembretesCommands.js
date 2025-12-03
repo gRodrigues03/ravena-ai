@@ -245,11 +245,6 @@ async function criarLembrete(bot, message, args, group) {
         // Baixa a mídia
         const media = await quotedMsg.downloadMedia();
         
-        // Define o tipo de mídia
-        let mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
-        if (quotedMsg.type === 'sticker') mediaType = 'sticker';
-        if (quotedMsg.type === 'voice') mediaType = 'voice';
-        
         // Gera nome de arquivo com extensão apropriada
         let fileExt = media.mimetype.split('/')[1];
         if (fileExt && fileExt.includes(';')) {
@@ -746,20 +741,5 @@ const commands = [
 //logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { 
-  commands,
-  // Exporta funções úteis para uso externo
-  inicializarLembretes: async (bot) => {
-    try {
-      const lembretes = await carregarLembretes();
-      const lembretesAtivos = lembretes.filter(l => l.ativo);
-      
-      logger.info(`Inicializando ${lembretesAtivos.length} lembretes para o bot`);
-      
-      for (const lembrete of lembretesAtivos) {
-        iniciarTemporizador(bot, lembrete);
-      }
-    } catch (error) {
-      logger.error('Erro ao inicializar lembretes para o bot:', error);
-    }
-  }
+  commands
 };

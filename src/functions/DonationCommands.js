@@ -17,8 +17,7 @@ const database = Database.getInstance();
 async function readDonationHeader() {
   try {
     const headerPath = path.join(database.databasePath, 'textos', 'donate_header.txt');
-    const headerContent = await fs.readFile(headerPath, 'utf8');
-    return headerContent;
+    return await fs.readFile(headerPath, 'utf8');
   } catch (error) {
     logger.warn('Erro ao ler cabeçalho do donate:', error);
     return '💖 *Ajuda de custos _ravenabot_!* 🐦‍⬛\n\n';
@@ -32,8 +31,7 @@ async function readDonationHeader() {
 async function readDonationFooter() {
   try {
     const headerPath = path.join(database.databasePath, 'textos', 'donate_footer.txt');
-    const headerContent = await fs.readFile(headerPath, 'utf8');
-    return headerContent;
+    return await fs.readFile(headerPath, 'utf8');
   } catch (error) {
     logger.warn('Erro ao ler footer do donate:', error);
     return '';
@@ -92,7 +90,7 @@ async function showDonationGoal(bot, message, args, group) {
     }
     
     // Obtém todas as doações
-    const donations = await database.getDonations();
+    const donations = database.getDonations();
     
     // Calcula total de doações
     const totalAmount = donations.reduce((total, donation) => total + donation.valor, 0);
@@ -148,7 +146,7 @@ async function showTopDonors(bot, message, args, group) {
     const chatId = message.group || message.author;
     
     // Obtém todas as doações
-    const donations = await database.getDonations();
+    const donations = database.getDonations();
     
     if (!donations || donations.length === 0) {
       return new ReturnMessage({

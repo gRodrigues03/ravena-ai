@@ -108,19 +108,6 @@ class EvolutionGoClient {
   }
 
   /**
-   * PUT Request
-   */
-  async put(endpoint, body = {}, useGlobalKey = false) {
-    try {
-      const config = useGlobalKey ? this._adminConfig : this._instanceConfig;
-      const response = await this.client.put(endpoint, body, config);
-      return response.data;
-    } catch (error) {
-      return this._handleError(error, `PUT ${endpoint}`);
-    }
-  }
-
-  /**
    * DELETE Request
    * @param {boolean} useGlobalKey - Se true, usa a Global API Key (ex: delete instance)
    */

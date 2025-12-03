@@ -57,21 +57,6 @@ class ReturnMessage {
   isValid() {
     return this.chatId !== null && this.content !== null;
   }
-
-  /**
-   * Converte ReturnMessage para um objeto simples para serialização
-   * @returns {Object} - Representação em objeto simples
-   */
-  toJSON() {
-    return {
-      chatId: this.chatId,
-      content: typeof this.content === 'string' ? this.content : '[Conteúdo de Mídia]',
-      options: this.options,
-      reactions: this.reactions,
-      delay: this.delay,
-      metadata: this.metadata
-    };
-  }
 }
 
 module.exports = ReturnMessage;

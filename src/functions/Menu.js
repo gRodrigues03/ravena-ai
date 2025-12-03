@@ -86,7 +86,7 @@ async function showCommandsByCategory (bot, message, args, group){
       
       // Get custom commands for this group
       const customCommands = group ? 
-        (await database.getCustomCommands(group.id))
+        (database.getCustomCommands(group.id))
           .filter(cmd => cmd.active && !cmd.deleted && 
                  cmd.category && cmd.category.toLowerCase() === category) : 
         [];
@@ -305,9 +305,6 @@ async function sendCommandList(bot, message, args, group) {
     // Obtém todos os comandos fixos
     const fixedCommands = bot.eventHandler.commandHandler.fixedCommands.getAllCommands();
     
-    // Obtém comandos personalizados para este grupo
-    const customCommands = group ? (await database.getCustomCommands(group.id)).filter(cmd => cmd.active && !cmd.deleted) :  [];
-    
     // Lê o cabeçalho do menu
     const header = await readMenuHeader();
     
@@ -509,7 +506,7 @@ async function sendGroupCommandList(bot, message, args, group) {
     logger.debug(`Enviando lista de comandos personalizados para o grupo ${group.id}`);
     
     // Obtém comandos personalizados para este grupo
-    const customCommands = (await database.getCustomCommands(group.id)).filter(cmd => cmd.active && !cmd.deleted);
+    const customCommands = (database.getCustomCommands(group.id)).filter(cmd => cmd.active && !cmd.deleted);
     
     // Verifica se existem comandos personalizados
     if (customCommands.length === 0) {

@@ -125,48 +125,6 @@ class UserGreetingManager {
       return "🦇 Olá! Eu sou a Ravena, um bot de WhatsApp. Digite !cmd para ver os comandos disponíveis.";
     }
   }
-  
-  /**
-   * Processa a saudação para um usuário
-   * @param {WhatsAppBot} bot - Instância do bot
-   * @param {Object} message - A mensagem do usuário
-   * @returns {Promise<boolean>} - Se a saudação foi enviada
-   */
-  async processGreeting(bot, message) {
-    try {
-      // Verificar se a mensagem é de chat privado
-      if (message.group) {
-        return false;
-      }
-      
-      const userId = message.author;
-      const botId = bot.id;
-      
-      // Verificar se o usuário já foi saudado recentemente por este bot
-      if (this.wasGreetedRecently(userId, botId)) {
-        this.logger.debug(`Usuário ${userId} já foi saudado recentemente pelo bot ${botId}`);
-        return false;
-      } else {
-        this.logger.debug(`Usuário ${userId} será saudado pelo bot ${botId}!`);
-      }
-      
-      // Obter o texto de saudação
-      const greetingText = await this.getGreetingText();
-      
-      // Enviar a saudação
-      await bot.sendMessage(userId, greetingText);
-      
-      // Marcar o usuário como saudado por este bot
-      await this.markAsGreeted(userId, botId);
-      
-      this.logger.info(`Saudação enviada para ${userId} pelo bot ${botId}`);
-      await sleep(3000);
-      return true;
-    } catch (error) {
-      this.logger.error('Erro ao processar saudação:', error);
-      return false;
-    }
-  }
 }
 
 

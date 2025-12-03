@@ -1,5 +1,4 @@
 const axios = require('axios');
-const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
 const Command = require('../models/Command');
 const Database = require('../utils/Database');

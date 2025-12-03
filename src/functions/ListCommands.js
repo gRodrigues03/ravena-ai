@@ -44,9 +44,6 @@ async function processListReaction(bot, message, args, group) {
       const chat = await message.getChat();
       if (!chat.isGroup) return false;
 
-      // Get group data
-      const group = await bot.eventHandler.getOrCreateGroup(chat.id._serialized);
-
       // Get lists for this group
       const lists = await getGroupLists(chat.id._serialized);
 
@@ -1011,7 +1008,6 @@ const commands = [
 
 // Export commands and reaction handler
 module.exports = {
-  commands,
-  processListReaction
+  commands
 };
 

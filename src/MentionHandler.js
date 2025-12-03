@@ -77,8 +77,6 @@ class MentionHandler {
         await bot.sendReturnMessages(msgsLLM);
         return true;
 
-      } else {
-        return
       }
 
       

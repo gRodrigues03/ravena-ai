@@ -68,109 +68,6 @@ class Command {
   isValid() {
     return this.name && typeof this.method === 'function';
   }
-
-  /**
-   * Executa o comando e retorna o resultado
-   * @param {WhatsAppBot} bot - Instância do bot
-   * @param {Object} message - Mensagem que acionou o comando
-   * @param {Array} args - Argumentos do comando
-   * @param {Object} group - Objeto do grupo (se em grupo)
-   * @returns {Promise<ReturnMessage|Array<ReturnMessage>|null>} - Resultado da execução
-   */
-  async execute(bot, message, args, group) {
-    try {
-      // Incrementa contador de uso
-      this.count++;
-      this.lastUsed = Date.now();
-      
-      // Executa o método do comando
-      const result = await this.method(bot, message, args, group);
-      
-      // Processa o resultado, convertendo para ReturnMessage(s) se necessário
-      if (this.usesReturnMessage) {
-        // O método já retorna ReturnMessage(s), apenas passa adiante
-        return result;
-      } else {
-        // Legacy mode: se o método não retornar nada, assume que
-        // já tratou o envio de mensagens manualmente
-        return result;
-      }
-    } catch (error) {
-      throw error;
-    }
-  }
-  
-  /**
-   * Registra um uso bem-sucedido do comando
-   */
-  trackUsage() {
-    this.count++;
-    this.lastUsed = Date.now();
-  }
-
-  /**
-   * Verifica se o comando está em cooldown
-   * @param {string} userId - ID do usuário que acionou o comando
-   * @returns {Object} - Objeto com status e tempo restante
-   */
-  checkCooldown(userId) {
-    if (!this.cooldown || this.cooldown <= 0) {
-      return { onCooldown: false, timeLeft: 0 };
-    }
-    
-    const lastUserUsage = this.metadata.userCooldowns?.[userId] || 0;
-    const now = Date.now();
-    const timeSinceLastUse = (now - lastUserUsage) / 1000; // em segundos
-    
-    if (timeSinceLastUse < this.cooldown) {
-      return {
-        onCooldown: true,
-        timeLeft: Math.ceil(this.cooldown - timeSinceLastUse)
-      };
-    }
-    
-    // Atualiza o último uso para este usuário
-    if (!this.metadata.userCooldowns) {
-      this.metadata.userCooldowns = {};
-    }
-    this.metadata.userCooldowns[userId] = now;
-    
-    return { onCooldown: false, timeLeft: 0 };
-  }
-
-  /**
-   * Converte a instância Command para um objeto simples para serialização
-   * @returns {Object} - Objeto simples do comando
-   */
-  toJSON() {
-    return {
-      name: this.name,
-      aliases: this.aliases,
-      description: this.description,
-      usage: this.usage,
-      category: this.category,
-      needsMedia: this.needsMedia,
-      needsQuotedMsg: this.needsQuotedMsg,
-      needsArgs: this.needsArgs,
-      minArgs: this.minArgs,
-      adminOnly: this.adminOnly,
-      reactions: this.reactions,
-      cooldown: this.cooldown,
-      timeout: this.timeout,
-      deleteOnComplete: this.deleteOnComplete,
-      ignoreInteract: this.ignoreInteract,
-      // Não inclui o method para evitar problemas de serialização de funções
-      middlewares: this.middlewares.length,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-      count: this.count,
-      lastUsed: this.lastUsed,
-      metadata: this.metadata,
-      active: this.active,
-      hidden: this.hidden,
-      usesReturnMessage: this.usesReturnMessage
-    };
-  }
   
   /**
    * Cria uma instância de Command a partir de um objeto simples
@@ -179,11 +76,10 @@ class Command {
    * @returns {Command} - Nova instância de Command
    */
   static fromJSON(data, method) {
-    const command = new Command({
+    return new Command({
       ...data,
       method: method
     });
-    return command;
   }
 }
 

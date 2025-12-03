@@ -1,7 +1,6 @@
 const path = require('path');
 const Logger = require('../utils/Logger');
 const fs = require('fs').promises;
-const Database = require('../utils/Database');
 const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
 const sharp = require('sharp');
@@ -9,7 +8,6 @@ const ffmpeg = require('fluent-ffmpeg');
 const { MessageMedia } = require('whatsapp-web.js');
 
 const logger = new Logger('sticker-commands');
-const database = Database.getInstance();
 const TEMP_DIR = path.join(__dirname, '../../temp', 'whatsapp-bot-stickers');
 //logger.info('Módulo  Commands carregado');
 
@@ -142,26 +140,6 @@ async function ensureTempDir() {
     await fs.mkdir(TEMP_DIR, { recursive: true });
   } catch (error) {
     logger.error('Erro ao criar diretório temporário:', error);
-  }
-}
-
-// Limpar arquivos temporários mais antigos que 1 hora
-async function cleanupTempFiles() {
-  try {
-    const files = await fs.readdir(TEMP_DIR);
-    const now = Date.now();
-    const oneHourAgo = now - 60 * 60 * 1000;
-
-    for (const file of files) {
-      const filePath = path.join(TEMP_DIR, file);
-      const stats = await fs.stat(filePath);
-      
-      if (stats.mtimeMs < oneHourAgo) {
-        await fs.unlink(filePath);
-      }
-    }
-  } catch (error) {
-    logger.error('Erro ao limpar arquivos temporários:', error);
   }
 }
 

@@ -585,4 +585,4 @@ const commands = [
   })
 ];
 
-module.exports = { commands, getPintoGameData, savePintoGameData };
+module.exports = { commands };

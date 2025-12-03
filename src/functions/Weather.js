@@ -342,7 +342,6 @@ async function handleWeatherCommand(bot, message, args, group) {
       if (quotedMsg.type === 'location') {
         latitude = quotedMsg.location.latitude;
         longitude = quotedMsg.location.longitude;
-        locationName = quotedMsg.location.description || 'localização compartilhada';
       } else {
         return new ReturnMessage({
           chatId: chatId,
@@ -363,7 +362,6 @@ async function handleWeatherCommand(bot, message, args, group) {
         const coordinates = await getCityCoordinates(cityName);
         latitude = coordinates.lat;
         longitude = coordinates.lon;
-        locationName = cityName;
       } catch (error) {
         return new ReturnMessage({
           chatId: chatId,

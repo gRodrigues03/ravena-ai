@@ -218,8 +218,7 @@ async function searchWeb(bot, message, args, group) {
         evoReply: message.origin
       }
     });
-    
-    logger.info(`Resultados de busca enviados com sucesso para "${query}"`);
+
   } catch (error) {
     logger.error('Erro na busca web:', error);
     const chatId = message.group || message.author;

@@ -157,7 +157,7 @@ async function rollDice(bot, message, args, group, defaultSides = null) {
     }
     
     // Prepara mensagem
-    let resultMessage = '';
+    let resultMessage;
     
     // Casos especiais para mensagens mais limpas
     if (numDice === 1 && !modifierSign) {

@@ -82,6 +82,5 @@ function start() {
 
 // Export the functions to be used by other parts of your application (e.g., index.js)
 module.exports = {
-    start,
-    organizeLogs // Exposing organizeLogs allows for manual triggering if needed
+    start
 };

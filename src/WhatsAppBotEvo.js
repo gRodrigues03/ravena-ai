@@ -1,4 +1,4 @@
-﻿const { Contact, LocalAuth, MessageMedia, Location, Poll } = require('whatsapp-web.js');
+﻿const { Contact, MessageMedia, Location, Poll } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const qrimg = require('qr-image');
 const { randomBytes } = require('crypto');
@@ -16,13 +16,8 @@ const { io } = require("socket.io-client");
 
 const EvolutionApiClient = require('./services/EvolutionApiClient');
 const CacheManager = require('./services/CacheManager');
-const ReturnMessage = require('./models/ReturnMessage');
 const ReactionsHandler = require('./ReactionsHandler');
-const LLMService = require('./services/LLMService');
-const MentionHandler = require('./MentionHandler');
 const AdminUtils = require('./utils/AdminUtils');
-const InviteSystem = require('./InviteSystem');
-const StreamSystem = require('./StreamSystem');
 const Database = require('./utils/Database');
 const LoadReport = require('./LoadReport');
 const Logger = require('./utils/Logger');
@@ -31,7 +26,6 @@ const { toOpus, toMp3 } = require('./utils/Conversions');
 // Utils
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const writeFileAsync = promisify(fs.writeFile);
-const readFileAsync = promisify(fs.readFile);
 const unlinkAsync = promisify(fs.unlink);
 const convertAsync = promisify(imagemagick.convert);
 
@@ -69,10 +63,6 @@ class WhatsAppBotEvo {
     this.redisTTL = options.redisTTL || 604800;
     this.maxCacheSize = 3000;
 
-    this.streamIgnoreGroups = [];
-    this.messageCache = [];
-    this.contactCache = [];
-    this.sentMessagesCache = [];
     this.cacheManager = new CacheManager(
       this.redisURL,
       this.redisDB,
@@ -112,21 +102,14 @@ class WhatsAppBotEvo {
 
     this.userAgent = options.userAgent || process.env.USER_AGENT;
 
-
-    this.mentionHandler = new MentionHandler();
-
     this.lastMessageReceived = Date.now();
     this.startupTime = Date.now();
 
     this.loadReport = new LoadReport(this);
-    this.inviteSystem = new InviteSystem(this);
     this.reactionHandler = new ReactionsHandler();
 
-    this.streamSystem = null;
-    this.streamMonitor = null;
     this.stabilityMonitor = options.stabilityMonitor ?? false;
 
-    this.llmService = new LLMService({});
     this.adminUtils = AdminUtils.getInstance();
 
     this.webhookApp = null; // Express app instance
@@ -286,107 +269,6 @@ class WhatsAppBotEvo {
       this.logger.error(`[updateVersions] Erro buscando infos da Evo`, e);
     }
 
-  }
-
-  async convertToSquareWebPImage(base64ImageContent) {
-    let inputPath = ''; // Will be set to the path of the temporary input file
-    let isTempInputFile = false;
-    const tempId = randomBytes(16).toString('hex');
-
-    // Use system's temporary directory for better portability
-    const tempDirectory = os.tmpdir();
-    // Using a generic extension like .tmp as ffmpeg will auto-detect the input format (JPG/PNG)
-    const tempInputPath = path.join(tempDirectory, `${tempId}_input.tmp`);
-    const tempOutputPath = path.join(tempDirectory, `${tempId}_output.webp`);
-
-    try {
-      // Validate and decode base64 input
-      if (!base64ImageContent || typeof base64ImageContent !== 'string') {
-        throw new Error('Invalid base64ImageContent: Must be a non-empty string.');
-      }
-
-      //this.logger.info('[toSquareWebPImage] Input is base64. Decoding and saving to temporary file...');
-      // Remove potential data URI prefix (e.g., "data:image/png;base64,")
-      const base64Data = base64ImageContent.includes(',') ? base64ImageContent.split(',')[1] : base64ImageContent;
-
-      if (!base64Data) {
-        throw new Error('Invalid base64ImageContent: Empty data after stripping prefix.');
-      }
-
-      const buffer = Buffer.from(base64Data, 'base64');
-      await writeFileAsync(tempInputPath, buffer);
-      inputPath = tempInputPath;
-      isTempInputFile = true;
-      this.logger.info('[toSquareWebPImage] Base64 input saved to temporary file:', tempInputPath);
-
-      //this.logger.info('[toSquareWebPImage] Starting square WebP image conversion for:', inputPath);
-
-      const targetSize = 512; // Target dimension for the square output
-
-      // ffmpeg filter to:
-      // 1. Scale the image to fit within targetSize x targetSize, preserving aspect ratio.
-      // 2. Pad the scaled image to targetSize x targetSize, centering it.
-      //    The padding color is set to transparent (black@0.0).
-      const videoFilter = `scale=${targetSize}:${targetSize}:force_original_aspect_ratio=decrease:flags=lanczos,pad=${targetSize}:${targetSize}:(ow-iw)/2:(oh-ih)/2:color=black@0.0`;
-
-      await new Promise((resolve, reject) => {
-        ffmpeg(inputPath)
-          .outputOptions([
-            '-vf', videoFilter,       // Apply the scaling and padding filter
-            '-c:v', 'libwebp',        // Set the codec to libwebp
-            '-lossless', '0',         // Use lossy compression (0 for lossy, 1 for lossless). Lossy is often preferred for stickers for smaller file size.
-            '-q:v', '80',             // Quality for lossy WebP (0-100). Adjust for balance. Higher is better quality/larger file.
-            '-compression_level', '6',// Compression effort (0-6). Higher means more compression (smaller size) but slower.
-            // No animation-specific options like -loop, fps, etc.
-          ])
-          .toFormat('webp') // Output format
-          .on('end', () => {
-            this.logger.info('[toSquareWebPImage] Square WebP image conversion finished.');
-            resolve();
-          })
-          .on('error', (err) => {
-            let ffmpegCommand = '';
-            // fluent-ffmpeg might expose the command it tried to run in err.ffmpegCommand or similar
-            if (typeof err.spawnargs !== 'undefined') { // Check common property for spawn arguments
-              ffmpegCommand = `FFmpeg arguments: ${err.spawnargs.join(' ')}`;
-            }
-            this.logger.error(`[toSquareWebPImage] Error during WebP image conversion: ${err.message}. ${ffmpegCommand}`, err.stack);
-            reject(err);
-          })
-          .save(tempOutputPath);
-      });
-
-      this.logger.info('[toSquareWebPImage] Square WebP image saved to temporary file:', tempOutputPath);
-
-      // Read the generated WebP and convert to base64
-      const webpBuffer = await readFileAsync(tempOutputPath);
-      const base64WebP = webpBuffer.toString('base64');
-      this.logger.info('[toSquareWebPImage] Square WebP image converted to base64.');
-
-      return base64WebP; // Return raw base64 string
-
-    } catch (error) {
-      this.logger.error('[toSquareWebPImage] Error in convertToSquareWebPImage function:', error.message, error.stack);
-      throw error; // Re-throw the error to be caught by the caller
-    } finally {
-      // Clean up temporary files
-      if (isTempInputFile && fs.existsSync(tempInputPath)) {
-        try {
-          await unlinkAsync(tempInputPath);
-          this.logger.info('[toSquareWebPImage] Temporary input file deleted:', tempInputPath);
-        } catch (e) {
-          this.logger.error('[toSquareWebPImage] Error deleting temporary input file:', tempInputPath, e.message);
-        }
-      }
-      if (fs.existsSync(tempOutputPath)) { // Check existence before unlinking
-        try {
-          await unlinkAsync(tempOutputPath);
-          this.logger.info('[toSquareWebPImage] Temporary output file deleted:', tempOutputPath);
-        } catch (e) {
-          this.logger.error('[toSquareWebPImage] Error deleting temporary output file:', tempOutputPath, e.message);
-        }
-      }
-    }
   }
 
   async convertToSquarePNGImage(base64ImageContent) {
@@ -596,177 +478,6 @@ class WhatsAppBotEvo {
           this.logger.info('[toSquareAnimatedGif] Temporary input file deleted:', tempInputPath);
         } catch (e) {
           this.logger.error('[toSquareAnimatedGif] Error deleting temporary input file:', tempInputPath, e.message);
-        }
-      }
-    }
-  }
-
-  async convertToAnimatedWebP(inputContent) {
-    let inputPath = inputContent;
-    let isTempInputFile = false;
-    const tempId = randomBytes(16).toString('hex');
-
-    const tempDirectory = os.tmpdir();
-    const tempInputPath = path.join(tempDirectory, `${tempId}_input.tmp`);
-    const tempOutputPath = path.join(tempDirectory, `${tempId}_output.webp`);
-
-    try {
-      if (inputContent && !inputContent.startsWith('http://') && !inputContent.startsWith('https://')) {
-        this.logger.info('[toAnimatedWebP] Input is base64. Decoding and saving to temporary file...');
-        const base64Data = inputContent.includes(',') ? inputContent.split(',')[1] : inputContent;
-        const buffer = Buffer.from(base64Data, 'base64');
-        await writeFileAsync(tempInputPath, buffer);
-        inputPath = tempInputPath;
-        isTempInputFile = true;
-        this.logger.info('[toAnimatedWebP] Base64 input saved to temporary file:', tempInputPath);
-      } else if (inputContent && (inputContent.startsWith('http://') || inputContent.startsWith('https://'))) {
-        this.logger.info('[toAnimatedWebP] Input is a URL:', inputPath);
-      } else {
-        throw new Error('Invalid inputContent provided. Must be a URL or base64 string.');
-      }
-
-      this.logger.info('[toAnimatedWebP] Starting square animated WebP conversion for:', inputPath);
-
-      // Define the target square dimensions
-      const targetSize = 512;
-
-      // Construct the complex video filter string
-      // 1. Set FPS
-      // 2. Scale to fit within targetSize x targetSize, preserving aspect ratio (lanczos for quality)
-      // 3. Pad to targetSize x targetSize, center content, fill with transparent background
-      // 4. Generate and use a palette for better WebP quality and transparency handling
-      const videoFilter = `fps=20,scale=${targetSize}:${targetSize}:force_original_aspect_ratio=decrease:flags=lanczos,pad=${targetSize}:${targetSize}:(ow-iw)/2:(oh-ih)/2:color=black@0.0,split[s0][s1];[s0]palettegen=max_colors=250:reserve_transparent=on[p];[s1][p]paletteuse=dither=bayer:alpha_threshold=128`;
-
-      await new Promise((resolve, reject) => {
-        ffmpeg(inputPath)
-          .outputOptions([
-            '-vf', videoFilter,
-            '-loop', '0',
-            '-c:v', 'libwebp',
-            '-lossless', '0',
-            '-q:v', '75', // Quality for lossy WebP (0-100)
-            '-compression_level', '6', // Compression level (0-6)
-            '-preset', 'default',
-            '-an', // Remove audio
-            '-vsync', 'cfr', // Constant frame rate
-          ])
-          .toFormat('webp')
-          .on('end', () => {
-            this.logger.info('[toAnimatedWebP] Square animated WebP conversion finished.');
-            resolve();
-          })
-          .on('error', (err) => {
-            let ffmpegCommand = '';
-            if (err.ffmpegCommand) {
-              ffmpegCommand = `FFmpeg command: ${err.ffmpegCommand}`;
-            }
-            this.logger.error(`[toAnimatedWebP] Error during square WebP conversion: ${err.message}. ${ffmpegCommand}`, err.stack);
-            reject(err);
-          })
-          .save(tempOutputPath);
-      });
-
-      this.logger.info('[toAnimatedWebP] Square animated WebP saved to temporary file:', tempOutputPath);
-
-      const webpBuffer = await readFileAsync(tempOutputPath);
-      const base64WebP = webpBuffer.toString('base64');
-      this.logger.info('[toAnimatedWebP] Square animated WebP converted to base64.');
-
-      return base64WebP;
-
-    } catch (error) {
-      this.logger.error('[toAnimatedWebP] Error in convertToAnimatedWebP function:', error.message, error.stack);
-      throw error;
-    } finally {
-      if (isTempInputFile && fs.existsSync(tempInputPath)) {
-        try {
-          await unlinkAsync(tempInputPath);
-          this.logger.info('[toAnimatedWebP] Temporary input file deleted:', tempInputPath);
-        } catch (e) {
-          this.logger.error('[toAnimatedWebP] Error deleting temporary input file:', tempInputPath, e.message);
-        }
-      }
-      if (fs.existsSync(tempOutputPath)) {
-        try {
-          await unlinkAsync(tempOutputPath);
-          this.logger.info('[toAnimatedWebP] Temporary output file deleted:', tempOutputPath);
-        } catch (e) {
-          this.logger.error('[toAnimatedWebP] Error deleting temporary output file:', tempOutputPath, e.message);
-        }
-      }
-    }
-  }
-
-  async toGif(inputContent) {
-    let inputPath = inputContent;
-    let isTempFile = false;
-    const tempDirectory = os.tmpdir();
-    const tempId = randomBytes(16).toString('hex'); // Generate a unique ID for temp files
-    const tempInputPath = path.join(tempDirectory, `${tempId}_input.mp4`);
-    const tempOutputPath = path.join(tempDirectory, `${tempId}_output.gif`);
-
-    try {
-      // Check if inputContent is base64 or URL
-      if (!inputContent.startsWith('http://') && !inputContent.startsWith('https://')) {
-        // Assume it's base64, decode and write to a temporary file
-        const base64Data = inputContent.includes(',') ? inputContent.split(',')[1] : inputContent;
-        const buffer = Buffer.from(base64Data, 'base64');
-        await writeFileAsync(tempInputPath, buffer);
-        inputPath = tempInputPath;
-        isTempFile = true;
-        this.logger.info('[toGif] Input is base64, saved to temporary file:', tempInputPath);
-      } else {
-        this.logger.info('[toGif] Input is a URL:', inputPath);
-      }
-
-      this.logger.info('[toGif] Starting GIF conversion for:', inputPath);
-
-      await new Promise((resolve, reject) => {
-        ffmpeg(inputPath)
-          .outputOptions([
-            '-vf', 'fps=20,scale=512:-1:flags=lanczos', // Example: 10 fps, 320px width, maintain aspect ratio
-            '-loop', '0' // 0 for infinite loop, -1 for no loop, N for N loops
-          ])
-          .toFormat('gif')
-          .on('end', () => {
-            this.logger.info('[toGif] GIF conversion finished.');
-            resolve();
-          })
-          .on('error', (err) => {
-            this.logger.error('[toGif] Error during GIF conversion:', err.message);
-            reject(err);
-          })
-          .save(tempOutputPath);
-      });
-
-      this.logger.info('[toGif] GIF saved to temporary file:', tempOutputPath);
-
-      // Read the generated GIF and convert to base64
-      const gifBuffer = await readFileAsync(tempOutputPath);
-      const base64Gif = gifBuffer.toString('base64');
-      this.logger.info('[toGif] GIF converted to base64.');
-
-      return base64Gif; // 'data:image/gif;base64,' não inclui
-
-    } catch (error) {
-      this.logger.error('[toGif] Error in toGif function:', error);
-      throw error; // Re-throw the error to be caught by the caller
-    } finally {
-      // Clean up temporary files
-      if (isTempFile && fs.existsSync(tempInputPath)) {
-        try {
-          await unlinkAsync(tempInputPath);
-          this.logger.info('[toGif] Temporary input file deleted:', tempInputPath);
-        } catch (e) {
-          this.logger.error('[toGif] Error deleting temporary input file:', tempInputPath, e.message);
-        }
-      }
-      if (fs.existsSync(tempOutputPath)) {
-        try {
-          await unlinkAsync(tempOutputPath);
-          this.logger.info('[toGif] Temporary output file deleted:', tempOutputPath);
-        } catch (e) {
-          this.logger.error('[toGif] Error deleting temporary output file:', tempOutputPath, e.message);
         }
       }
     }
@@ -1121,10 +832,6 @@ class WhatsAppBotEvo {
     res.sendStatus(200);
   }
 
-  async formatMessage(data) { // Fallback
-    return data;
-  }
-
   numeroMaisProvavel(numeros) {
     const validSenders = Array.isArray(numeros) ? numeros.filter(Boolean) : [];
     const priorityOrder = ['@s.whatsapp.net', '@c.us', '@lid'];
@@ -1148,11 +855,9 @@ class WhatsAppBotEvo {
         if (!key || !waMessage) {
           this.logger.warn(`[${this.id}] Incomplete Evolution message data for formatting:`, evoMessageData);
           resolve(null);
-          return;
         } else {
           const chatId = key.remoteJid;
           const isGroup = chatId.endsWith('@g.us');
-          let isSentMessage = false;
 
           let author = this.numeroMaisProvavel([evoMessageData.author, key.remoteJidAlt, key.remoteJid, key.participantAlt]);
           if (author) {
@@ -1166,9 +871,7 @@ class WhatsAppBotEvo {
             : (typeof evoMessageData.messageTimestamp === 'string' ? parseInt(evoMessageData.messageTimestamp, 10) : Math.floor(Date.now() / 1000));
           const responseTime = Math.max(0, this.getCurrentTimestamp() - messageTimestamp);
 
-          if (evoMessageData.event === "send.message") {
-            isSentMessage = true;
-          } else {
+          if (evoMessageData.event !== "send.message") {
             // send.message é evento de enviadas, então se não for, recebeu uma
             this.loadReport.trackReceivedMessage(isGroup, responseTime, author);
           }
@@ -1331,7 +1034,6 @@ class WhatsAppBotEvo {
             hasMedia: (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)),
 
             getContact: async () => {
-              const contactIdToFetch = isGroup ? (key.participant || author) : author;
               return await this.getContactDetails(author, authorName);
             },
 
@@ -1397,10 +1099,6 @@ class WhatsAppBotEvo {
         resolve(null);
       }
     });
-  }
-
-  shortJson(json, max = 30) {
-    return JSON.stringify(json, null, "\t").substring(0, max);
   }
 
   async _downloadMediaAsBase64(mediaInfo, messageKey, evoMessageData) {
@@ -1724,7 +1422,7 @@ class WhatsAppBotEvo {
 
 
       const outputDir = path.join(__dirname, '..', 'public', 'attachments');
-      await fs.mkdirSync(outputDir, { recursive: true });
+      fs.mkdirSync(outputDir, {recursive: true});
 
       const extension = path.extname(filePath); // e.g., '.mp4'
       const tempId = randomBytes(8).toString('hex');
@@ -1763,7 +1461,7 @@ class WhatsAppBotEvo {
           mimetype = options.customMime ? options.customMime : (headResponse.headers['content-type']?.split(';')[0] || 'application/octet-stream');
         } catch (e) { /* ignore */ }
       }
-      return { url, mimetype, filename, source: 'url', url, isMessageMedia: true }; // MessageMedia compatible for URL sending
+      return { url, mimetype, filename, source: 'url', isMessageMedia: true }; // MessageMedia compatible for URL sending
     } catch (error) {
       this.logger.error(`[${this.id}] Evo: Error creating media from URL ${url}:`, error);
       throw error;
@@ -1939,14 +1637,6 @@ class WhatsAppBotEvo {
         const groupData = await this.apiClient.get(`/group/findGroupInfos`, { groupJid: chatId });
 
         chat = {
-          setSubject: async (title) => {
-            return await this.apiClient.post(`/group/updateGroupSubject`, { groupJid: chatId, subject: title });
-          },
-          fetchMessages: async (limit = 30) => {
-            // Não rola
-            //https://doc.evolution-api.com/v2/api-reference/chat-controller/find-messages
-            return false;
-          },
           setMessagesAdminsOnly: async (adminOnly) => {
             if (adminOnly) {
               return await this.apiClient.post(`/group/updateSetting`, { groupJid: chatId, action: "announcement" });
@@ -2113,10 +1803,6 @@ class WhatsAppBotEvo {
     }
   }
 
-  async isUserAdminInGroup(userId, groupId) {
-    return this.adminUtils.isAdmin(userId, { id: groupId }, null, this.client);
-  }
-
   async fetchAndPrepareBlockedContacts() {
     // Evolution API does not list a direct "get all blocked contacts" endpoint in the provided link.
     // It has /contacts/blockUnblock. This functionality might be limited or require different handling.
@@ -2128,7 +1814,7 @@ class WhatsAppBotEvo {
 
   async _loadDonationsToWhitelist() {
     try {
-      const donations = await this.database.getDonations();
+      const donations = this.database.getDonations();
       for (let don of donations) {
         if (don.numero && don.numero?.length > 5) {
           this.whitelist.push(don.numero.replace(/\D/g, ''));
@@ -2152,12 +1838,6 @@ class WhatsAppBotEvo {
         // await this.sendMessage(this.grupoAvisos, `🟢 [${this.phoneNumber.slice(2,4)}] *${this.id}* (Evo) tá _on_! (${new Date().toLocaleString("pt-BR")})`);
       } catch (error) { this.logger.error(`[${this.id}] Error sending startup notification to grupoAvisos:`, error); }
     }
-  }
-
-  // --- Utility methods from original bot that should largely remain compatible ---
-  notInWhitelist(author) { // author is expected to be a JID string
-    const cleanAuthor = author.replace(/\D/g, ''); // Cleans non-digits from JID user part
-    return !(this.whitelist.includes(cleanAuthor))
   }
 
   rndString() {
@@ -2210,14 +1890,6 @@ class WhatsAppBotEvo {
   async restartBot(reason = 'Restart requested') {
     this.logger.info(`[restartBot] EvoAPI restart instance ${this.instanceName}`);
     return await this.apiClient.post('/instance/restart');
-  }
-
-  async createContact(phoneNumber, name, surname) {
-    this.logger.warn(`[${this.id}] WhatsAppBotEvo.createContact is a mock. Fetching real contact instead.`);
-    const formattedNumber = phoneNumber.endsWith('@c.us')
-      ? phoneNumber
-      : `${phoneNumber.replace(/\D/g, '')}@c.us`;
-    return await this.getContactDetails(formattedNumber, `${name} ${surname}`);
   }
 
 }

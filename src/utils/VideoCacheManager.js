@@ -151,47 +151,6 @@ class VideoCacheManager {
 
     return downloadResult;
   }
-
-  /**
-   * Download audio with caching and tracking download location
-   * @param {string} id - Video ID
-   * @param {Object} options - Options for downloading audio
-   * @returns {Promise<Object>} Download result with lastDownloadLocation
-   */
-  async downloadMusicWithCache(id, options) {
-    const cache = await this._readCache();
-    const type = 'audio';
-
-    // Check if there's a cached download location and the file exists
-    if (cache[id] && cache[id].downloads && cache[id].downloads[type]) {
-      console.log(`[downloadMusicWithCache] ${id} cached.`);
-      const existingFilePath = cache[id].downloads[type].path;
-      const fileStillExists = await fileExists(existingFilePath);
-      
-      if (fileStillExists) {
-        return { 
-          lastDownloadLocation: existingFilePath,
-          fromCache: true
-        };
-      }
-      
-      // If file no longer exists, remove the cached location
-      delete cache[id].downloads[type];
-      await this._writeCache(cache);
-    }
-    console.log(`[downloadMusicWithCache] No cache for ${id}.`);
-
-    // Perform the download
-    const downloadResult = await this.downloadAudio(id, options);
-
-    // If download was successful, cache the download location
-    if (downloadResult && downloadResult.outputPath) {
-      await this.setLastDownloadLocation(id, downloadResult.outputPath, type);
-      downloadResult.lastDownloadLocation = downloadResult.outputPath;
-    }
-
-    return downloadResult;
-  }
 }
 
 // const videoCacheManager = new VideoCacheManager();

@@ -1,5 +1,4 @@
 ﻿// src/functions/StopGame.js
-const path = require('path');
 const Logger = require('../utils/Logger');
 const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
@@ -59,24 +58,6 @@ function getRandomCategories(count) {
 function getRandomLetter() {
   const index = Math.floor(Math.random() * AVAILABLE_LETTERS.length);
   return AVAILABLE_LETTERS[index];
-}
-
-/**
- * Verifica se uma string começa com a letra especificada (ignorando acentos)
- * @param {string} text - Texto a verificar
- * @param {string} letter - Letra inicial
- * @returns {boolean} - Verdadeiro se começar com a letra
- */
-function startsWithLetter(text, letter) {
-  if (!text || typeof text !== 'string' || text.trim() === '') {
-    return false;
-  }
-  
-  // Normaliza para remover acentos e converte para maiúscula
-  const normalizedText = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-  const normalizedLetter = letter.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-  
-  return normalizedText.startsWith(normalizedLetter);
 }
 
 function handleGame(bot, message, args, group){
@@ -218,8 +199,6 @@ async function startStopGame(bot, message, args, group) {
 function processStopGameResponse(bot, message) {
   try {    
     const userId = message.author;
-    const userName = message.authorName || "Jogador";
-    
     
     // Verifica se a mensagem começa com o cabeçalho do jogo
     const messageContent = message.content;
@@ -327,9 +306,6 @@ async function analyzeResponses(game) {
       
       // Analisa a resposta do LLM (espera um JSON)
       const validationResults = parseLLMResponse(llmResponse);
-      
-      // Calcula a pontuação
-      const validatedAnswers = {};
       
       // Cada response é a resposta de um usuario (key)
       for (const userId in validationResults) {

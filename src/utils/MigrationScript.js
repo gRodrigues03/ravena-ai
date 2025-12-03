@@ -1,6 +1,5 @@
 const fs = require('fs').promises;
 const path = require('path');
-const crypto = require('crypto');
 
 /**
  * Script de Migração de Dados da Ravenabot
@@ -237,7 +236,7 @@ async function processGroupsData() {
         for (const mediaFile of mediaFiles) {
           try {
             const destPath = path.join(NEW_BASE_PATH, 'media', mediaFile.newFileName);
-            await copyMediaFile(mediaFile.oldPath, destPath);
+            copyMediaFile(mediaFile.oldPath, destPath);
           } catch (error) {
             console.error(`Erro ao copiar arquivo de mídia ${mediaFile.oldPath}:`, error);
           }
@@ -371,7 +370,7 @@ async function processCustomCommands() {
               const sourcePath = path.join(oldBasePath, 'media', mediaFolder, mediaFileName);
               const destPath = path.join(NEW_BASE_PATH, 'media', mediaFileName);
               
-              await copyMediaFile(sourcePath, destPath);
+              copyMediaFile(sourcePath, destPath);
             } catch (error) {
               console.error(`Erro ao copiar arquivo de mídia ${mediaFileName}:`, error);
             }

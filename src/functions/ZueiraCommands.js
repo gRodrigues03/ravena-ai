@@ -1,14 +1,11 @@
 const { createCanvas, loadImage } = require('canvas');
 const path = require('path');
-const Logger = require('../utils/Logger');
 const ReturnMessage = require('../models/ReturnMessage');
 const { MessageMedia } = require('whatsapp-web.js');
 const Command = require('../models/Command');
 const Database = require('../utils/Database');
 const CustomVariableProcessor = require('../utils/CustomVariableProcessor');
 const crypto = require('crypto');
-
-const logger = new Logger('general-commands');
 
 const database = Database.getInstance();
 const variableProcessor = new CustomVariableProcessor();
@@ -138,7 +135,7 @@ function formatarValorSimples(valor){
   }
   const valorFormatado = numero.toFixed(2).replace('.', ',');
   return `R$${valorFormatado}`;
-};
+}
 
 function encontrarPrimeiroNumero(args){
   for (const item of args) {
@@ -156,7 +153,7 @@ function encontrarPrimeiroNumero(args){
   }
 
   return {n: 0, i: 1};
-};
+}
 
 
 async function pix(bot, message, args, group) {
@@ -172,7 +169,6 @@ async function pix(bot, message, args, group) {
 
   if(args[0].startsWith("@")){
     // Primeiro argumento é um mention
-    const cttRecebedor = await bot.client.getContactById(message.mentions[0] ?? message.evoMessageData.sender);
     nomeRecebedor = cttPagador.pushname ?? cttPagador.name ?? "Fulano";
   } else if(!isFinite(args[0])) { // se não for mention nem numero, é um nome (chute)
     nomeRecebedor = args.slice(0, iValor).join(" ");

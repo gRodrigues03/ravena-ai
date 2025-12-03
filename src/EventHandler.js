@@ -14,7 +14,6 @@ const RankingMessages = require('./functions/RankingMessages');
 const fs = require('fs').promises;
 const path = require('path');
 const Stickers = require('./functions/Stickers');
-const GeoGuesser = require('./functions/GeoguesserGame');
 
 class EventHandler {
   constructor() {
@@ -25,12 +24,8 @@ class EventHandler {
     this.variableProcessor = new CustomVariableProcessor();
     this.adminUtils = AdminUtils.getInstance();
     this.rankingMessages = RankingMessages;
-    this.userGreetingManager = require('./utils/UserGreetingManager').getInstance();
     this.groups = {};
     this.comandosWhitelist = process.env.CMD_WHITELIST ? process.env.CMD_WHITELIST.split(",") : ["sa-", "anoni"];
-
-    this.recentlyLeft = [];
-    this.recentlyJoined = [];
 
     this.logger.info(`[EventHandler] CmdWhitelist:`, this.comandosWhitelist);
     this.loadGroups();
@@ -41,7 +36,7 @@ class EventHandler {
    */
   async loadGroups() {
     try {
-      const groups = await this.database.getGroups();
+      const groups = this.database.getGroups();
       if (groups && Array.isArray(groups)) {
         for (const groupData of groups) {
           this.groups[groupData.id] = new Group(groupData);
@@ -65,7 +60,7 @@ class EventHandler {
         this.logger.info(`Criando novo grupo: ${groupId} com nome: ${name || 'desconhecido'}`);
 
         // Obtém grupos do banco de dados para garantir que temos o mais recente
-        const groups = await this.database.getGroups();
+        const groups = this.database.getGroups();
         const existingGroup = Array.isArray(groups) ?
           groups.find(g => g.id === groupId) : null;
 
@@ -97,7 +92,7 @@ class EventHandler {
           this.groups[groupId] = group;
 
           // Salva no banco de dados
-          const saveResult = await this.database.saveGroup(group);
+          const saveResult = this.database.saveGroup(group);
           this.logger.debug(`Resultado de salvamento do grupo: ${saveResult ? 'sucesso' : 'falha'}`);
         }
       }
@@ -212,7 +207,7 @@ class EventHandler {
           if (group.botNotInGroup.includes(bot.id)) {
             this.logger.info(`[processMessage] O bot '${bot.id}' estava como fora do grupo '${group.name}', mas recebeu mensagem - atualizando`);
             group.botNotInGroup = group.botNotInGroup.filter(b => b !== bot.id);
-            await this.database.saveGroup(group);
+            this.database.saveGroup(group);
           }
         }
 
@@ -367,7 +362,7 @@ class EventHandler {
       // Armazena também áudios no histórico!
       SummaryCommands.storeMessage(message, message.author);
 
-      if (false && bot.pvAI && processed.length > 0) { // Desabilitado por enquanto
+      if (bot.pvAI && processed.length > 0) { // Desabilitado por enquanto
         this.logger.debug(`[processNonCommandMessage] Recebido áudio no PV e trasncrito, chamando LLM com '${processed}'`);
         // Usa texto extraído do áudio como entrada pro LLM
         const msgsLLM = await aiCommand(bot, message, [], group);
@@ -381,14 +376,6 @@ class EventHandler {
     if (!group && !ignorePV) {
       const stickerProcessed = await Stickers.processAutoSticker(bot, message, group);
       if (stickerProcessed) return;
-    }
-
-    // Trigger para jogos
-    if (group && message.type === 'location') {
-      const respGeo = await GeoGuesser.processLocationMessage(bot, message);
-      if (respGeo) {
-        bot.sendReturnMessages(respGeo);
-      }
     }
 
     if (message.type === 'text') {
@@ -578,10 +565,10 @@ class EventHandler {
         // Caso 1: Bot entrou no grupo
         this.logger.info(`Bot entrou no grupo ${data.group.name} (${nomeGrupo}/${data.group.id})`);
         group.paused = false; // Sempre que o bot entra no grupo, tira o pause (para grupos em que saiu/foi removido)
-        await this.database.saveGroup(group);
+        this.database.saveGroup(group);
         
         // Busca pendingJoins para ver se esse grupo corresponde a um convite pendente
-        const pendingJoins = await this.database.getPendingJoins();
+        const pendingJoins = this.database.getPendingJoins();
         let foundInviter = null;
         
         // Obtém todos os membros do grupo para verificação
@@ -639,11 +626,11 @@ class EventHandler {
           // Adiciona o autor como admin adicional se ainda não estiver na lista
           if (!group.additionalAdmins.includes(foundInviter.authorId)) {
             group.additionalAdmins.push(foundInviter.authorId);
-            await this.database.saveGroup(group);   
+            this.database.saveGroup(group);
           }
       
           // Remove o join pendente
-          await this.database.removePendingJoin(foundInviter.code);
+          this.database.removePendingJoin(foundInviter.code);
         }
 
         if(bot.comunitario){
@@ -733,7 +720,7 @@ class EventHandler {
         try {
           if(isBotLeaving){
             //group.paused = true; // Sempre que o bot sai do grupo, pausa o mesmo
-            await this.database.saveGroup(group);
+            this.database.saveGroup(group);
             bot.sendMessage(bot.grupoLogs, `🚪 Bot ${bot.id} saiu do grupo: ${data.group.name} (${data.group.id})})\nQuem removeu: ${data.responsavel.name}/${data.responsavel.id}`).catch(error => {
               this.logger.error('Erro ao enviar notificação de entrada no grupo para o grupo de logs:', error);
             });
@@ -745,7 +732,7 @@ class EventHandler {
       }
       
       if (group && group.farewells && !isBotLeaving) {
-        const farewell = await this.processFarewellMessage(group, data.user, bot);
+        const farewell = this.processFarewellMessage(group, data.user, bot);
         if (farewell) {
           bot.sendMessage(data.group.id, farewell.message, { mentions: farewell.mentions }).catch(error => {
             this.logger.error('Erro ao enviar mensagem de despedida:', error);
@@ -782,11 +769,10 @@ class EventHandler {
       }
       
       // Se houver múltiplos usuários, prepara os nomes
-      let nomesPessoas = "";
-      let numeroPessoas = "";
+      let numeroPessoas;
       let quantidadePessoas = 1;
       let isPlural = false;
-      let mentions = [];
+      let mentions;
 
        if (Array.isArray(user)) {
         numeroPessoas = user.map(u => `@${u.id.split('@')[0]}` || "@123456780").join(", ");
@@ -917,42 +903,6 @@ class EventHandler {
    */
   onNotification(bot, notification) {
     // Implementação opcional para tratar outros tipos de notificações
-  }
-
-    /**
-   * Exemplo de método que verifica permissões administrativas
-   * @param {WhatsAppBot} bot - A instância do bot
-   * @param {Object} message - A mensagem formatada
-   * @param {string} action - A ação a ser realizada
-   * @param {Group} group - O objeto do grupo
-   * @returns {Promise<boolean>} - True se a ação for permitida
-   */
-  async checkPermission(bot, message, action, group) {
-    try {
-      // Obtém o chat diretamente da mensagem original
-      const chat = await message.origin.getChat();
-      
-      // Usa o AdminUtils para verificar permissões
-      const isAdmin = await this.adminUtils.isAdmin(message.author, group, chat, bot.client);
-      
-      if (!isAdmin) {
-        this.logger.warn(`Usuário ${message.author} tentou realizar a ação "${action}" sem permissão`);
-        
-        // Notifica o usuário (opcional)
-        const returnMessage = new ReturnMessage({
-          chatId: message.group || message.author,
-          content: `⛔ Você não tem permissão para realizar esta ação: ${action}`
-        });
-        await bot.sendReturnMessages(returnMessage);
-        
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      this.logger.error(`Erro ao verificar permissões para ação "${action}":`, error);
-      return false;
-    }
   }
 
 }

@@ -161,7 +161,7 @@ async function anonymousMessage(bot, message, args, group) {
     }
     
     // Obtém todos os grupos para verificar o alvo
-    const groups = await database.getGroups();
+    const groups = database.getGroups();
     
     // Encontra o grupo pelo nome ou ID
     const targetGroup = groups.find(g => 

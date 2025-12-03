@@ -3,21 +3,15 @@ const fs = require('fs').promises;
 const { exec } = require('child_process');
 const util = require('util');
 const { v4: uuidv4 } = require('uuid');
-const os = require('os');
 const axios = require('axios');
-const FormData = require('form-data');
 const { URLSearchParams } = require('url');
 const Logger = require('../utils/Logger');
-const Database = require('../utils/Database');
 const crypto = require('crypto');
-const LLMService = require('../services/LLMService');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
 
 const execPromise = util.promisify(exec);
 const logger = new Logger('speech-commands');
-const database = Database.getInstance();
-const llmService = new LLMService({});
 
 const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg';
 const allTalkAPI = process.env.ALLTALK_API || 'http://localhost:7851/';

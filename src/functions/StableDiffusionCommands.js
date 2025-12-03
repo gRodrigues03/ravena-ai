@@ -8,9 +8,6 @@ const ReturnMessage = require('../models/ReturnMessage');
 const { translateText } = require('./TranslationCommands');
 
 const logger = new Logger('stable-diffusion-commands');
-
-const LLMService = require('../services/LLMService');
-const llmService = new LLMService({});
 const sdWebUIToken = `Basic ${process.env.SDWEBUI_TOKEN ?? ""}`;
 
 //logger.info('Módulo StableDiffusionCommands carregado');

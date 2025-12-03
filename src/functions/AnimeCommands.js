@@ -35,11 +35,7 @@ async function buscarAnime(bot, message, args, group) {
     
     // Obtém o nome do anime
     const nome = args.join(' ');
-    
-    // Cria array de ReturnMessages para retornar
-    const returnMessages = [];
-    
-    
+
     // Busca informações do anime usando mal-scraper
     const data = await malScraper.getInfoFromName(nome);
     

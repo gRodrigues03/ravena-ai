@@ -3,7 +3,6 @@ const Logger = require('../utils/Logger');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs').promises;
 const crypto = require('crypto');
-const axios = require('axios');
 const path = require('path');
 
 const logger = new Logger('utils-conversions');
@@ -206,29 +205,4 @@ async function toMp3(inputFile, opts = { b64: false, url: false, returnAsURL: fa
   }
 }
 
-/**
- * Converte um objeto MessageMedia do wwebjs para o formato MP3.
- * @param {object} messageMedia O objeto MessageMedia a ser convertido.
- * @returns {Promise<object>} Um novo objeto MessageMedia no formato MP3.
- */
-async function messageMediaToMp3(messageMedia) {
-  const filename = messageMedia.filename || `audio_${crypto.randomUUID()}`;
-  const filenameWithoutExt = path.parse(filename).name;
-
-  try {
-    const mp3Base64 = await toMp3(messageMedia.data, { b64: true });
-    const newMedia =  new MessageMedia(
-      'audio/mpeg',
-      mp3Base64,
-      path.basename(`${filenameWithoutExt}.mp3`)
-    );
-
-    logger.info(`[messageMediaToMp3] Conversão concluída. Arquivo: ${newMedia.filename}`);
-    return newMedia;
-  } catch (error) {
-    logger.error('[messageMediaToMp3] Erro durante a conversão:', error);
-    throw error;
-  }
-}
-
-module.exports = { toOpus, messageMediaToOpus, toMp3, messageMediaToMp3 };
+module.exports = { toOpus, messageMediaToOpus, toMp3 };

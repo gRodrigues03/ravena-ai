@@ -26,7 +26,6 @@ const OMDB_API_URL = 'http://www.omdbapi.com/';
 async function buscarImdb(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
-    const returnMessages = [];
     
     // Verificar se a API key está configurada
     if (!OMDB_API_KEY) {

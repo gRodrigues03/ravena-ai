@@ -84,7 +84,7 @@ class BotAPI {
         const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
 
         // Obtém relatórios de carga mais recentes
-        const recentReports = await this.database.getLoadReports(thirtyMinutesAgo);
+        const recentReports = this.database.getLoadReports(thirtyMinutesAgo);
 
         // Mapeia resultados por bot
         const botReports = {};
@@ -339,7 +339,7 @@ class BotAPI {
         }
 
         // Adiciona doação ao banco de dados
-        const donationTotal = await this.database.addDonation(nome, valor);
+        const donationTotal = this.database.addDonation(nome, valor);
 
         // Notifica grupos sobre a doação
         await this.notifyGroupsAboutDonation(nome, valor, msg, donationTotal);
@@ -364,7 +364,7 @@ class BotAPI {
         }
 
         // Obtém relatórios de carga após o timestamp especificado
-        const reports = await this.database.getLoadReports(parseInt(timestamp));
+        const reports = this.database.getLoadReports(parseInt(timestamp));
 
         res.json({
           status: 'ok',
@@ -572,7 +572,7 @@ class BotAPI {
         groupData.lastUpdated = new Date().toISOString();
 
         // Save the updated group
-        await this.database.saveGroup(groupData);
+        this.database.saveGroup(groupData);
 
         // Signal bots to reload the group config
         const updatesPath = path.join(this.database.databasePath, 'group_updates.json');
@@ -652,7 +652,7 @@ class BotAPI {
         groupData.lastUpdated = new Date().toISOString();
 
         // Save the updated group  
-        await this.database.saveGroup(groupData);
+        this.database.saveGroup(groupData);
 
         // Signal bots to reload the group config  
         const updatesPath = path.join(this.database.databasePath, 'group_updates.json');
@@ -742,7 +742,7 @@ class BotAPI {
 
       const statusPre = `<h2>Raw Instance Status</h2><pre id="status-box">${JSON.stringify(instanceStatus, null, "\t")}</pre>`;
 
-      let pageContent = '';
+      let pageContent;
 
       if (instanceStatus.extra?.ok) {
         pageContent = `
@@ -1058,7 +1058,7 @@ class BotAPI {
       const yearStart = new Date();
       yearStart.setDate(yearStart.getDate() - 365);
 
-      const reports = await this.database.getLoadReports(yearStart.getTime());
+      const reports = this.database.getLoadReports(yearStart.getTime());
 
       if (!reports || !Array.isArray(reports) || reports.length === 0) {
         this.logger.warn('Nenhum relatório de carga encontrado para processamento analítico');
@@ -1493,27 +1493,6 @@ class BotAPI {
         reject(error);
       }
     });
-  }
-
-  /**
-     * Adiciona uma instância de bot à API
-     * @param {WhatsAppBot} bot - A instância do bot a adicionar
-     */
-  addBot(bot) {
-    if (!this.bots.includes(bot)) {
-      this.bots.push(bot);
-    }
-  }
-
-  /**
-   * Remove uma instância de bot da API
-   * @param {WhatsAppBot} bot - A instância do bot a remover
-   */
-  removeBot(bot) {
-    const index = this.bots.indexOf(bot);
-    if (index !== -1) {
-      this.bots.splice(index, 1);
-    }
   }
 }
 

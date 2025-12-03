@@ -1,6 +1,5 @@
 ﻿// src/functions/GroupCommands.js
 
-const path = require('path');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
 const Command = require('../models/Command');
@@ -160,7 +159,7 @@ async function toggleIgnore(bot, message, args, group) {
       group.ignoredUsers = group.ignoredUsers.filter(ignoredUser => 
         !numerosPraIgnorar.includes(ignoredUser)
       );
-      await database.saveGroup(group);
+      database.saveGroup(group);
       
       return new ReturnMessage({
         chatId: message.group,
@@ -174,7 +173,7 @@ async function toggleIgnore(bot, message, args, group) {
       // Adiciona todos os "números" do usuário à lista de ignorados
       logger.debug(`[toggleIgnore][${group.name}] Adicionado aos ignorados: '${numerosPraIgnorar.join(",")}'`);
       group.ignoredUsers = [...new Set([...group.ignoredUsers, ...numerosPraIgnorar])]; // Set pra evitar duplicados
-      await database.saveGroup(group);
+      database.saveGroup(group);
       
       return new ReturnMessage({
         chatId: message.group,
@@ -185,8 +184,7 @@ async function toggleIgnore(bot, message, args, group) {
         }
       });
     }
-    
-    logger.info(`Status de ignorar alternado para usuário '${numerosPraIgnorar.join("/")}'' no grupo ${message.group}`);
+
   } catch (error) {
     logger.error('Erro ao alternar status de ignorar:', error);
     return new ReturnMessage({
@@ -229,7 +227,6 @@ async function apagarMensagem(bot, message, args, group) {
         
           // Verifica se quem pediu é admin
           if (chat.isGroup) {
-            const participants = chat.participants || [];
             const quemPediuIsAdmin = await adminUtils.isAdmin(quemPediu, group, chat, bot.client);
             
             if (quemPediuIsAdmin) {

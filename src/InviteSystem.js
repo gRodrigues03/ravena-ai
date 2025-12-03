@@ -164,21 +164,9 @@ class InviteSystem {
       // Obtém informações do usuário
       const userName = message.name ?? message.pushName ?? message.pushname ?? message.authorName ?? "Pessoa";
       
-      // Salva o convite pendente no banco de dados
-      const invite = {
-        code: inviteCode,
-        link: inviteLink,
-        author: {
-          id: authorId,
-          name: userName
-        },
-        reason: reason,
-        timestamp: Date.now()
-      };
-      
       // Alteração: usar savePendingJoin em vez de addPendingInvite
-      await this.database.savePendingJoin(inviteCode, {
-        authorId: authorId, 
+      this.database.savePendingJoin(inviteCode, {
+        authorId: authorId,
         authorName: userName
       });
       
@@ -200,12 +188,12 @@ class InviteSystem {
         try {
           // Verifica se o autor está na lista de doadores
           let isDonator = false;
-          let infoMessage = "";
+          let infoMessage;
           let donateValue = 0;
           
           try {
             // Obtém todas as doações
-            const donations = await this.database.getDonations();
+            const donations = this.database.getDonations();
             
             if (donations && donations.length > 0) {
               // Remove caracteres especiais e espaços do número do autor para comparação

@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mediaItem.dataset.type = media.type;
         
         // Media type icon
-        let typeIcon = '';
+        let typeIcon;
         switch (media.type) {
             case 'text': typeIcon = '💬'; break;
             case 'image': typeIcon = '🖼'; break;
@@ -353,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Media content preview
-        let contentPreview = '';
+        let contentPreview;
         if (media.type === 'text') {
             // Truncate text if too long
             const truncatedContent = media.content.length > 50 
@@ -473,7 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function createDefaultChannelConfig(platform, channelName) {
         // Create default text content based on platform
-        let defaultText = '';
+        let defaultText;
         
         let changeTitle = true;
         if (platform === 'youtube') {
@@ -1224,7 +1224,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const changeItem = document.createElement('div');
             changeItem.className = 'change-item';
             
-            let displayValue = '';
+            let displayValue;
             if (value === null) {
                 displayValue = '<em>(removido)</em>';
             } else if (typeof value === 'object') {

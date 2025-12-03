@@ -144,7 +144,7 @@ async function faladoresCommand(bot, message, args, group) {
     }
     
     // Obtém ranking
-    const ranking = await getMessageRanking(chatId);
+    const ranking = getMessageRanking(chatId);
     
     if (ranking.length === 0) {
       return new ReturnMessage({

@@ -11,7 +11,6 @@ const EventHandler = require('./src/EventHandler');
 const Logger = require('./src/utils/Logger');
 const logCleaner = require('./src/utils/LogsCleaner');
 const BotAPI = require('./src/BotAPI');
-const StabilityMonitor = require('./src/services/StabilityMonitor');
 const fs = require('fs');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 

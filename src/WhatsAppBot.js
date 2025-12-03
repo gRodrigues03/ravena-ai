@@ -13,8 +13,6 @@ const LLMService = require('./services/LLMService');
 const AdminUtils = require('./utils/AdminUtils');
 const { messageMediaToOpus } = require('./utils/Conversions');
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-
 class WhatsAppBot {
   /**
    * Cria uma nova instância de bot WhatsApp
@@ -40,7 +38,6 @@ class WhatsAppBot {
     this.database = Database.getInstance(); // Instância de banco de dados compartilhada
     this.isConnected = false;
     this.version = version ?? "wwebjs";
-    this.wwebversion = "0";
     this.safeMode = options.safeMode !== undefined ? options.safeMode : (process.env.SAFE_MODE === 'true');
     this.puppeteerOptions = options.puppeteerOptions || {};
     this.otherBots = options.otherBots || [];
@@ -86,12 +83,8 @@ class WhatsAppBot {
     this.status = "INITIALIZING";
 
     // Monitora estabilidade dos bots entre eles
-    this.stabilityMonitor = options.stabilityMonitor ?? false; 
-
-    this.llmService = new LLMService({});
+    this.stabilityMonitor = options.stabilityMonitor ?? false;
     this.adminUtils = AdminUtils.getInstance();
-
-    this.sessionDir = path.join(__dirname, '..', '.wwebjs_auth', this.id);
   }
 
   /**
@@ -119,7 +112,7 @@ class WhatsAppBot {
     });
 
     // Coloca doadores na whitelist do PV
-    const donations = await this.database.getDonations();
+    const donations = this.database.getDonations();
     for(let don of donations){
       if(don.numero && don.numero?.length > 5){
         this.whitelist.push(don.numero.replace(/\D/g, ''));

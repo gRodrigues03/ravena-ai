@@ -120,14 +120,6 @@ class LoadReport {
 
       try {
         // Obtém emoji de carga com base em msgs/h
-        const loadLevels = ["⬜", "🟩", "🟨", "🟧", "🟥", "⬛"];
-        let loadEmoji = loadLevels[0];
-
-        if (report.messages.messagesPerHour > 100) loadEmoji = loadLevels[1];
-        if (report.messages.messagesPerHour > 500) loadEmoji = loadLevels[2];
-        if (report.messages.messagesPerHour > 1000) loadEmoji = loadLevels[3];
-        if (report.messages.messagesPerHour > 1500) loadEmoji = loadLevels[4];
-        if (report.messages.messagesPerHour > 2000) loadEmoji = loadLevels[5];
 
         // Formata data para status
         const now = new Date();
@@ -183,7 +175,6 @@ class LoadReport {
   formatReportMessage(report) {
     const startDate = new Date(report.period.start).toLocaleString("pt-BR");
     const endDate = new Date(report.period.end).toLocaleString("pt-BR");
-    const durationMinutes = Math.floor(report.duration / 60);
     const rndString = (Math.random() + 1).toString(36).substring(7);
 
     return `📊 *LoadReport para ${this.bot.id}* - ${startDate}~${endDate} (${rndString}}\n\n` +
@@ -204,7 +195,7 @@ class LoadReport {
   async saveReport(report) {
     try {
       // Obtém relatórios existentes
-      let reports = await this.database.getLoadReports() || [];
+      let reports = this.database.getLoadReports() || [];
 
       // Adiciona novo relatório
       reports.push(report);
@@ -215,7 +206,7 @@ class LoadReport {
       reports = reports.filter(r => r.timestamp && r.timestamp > ninetyDaysAgo);
 
       // Salva no banco de dados
-      await this.database.saveLoadReports(reports);
+      this.database.saveLoadReports(reports);
 
       this.logger.debug('Relatório de carga salvo com sucesso');
     } catch (error) {

@@ -1,6 +1,5 @@
 const path = require('path');
 const fs = require('fs').promises;
-const os = require('os');
 const { exec } = require('child_process');
 const sharp = require('sharp');
 const { v4: uuidv4 } = require('uuid');
@@ -15,7 +14,6 @@ const logger = new Logger('image-commands');
 
 // Encapsule os comandos do imagemagick em promessas
 const convertPromise = util.promisify(imagemagick.convert);
-const identifyPromise = util.promisify(imagemagick.identify);
 
 // Diretório temporário para processamento
 const tempDir = path.join(__dirname, '../../temp', 'whatsapp-bot-images');
@@ -198,7 +196,6 @@ function cleanupTempFiles(files) {
  */
 async function handleRemoveBg(bot, message, args, group) {
   const chatId = message.group || message.author;
-  const returnMessages = [];
   
   // Cadeia de promessas sem bloqueio
   try {

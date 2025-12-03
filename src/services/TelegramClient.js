@@ -1,9 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { randomBytes } = require('crypto');
 
 class TelegramClient {
   /**
@@ -70,14 +66,6 @@ class TelegramClient {
       // Re-throw to be handled by the polling loop in TelegramBot.js
       throw error;
     }
-  }
-
-  /**
-   * Processes incoming webhook updates.
-   * @param {object} update - The update object from Telegram.
-   */
-  processUpdate(update) {
-    this.bot.processUpdate(update);
   }
 
   /**
@@ -217,15 +205,6 @@ class TelegramClient {
    */
   async leaveChat(chatId) {
     return this.bot.leaveChat(chatId);
-  }
-
-  /**
-   * Updates the bot's profile picture for a chat.
-   * @param {string|number} chatId - The chat ID.
-   * @param {Buffer} photo - Buffer of the photo.
-   */
-  async setChatPhoto(chatId, photo) {
-    return this.bot.setChatPhoto(chatId, photo);
   }
 }
 

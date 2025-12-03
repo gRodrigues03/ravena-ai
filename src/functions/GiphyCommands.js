@@ -29,7 +29,6 @@ const GIPHY_TRENDING_URL = 'https://api.giphy.com/v1/gifs/trending';
 async function enviarGif(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
-    const returnMessages = [];
     
     // Se não tiver API key configurada
     if (!GIPHY_API_KEY) {
@@ -171,7 +170,7 @@ async function enviarGif(bot, message, args, group) {
     const media = new MessageMedia(finalMimeType, finalBase64, 'giphy.mp4');
     
     // Prepara a legenda
-    let caption = '';
+    let caption;
     
     if (gifTrending) {
       caption = `🔥 *GIF Popular*\n`;
@@ -209,8 +208,7 @@ async function enviarGif(bot, message, args, group) {
         evoReply: message.origin
       }
     });
-    
-    logger.info(`GIF enviado com sucesso para ${chatId}`);
+
   } catch (error) {
     logger.error('Erro ao buscar/enviar GIF:', error);
     

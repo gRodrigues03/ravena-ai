@@ -1064,8 +1064,7 @@ async function legendaryFishCommand(bot, message, args, group) {
           try {
             await fs.access(imagePath);
             // Imagem existe, cria média
-            const media = await bot.createMedia(imagePath);
-            content = media;
+            content = await bot.createMedia(imagePath);
             
             // Prepara a legenda
             const date = new Date(legendary.timestamp).toLocaleDateString('pt-BR');
@@ -1180,7 +1179,7 @@ async function fishingRankingCommand(bot, message, args, group) {
     }
     
     // Prepara o título do ranking de acordo com o tipo
-    let rankingTitle = '';
+    let rankingTitle;
     if (rankingType === 'weight') {
       rankingTitle = 'Peso Total';
     } else if (rankingType === 'count') {
@@ -1665,6 +1664,5 @@ const commands = [
 
 module.exports = { 
   commands,
-  forceSaveFishingData: saveSync,
-  addBaits
+  forceSaveFishingData: saveSync
 }

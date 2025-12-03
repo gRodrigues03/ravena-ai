@@ -55,23 +55,6 @@ class EvolutionApiClient {
     }
   }
 
-  async put(endpoint, data = {}, params = {}, noInstance = false) {
-    const url = endpoint.includes('{instanceName}')
-        ? endpoint.replace('{instanceName}', this.instanceName) // For endpoints like /instance/webhook/set/{instanceName}
-        : (noInstance ? endpoint : `${endpoint}/${this.instanceName}`);
-    
-    try {
-      const response = await this.client.put(url, data, { params });
-      return response.data;
-    } catch (error) {
-      this.logger.error(`Evo API PUT Error from ${url}:`, error.response?.status, error.response?.data || error.message);
-      this.logger.error(`\t- ${url}`, {data, params});
-      this.logger.error(`\t- ${error.response?.status} - ${error.response?.data?.message || 'An error occurred.'}`);
-      this.logger.error('\t- Details:', error.response?.data);
-      throw error.response?.data || error;
-    }
-  }
-
   async delete(endpoint, data = {}, params = {}) {
     const url = endpoint.includes('{instanceName}')
         ? endpoint.replace('{instanceName}', this.instanceName) // For endpoints like /instance/webhook/set/{instanceName}

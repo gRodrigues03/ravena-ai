@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const Logger = require('./Logger');
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Classe Singleton Database para lidar com persistência baseada em JSON
@@ -687,7 +686,7 @@ class Database {
    * @returns {Object|null} - O objeto do grupo ou null se não encontrado
    */
   async getGroup(groupId) {
-    const groups = await this.getGroups();
+    const groups = this.getGroups();
     return groups.find(group => group.id === groupId) || null;
   }
 
@@ -697,7 +696,7 @@ class Database {
    * @returns {Object|null} - O objeto do grupo ou null se não encontrado
    */
   async getGroupByName(groupName) {
-    const groups = await this.getGroups();
+    const groups = this.getGroups();
     return groups.find(group => group.name === groupName) || null;
   }
 
@@ -709,7 +708,7 @@ class Database {
   async saveGroup(group) {
     try {
       // Obtém todos os grupos
-      const groups = await this.getGroups();
+      const groups = this.getGroups();
       
       if (!Array.isArray(groups)) {
         this.logger.error('Groups não é um array em saveGroup:', groups);
@@ -744,15 +743,6 @@ class Database {
   }
   
   /**
-   * Verifica se um caminho está em um diretório excluído do backup
-   * @param {string} filePath - Caminho do arquivo a verificar
-   * @returns {boolean} - Verdadeiro se o caminho estiver em um diretório excluído
-   */
-  isInExcludedDirectory(filePath) {
-    return this.excludedDirs.some(dir => filePath.startsWith(dir));
-  }
-  
-  /**
    * Obtém comandos personalizados para um grupo
    * @param {string} groupId - O ID do grupo
    * @returns {Array} - Array de objetos de comando personalizado
@@ -780,7 +770,7 @@ class Database {
    */
   async saveCustomCommand(groupId, command) {
     // Obtém todos os comandos personalizados para este grupo
-    const commands = await this.getCustomCommands(groupId);
+    const commands = this.getCustomCommands(groupId);
     
     // Encontra índice do comando existente
     const index = commands.findIndex(c => c.startsWith === command.startsWith);
@@ -810,7 +800,7 @@ class Database {
    */
   async updateCustomCommand(groupId, command) {
     // Obtém todos os comandos personalizados para este grupo
-    const commands = await this.getCustomCommands(groupId);
+    const commands = this.getCustomCommands(groupId);
     
     // Encontra índice do comando existente
     const index = commands.findIndex(c => c.startsWith === command.startsWith);
@@ -818,36 +808,6 @@ class Database {
     if (index !== -1) {
       // Atualiza comando existente
       commands[index] = command;
-      
-      // Atualiza cache
-      this.cache.commands[groupId] = commands;
-      
-      // Marca como modificado
-      this.dirtyFlags.commands[groupId] = true;
-      
-      return true;
-    }
-    
-    return false;
-  }
-
-  /**
-   * Exclui um comando personalizado (apenas em cache)
-   * @param {string} groupId - O ID do grupo
-   * @param {string} commandStart - O valor startsWith do comando
-   * @returns {boolean} - Status de sucesso
-   */
-  async deleteCustomCommand(groupId, commandStart) {
-    // Obtém todos os comandos personalizados para este grupo
-    const commands = await this.getCustomCommands(groupId);
-    
-    // Encontra índice do comando existente
-    const index = commands.findIndex(c => c.startsWith === commandStart);
-    
-    if (index !== -1) {
-      // Marca comando como excluído
-      commands[index].deleted = true;
-      commands[index].active = false;
       
       // Atualiza cache
       this.cache.commands[groupId] = commands;
@@ -878,21 +838,6 @@ class Database {
     this.cache.variables = variables;
     
     return variables;
-  }
-
-  /**
-   * Salva variáveis personalizadas (apenas em cache)
-   * @param {Object} variables - Objeto de variáveis personalizadas
-   * @returns {boolean} - Status de sucesso
-   */
-  async saveCustomVariables(variables) {
-    // Atualiza cache
-    this.cache.variables = variables;
-    
-    // Marca como modificado
-    this.dirtyFlags.variables = true;
-    
-    return true;
   }
 
   /**
@@ -995,26 +940,6 @@ class Database {
   }
 
   /**
-   * Salva doações (apenas em cache)
-   * @param {Array} donations - Array de objetos de doação
-   * @returns {boolean} - Status de sucesso
-   */
-  async saveDonations(donations) {
-    try {
-      // Atualiza cache
-      this.cache.donations = donations;
-      
-      // Marca como modificado
-      this.dirtyFlags.donations = true;
-      
-      return true;
-    } catch (error) {
-      this.logger.error('Erro ao salvar doações:', error);
-      return false;
-    }
-  }
-
-  /**
    * Adiciona uma doação (apenas em cache)
    * @param {string} name - Nome do doador
    * @param {number} amount - Valor da doação
@@ -1023,7 +948,7 @@ class Database {
    */
   async addDonation(name, amount, numero = undefined) {
     try {
-        const donations = await this.getDonations();
+        const donations = this.getDonations();
         const existingIndex = donations.findIndex(d => d.nome.toLowerCase() === name.toLowerCase());
         const now = Date.now();
         const historyEntry = { ts: now, valor: amount };
@@ -1073,7 +998,7 @@ class Database {
   async updateDonorNumber(name, numero) {
     try {
       // Obtém doações existentes
-      const donations = await this.getDonations();
+      const donations = this.getDonations();
       
       // Encontra doador
       const donor = donations.find(d => d.nome.toLowerCase() === name.toLowerCase());
@@ -1107,7 +1032,7 @@ class Database {
    */
   async updateDonationAmount(name, amount) {
     try {
-        const donations = await this.getDonations();
+        const donations = this.getDonations();
         let donor = donations.find(d => d.nome.toLowerCase() === name.toLowerCase());
         const now = Date.now();
         const historyEntry = { ts: now, valor: amount };
@@ -1161,7 +1086,7 @@ class Database {
    */
   async mergeDonors(targetName, sourceName) {
     try {
-        const donations = await this.getDonations();
+        const donations = this.getDonations();
         const targetIndex = donations.findIndex(d => d.nome.toLowerCase() === targetName.toLowerCase());
         const sourceIndex = donations.findIndex(d => d.nome.toLowerCase() === sourceName.toLowerCase());
 
@@ -1232,26 +1157,6 @@ class Database {
   }
 
   /**
-   * Salva joins pendentes (apenas em cache)
-   * @param {Array} joins - Array de objetos de join pendente
-   * @returns {boolean} - Status de sucesso
-   */
-  async savePendingJoins(joins) {
-    try {
-      // Atualiza cache
-      this.cache.pendingJoins = joins;
-      
-      // Marca como modificado
-      this.dirtyFlags.pendingJoins = true;
-      
-      return true;
-    } catch (error) {
-      this.logger.error('Erro ao salvar joins pendentes:', error);
-      return false;
-    }
-  }
-
-  /**
    * Salva um join pendente (apenas em cache)
    * @param {string} inviteCode - Código do convite
    * @param {Object} data - Dados do join (authorId, authorName)
@@ -1260,7 +1165,7 @@ class Database {
   async savePendingJoin(inviteCode, data) {
     try {
       // Obtém joins pendentes existentes
-      const joins = await this.getPendingJoins();
+      const joins = this.getPendingJoins();
       
       // Adiciona ou atualiza o join pendente
       const existingIndex = joins.findIndex(join => join.code === inviteCode);
@@ -1304,7 +1209,7 @@ class Database {
   async removePendingJoin(inviteCode) {
     try {
       // Obtém joins existentes
-      let joins = await this.getPendingJoins();
+      let joins = this.getPendingJoins();
       
       // Filtra o join
       joins = joins.filter(join => join.code !== inviteCode);

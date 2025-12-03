@@ -12,7 +12,6 @@ const RIOT_API_KEY = process.env.RIOT_GAMES;
 // Base URLs for different Riot APIs
 const RIOT_BASE_URL = 'https://americas.api.riotgames.com/riot';
 const LOL_BASE_URL = 'https://br1.api.riotgames.com/lol'; // Default to NA region
-const VALORANT_BASE_URL = 'https://br.api.riotgames.com/val';
 const CHAMPIONS_URL = 'https://ddragon.leagueoflegends.com/cdn/15.10.1/data/en_US/champion.json';
 
 
@@ -63,15 +62,6 @@ const RANK_EMOJIS_VALORANT = {
     "Immortal 3": '☠️',
     "Immortal":'☠️',
     "Radiant": '🌞'
-};
-
-// Emoji mapping for positions/roles
-const POSITION_EMOJIS = {
-  'TOP': '🛡️',
-  'JUNGLE': '🌳',
-  'MIDDLE': '🧙‍♂️',
-  'BOTTOM': '🏹',
-  'SUPPORT': '💉'
 };
 
 /**
@@ -235,150 +225,6 @@ function formatLolMessage(data) {
   return message;
 }
 
-
-/**
- * Get Valorant player data
- * @param {string} gameName - Game name to look up
- * @param {string} tagLine - Tag line (e.g., "NA1")
- * @returns {Promise<Object>} - Formatted player data
- */
-async function getValorantPlayerData(gameName, tagLine) {
-  try {
-    // Fetch account by gameName/tagLine
-    const accountResponse = await axios.get(
-      `${RIOT_BASE_URL}/account/v1/accounts/by-riot-id/${gameName}/${tagLine}`,
-      { headers: { 'X-Riot-Token': RIOT_API_KEY } }
-    );
-    
-    const account = accountResponse.data;
-    const puuid = account.puuid;
-    console.log(account);
-    
-    // Get player ranked data
-    console.log(`${VALORANT_BASE_URL}/content/v1/contents`);
-    const rankedResponse = await axios.get(
-      `${VALORANT_BASE_URL}/content/v1/contents`,
-      { headers: { 'X-Riot-Token': RIOT_API_KEY } }
-    );
-    console.log("rankedResponse", rankedResponse.data);
-    
-    // Get match history
-    console.log(`${VALORANT_BASE_URL}/match/v1/matchlists/by-puuid/${puuid}`);
-    const matchlistResponse = await axios.get(
-      `${VALORANT_BASE_URL}/match/v1/matchlists/by-puuid/${puuid}`,
-      { headers: { 'X-Riot-Token': RIOT_API_KEY } }
-    );
-    console.log("matchlistResponse", matchlistResponse.data);
-    
-    // Get MMR/ranked data
-    console.log(`${VALORANT_BASE_URL}/ranked/v1/leaderboards/by-puuid/${puuid}`);
-    const mmrResponse = await axios.get(
-      `${VALORANT_BASE_URL}/ranked/v1/leaderboards/by-puuid/${puuid}`,
-      { headers: { 'X-Riot-Token': RIOT_API_KEY } }
-    );
-    console.log("mmrResponse", mmrResponse.data);
-    
-    // Process the data from the API responses
-    // Note: The actual structure will depend on the API responses
-    const rankedData = mmrResponse.data;
-    const matchlistData = matchlistResponse.data;
-    
-    // Process agent data from match history
-    const agentStats = processAgentStats(matchlistData);
-    
-    return {
-      name: gameName,
-      tagLine: tagLine,
-      puuid: puuid,
-      ranked: rankedData,
-      agents: agentStats
-    };
-  } catch (error) {
-    logger.error(`Error fetching Valorant data for ${gameName}#${tagLine}:`, error.message);
-    throw new Error(`Não foi possível encontrar o jogador de Valorant "${gameName}#${tagLine}" ou ocorreu um erro durante a busca.`);
-  }
-}
-
-// Helper function to process agent stats from match history
-function processAgentStats(matchlistData) {
-  // This would process the match history to extract agent performance
-  // Implementation depends on the actual structure of the API response
-  const agentStats = [];
-  
-  // Example processing (adjust based on actual API response)
-  if (matchlistData && matchlistData.matches) {
-    const agentMap = new Map();
-    
-    matchlistData.matches.forEach(match => {
-      const agent = match.agentUsed;
-      if (!agentMap.has(agent)) {
-        agentMap.set(agent, {
-          name: agent,
-          matches: 0,
-          wins: 0,
-          kills: 0,
-          deaths: 0,
-          assists: 0
-        });
-      }
-      
-      const stats = agentMap.get(agent);
-      stats.matches++;
-      if (match.won) stats.wins++;
-      stats.kills += match.kills || 0;
-      stats.deaths += match.deaths || 0;
-      stats.assists += match.assists || 0;
-    });
-    
-    // Convert map to array and calculate derived stats
-    for (const [_, stats] of agentMap) {
-      const winRate = Math.round((stats.wins / stats.matches) * 100);
-      const kda = stats.deaths > 0 ? 
-        ((stats.kills + stats.assists) / stats.deaths).toFixed(2) : 
-        (stats.kills + stats.assists).toFixed(2);
-      
-      agentStats.push({
-        name: stats.name,
-        matches: stats.matches,
-        winRate: winRate,
-        kda: kda
-      });
-    }
-    
-    // Sort by matches played
-    agentStats.sort((a, b) => b.matches - a.matches);
-  }
-  
-  return agentStats.slice(0, 5); // Return top 5 agents
-}
-
-/**
- * Format Valorant player data into a message
- * @param {Object} data - Player data
- * @returns {string} - Formatted message
- */
-function formatValorantMessage(data) {
-  // Calculate win rate
-  const winRate = Math.round((data.ranked.wins / (data.ranked.wins + data.ranked.losses)) * 100);
-  
-  let message = `🔫 *Valorant - ${data.name}#${data.tagLine}*\n\n`;
-  
-  // Ranked info
-  message += `*🏆 Rank Competitivo:*\n`;
-  const rankStr = data.ranked.tier === 'RADIANT' ? 'RADIANT' : `${data.ranked.tier} ${data.ranked.rank}`;
-  message += `${getRankEmoji(data.ranked.tier)} ${rankStr} (${data.ranked.rr} RR)\n`;
-  message += `🏅 ${data.ranked.wins}V ${data.ranked.losses}D (${winRate}% de vitórias)\n`;
-  
-  // Top agents
-  message += `\n*👤 Principais Agentes:*\n`;
-  for (let i = 0; i < data.agents.length; i++) {
-    const agent = data.agents[i];
-    message += `${i+1}. ${agent.name} - ${agent.matches} partidas, ${agent.winRate}% VIT, ${agent.kda} KDA\n`;
-  }
-  
-  return message;
-}
-
 /**
  * Parse a Riot ID from input
  * @param {Array} args - Command arguments
@@ -390,7 +236,7 @@ function parseRiotId(args) {
   if (input.includes('#')) {
     const [namePart, tagPart] = input.split('#');
 
-    let tagLine = null;
+    let tagLine;
     let server = null;
 
     if (tagPart.includes('-')) {
@@ -495,7 +341,6 @@ async function handleLolCommand(bot, message, args, group) {
  */
 async function handleValorantCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
-  const returnMessages = [];
   
   try {
     if (args.length === 0) {

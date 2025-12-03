@@ -75,7 +75,7 @@ async function loadFilesDB() {
  */
 async function saveFilesDB(db) {
   try {
-    return await database.saveJSONToFile(path.join(database.databasePath, FILES_DB_FILE), db);
+    return database.saveJSONToFile(path.join(database.databasePath, FILES_DB_FILE), db);
   } catch (error) {
     logger.error('Erro ao salvar banco de dados de arquivos:', error);
     return false;
@@ -759,7 +759,7 @@ async function uploadFile(bot, message, args, group) {
     
     // Obtém nome de arquivo
     let targetPath = destination;
-    let fileName = '';
+    let fileName;
     
     // Se o destino já é um arquivo (tem extensão), usa como nome de arquivo
     if (path.extname(destination)) {

@@ -1,5 +1,3 @@
-const fs = require('fs').promises;
-const path = require('path');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
 const ReturnMessage = require('../models/ReturnMessage');
@@ -14,7 +12,6 @@ class SuperAdmin {
     this.logger = new Logger('superadmin');
     this.adminUtils = AdminUtils.getInstance();
     this.database = Database.getInstance();
-    this.dataPath = this.database.databasePath;
 
     // Lista de superadmins do sistema
     this.superAdmins = process.env.SUPER_ADMINS ?
@@ -83,7 +80,6 @@ class SuperAdmin {
 
 
   async wakeOnLan(bot, message, args) {
-    const chatId = message.group || message.author;
     try {
       if (!this.isSuperAdmin(message.author)) return;
       if (args[0]) { // Mac tem 17 caracteres
@@ -113,25 +109,6 @@ class SuperAdmin {
     }
   }
 
-  async testeMsg(bot, message, args) {
-    const chatId = message.group || message.author;
-    try {
-      if (!this.isSuperAdmin(message.author)) return;
-
-      const resMsgValida = await bot.sendReturnMessages(new ReturnMessage({
-        chatId: chatId,
-        content: `\`\`\`\n${JSON.stringify(message, null, "  ")}\`\`\``
-      }));
-
-    } catch (error) {
-      this.logger.error('Erro no comando testeMsg:', error);
-
-      return new ReturnMessage({
-        chatId: message.group || message.author,
-        content: '❌ Erro ao processar comando.'
-      });
-    }
-  }
   /**
    * Entra em um grupo via link de convite
    * @param {WhatsAppBot} bot - Instância do bot
@@ -180,11 +157,11 @@ class SuperAdmin {
         if (joinResult.accepted) {
           // Salva os dados do autor que enviou o convite para uso posterior
           if (authorId) {
-            await this.database.savePendingJoin(inviteCode, { authorId, authorName });
+            this.database.savePendingJoin(inviteCode, {authorId, authorName});
           }
 
           // Remove dos convites pendentes se existir
-          await this.database.removePendingJoin(inviteCode);
+          this.database.removePendingJoin(inviteCode);
 
           return new ReturnMessage({
             chatId: chatId,
@@ -214,19 +191,6 @@ class SuperAdmin {
       });
     }
   }
-
-  formatPhoneNumber(phone) {
-    // Ensure only digits
-    const digits = phone.replace(/\D/g, '');
-
-    // Match and format
-    const match = digits.match(/^(\d{2})(\d{2})(\d{5})(\d{4})$/);
-    if (!match) return 'Invalid number';
-
-    const [, country, area, part1, part2] = match;
-    return `+${country} (${area}) ${part1}-${part2}`;
-  }
-
 
   /**
    * Adiciona novo doador na lista
@@ -266,7 +230,7 @@ class SuperAdmin {
       }
 
       // Atualiza número do doador no banco de dados
-      const success = await this.database.addDonation(donorName, 0, numero);
+      const success = this.database.addDonation(donorName, 0, numero);
 
       if (success) {
 
@@ -332,17 +296,9 @@ class SuperAdmin {
       }
 
       // Atualiza número do doador no banco de dados
-      const success = await this.database.updateDonorNumber(donorName, numero);
+      const success = this.database.updateDonorNumber(donorName, numero);
 
       if (success) {
-        // Pega contato do doador e envia junto pra poder add
-        const cttDonate = await bot.createContact(numero);
-
-        if (!cttDonate) {
-          cttDonate = `${donorName} apoiador ravenabot`;
-        }
-
-        this.logger.debug("[cttDonate]", cttDonate);
 
         return [
           new ReturnMessage({
@@ -404,7 +360,7 @@ class SuperAdmin {
       }
 
       // Une doadores no banco de dados
-      const success = await this.database.mergeDonors(targetName, sourceName);
+      const success = this.database.mergeDonors(targetName, sourceName);
 
       if (success) {
         return new ReturnMessage({
@@ -465,7 +421,7 @@ class SuperAdmin {
       }
 
       // Atualiza valor de doação no banco de dados
-      const success = await this.database.updateDonationAmount(donorName, amount);
+      const success = this.database.updateDonationAmount(donorName, amount);
 
       if (success) {
         return new ReturnMessage({
@@ -784,7 +740,7 @@ class SuperAdmin {
         groupId = message.group;
       } else {
         // Busca o grupo pelo nome
-        const groups = await this.database.getGroups();
+        const groups = this.database.getGroups();
         const group = groups.find(g => g.name.toLowerCase() === groupIdentifier.toLowerCase());
 
         if (!group) {
@@ -883,8 +839,6 @@ class SuperAdmin {
       }
 
       try {
-        // Obtém a mídia da mensagem
-        const media = message.content;
 
         // Altera as configs
         const privacySettings = {
@@ -989,7 +943,6 @@ class SuperAdmin {
     }
 
     try {
-      const chatId = message.group || message.author;
 
       try {
         const emoji = args[0] ?? "✅";
@@ -1015,7 +968,6 @@ class SuperAdmin {
     }
 
     try {
-      const chatId = message.group || message.author;
 
       try {
         bot.updateProfileStatus(args.join(" "));
@@ -1823,7 +1775,7 @@ class SuperAdmin {
         }
 
         // Obtém informações dos grupos do banco de dados
-        const groups = await this.database.getGroups();
+        const groups = this.database.getGroups();
 
         // Constrói a mensagem de resposta
         let responseMessage = `*Grupos em comum com ${contactName} (${phoneNumber}):*\n\n`;
@@ -2151,7 +2103,7 @@ class SuperAdmin {
       const groupName = args.join(' ').toLowerCase();
 
       // Busca o grupo no banco de dados
-      const groups = await this.database.getGroups();
+      const groups = this.database.getGroups();
       const group = groups.find(g => g.name.toLowerCase() === groupName);
 
       if (!group) {
@@ -2162,7 +2114,7 @@ class SuperAdmin {
       }
 
       // Tenta obter informações do chat do grupo
-      let chatInfo = null;
+      let chatInfo;
       try {
         const chat = await bot.client.getChatById(group.id);
         chatInfo = JSON.stringify(chat, null, 2);
@@ -2197,7 +2149,7 @@ class SuperAdmin {
       }
 
       // Comandos personalizados
-      const commands = await this.database.getCustomCommands(group.id);
+      const commands = this.database.getCustomCommands(group.id);
       const activeCommands = commands.filter(cmd => cmd.active && !cmd.deleted);
       responseMessage += `\n*Comandos Personalizados:* ${activeCommands.length}\n`;
 

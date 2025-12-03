@@ -174,6 +174,5 @@ const commands = [
 
 // Exporta o módulo
 module.exports = {
-  commands,
-  buscarAudios
+  commands
 };

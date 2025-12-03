@@ -81,9 +81,7 @@ class WhatsAppBotTelegram {
     this.botInfo = null;
 
     // Sistemas e Handlers
-    this.mentionHandler = new MentionHandler();
     this.lastMessageReceived = Date.now();
-    this.startupTime = Date.now();
     this.loadReport = new LoadReport(this);
     // this.inviteSystem = new InviteSystem(this); // Ignorado no Telegram
     // this.reactionHandler = new ReactionsHandler(); // Ignorado no Telegram

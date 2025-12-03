@@ -96,7 +96,6 @@ const commands = [
 ];
 
 module.exports = {
-  commands,
-  buscarMetar
+  commands
 };
 

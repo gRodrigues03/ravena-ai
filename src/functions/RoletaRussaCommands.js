@@ -715,4 +715,4 @@ const commands = [
 ];
 
 
-module.exports = { commands, carregarDadosRoleta, inicializarGrupo, salvarDadosRoleta };
+module.exports = { commands };

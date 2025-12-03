@@ -228,15 +228,6 @@ async function lastfmCommand(bot, message, args, group) {
     
     const username = args[0];
     
-    // Envia mensagem de processamento
-    const processingMsg = new ReturnMessage({
-      chatId: chatId,
-      content: `🔍 Buscando dados do perfil '${username}' no Last.fm...`,
-      reactions: {
-        before: process.env.LOADING_EMOJI ?? "🌀"
-      }
-    });
-    
     // Obtém resultados do Last.fm
     const result = await processLastFM(username);
     
