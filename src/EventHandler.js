@@ -29,6 +29,9 @@ class EventHandler {
     this.groups = {};
     this.comandosWhitelist = process.env.CMD_WHITELIST ? process.env.CMD_WHITELIST.split(",") : ["sa-", "anoni"];
 
+    this.recentlyLeft = [];
+    this.recentlyJoined = [];
+
     this.logger.info(`[EventHandler] CmdWhitelist:`, this.comandosWhitelist);
     this.loadGroups();
   }
@@ -60,28 +63,28 @@ class EventHandler {
     try {
       if (!this.groups[groupId]) {
         this.logger.info(`Criando novo grupo: ${groupId} com nome: ${name || 'desconhecido'}`);
-        
+
         // Obtém grupos do banco de dados para garantir que temos o mais recente
         const groups = await this.database.getGroups();
-        const existingGroup = Array.isArray(groups) ? 
+        const existingGroup = Array.isArray(groups) ?
           groups.find(g => g.id === groupId) : null;
-        
+
         if (existingGroup) {
           this.logger.info(`Grupo existente encontrado no banco de dados: ${groupId}`);
           this.groups[groupId] = new Group(existingGroup);
         } else {
           // Cria novo grupo
-          let displayName = name || 
+          let displayName = name ||
             (groupId.split('@')[0].toLowerCase().replace(/\s+/g, '').substring(0, 16));
-          
+
 
           // Verifica se já tem grupo com esse nome antes
           let grupoExistente = await this.database.getGroupByName(displayName);
-          while(grupoExistente){
+          while (grupoExistente) {
             const rndG = Math.floor(Math.random() * 100);
             this.logger.info(`[getOrCreateGroup] Tentei criar grupo '${displayName}', tentando agora '${displayName}${rndG}', mas já existe um!`, grupoExistente);
             displayName = `${displayName}${rndG}`;
-            grupoExistente = await this.database.getGroupByName(displayName);            
+            grupoExistente = await this.database.getGroupByName(displayName);
           }
 
           const group = new Group({
@@ -90,9 +93,9 @@ class EventHandler {
             prefix: prefix,
             addedBy: "test@c.us" // Para teste
           });
-          
+
           this.groups[groupId] = group;
-          
+
           // Salva no banco de dados
           const saveResult = await this.database.saveGroup(group);
           this.logger.debug(`Resultado de salvamento do grupo: ${saveResult ? 'sucesso' : 'falha'}`);
@@ -142,24 +145,54 @@ class EventHandler {
    */
   async processMessage(bot, message) {
     try {
-      let ignorePV = bot.ignorePV && bot.notInWhitelist(message.author) && message.group === null; 
+
+      // Ignorar: Mensagens do bot e mensagens de broadcast ('status@broadcast')
+      if(message.fromMe || message.from?.includes("broadcast") || message.group?.includes("broadcast")) return;
+
+      // Newsletter/Canais: Apenas pra detectar jrmunews, horóscopos, etc.
+      if (message.isNewsletter) {
+        try {
+          const isNewsDetected = await MuNewsCommands.detectNews(message.content, group.id);
+          if (isNewsDetected) {
+            // Opcionalmente, envia uma confirmação de que a MuNews foi detectada e salva
+            bot.sendMessage(process.env.GRUPO_LOGS, "📰 *MuNews detectada e salva!*").catch(error => {
+              this.logger.error('Erro ao enviar confirmação de MuNews:', error);
+            });
+          }
+
+          const isHoroscopoDetected = await HoroscopoCommands.detectHoroscopo(message.content, group.id);
+          if (isHoroscopoDetected) {
+            // Opcionalmente, envia uma confirmação de que um Horoscopo foi detectado e salvo
+            // bot.sendMessage(process.env.GRUPO_LOGS, "🔮 *Horoscopo detectado e salvo!*").catch(error => {
+            //   this.logger.error('Erro ao enviar confirmação de Horoscopo:', error);
+            // });
+          }
+
+        } catch (error) {
+          this.logger.error('Erro ao verificar Newsletter:', error);
+        }
+
+        return;
+      }
+
+      let ignorePV = bot.ignorePV && bot.notInWhitelist(message.author) && message.group === null;
 
       // Verifica links de convite em chats privados
       if (!message.group && !ignorePV) {
         // Verifica se é uma mensagem de link de convite
-        if(!bot.ignoreInvites && bot.inviteSystem){
+        if (!bot.ignoreInvites && bot.inviteSystem) {
           const isInviteHandled = await bot.inviteSystem.processMessage(message);
           if (isInviteHandled) return;
-          
+
           // Verifica se é uma mensagem de acompanhamento para um convite
           const isFollowUpHandled = await bot.inviteSystem.processFollowUpMessage(message);
           if (isFollowUpHandled) return;
         }
       }
-      
+
       // Processa saudação para novos usuários no PV
       //this.userGreetingManager.processGreeting(bot, message);
-      
+
       // Obtém conteúdo de texto da mensagem (corpo ou legenda)
       const textContent = message.type === 'text' ? message.content : message.caption;
 
@@ -172,18 +205,18 @@ class EventHandler {
         SummaryCommands.storeMessage(message, message.group);
 
         group = await this.getOrCreateGroup(message.guildId ?? message.group, null, bot.prefix);
-        if(!group.botNotInGroup){
+        if (!group.botNotInGroup) {
           group.botNotInGroup = [];
         } else {
           // Verifica se o bot está marcada como fora do grupo - se ele recebeu msg aqui, é pq tá dentro!
-          if(group.botNotInGroup.includes(bot.id)){
+          if (group.botNotInGroup.includes(bot.id)) {
             this.logger.info(`[processMessage] O bot '${bot.id}' estava como fora do grupo '${group.name}', mas recebeu mensagem - atualizando`);
             group.botNotInGroup = group.botNotInGroup.filter(b => b !== bot.id);
             await this.database.saveGroup(group);
           }
         }
-        
-        
+
+
         // Verifica apelido do usuário e atualiza o nome se necessário
         if (group.nicks && Array.isArray(group.nicks)) {
           const nickData = group.nicks.find(nick => nick.numero === message.author);
@@ -198,7 +231,7 @@ class EventHandler {
               // Atualiza o nome com o apelido
               contact.name = nickData.apelido;
               contact.pushname = nickData.apelido;
-              
+
               // Atualiza também o nome no objeto message para uso em comandos
               // ATENÇÃO: TRIPA DE CÓDIGO ADIANTE
               message.name = message.pushname = message.pushName = message.authorName = message.origin.name = message.origin.pushname = message.origin.pushName = message.origin.authorName = nickData.apelido;
@@ -208,37 +241,37 @@ class EventHandler {
             }
           }
         }
-        
+
 
         // Verifica se o grupo está pausado
-        if (group.paused) {        
-          
+        if (group.paused) {
+
           // Verifica se é o comando g-pausar antes de ignorar completamente
           const prefix = (group && group.prefix !== undefined) ? group.prefix : bot.prefix;
-          const isPauseCommand = textContent && 
-                               textContent.startsWith(prefix) && 
-                               textContent.substring(prefix.length).startsWith('g-pausar');
-          
+          const isPauseCommand = textContent &&
+            textContent.startsWith(prefix) &&
+            textContent.substring(prefix.length).startsWith('g-pausar');
+
           // Só continua o processamento se for o comando g-pausar
           if (!isPauseCommand) {
             return;
           }
         }
-        
+
         // Processa mensagem para ranking
         try {
           await this.rankingMessages.processMessage(message);
         } catch (error) {
           this.logger.error('Erro ao processar mensagem para ranking:', error);
         }
-        
+
         // Verifica se o usuário está ignorado
         if (group && group.ignoredNumbers && Array.isArray(group.ignoredNumbers)) {
           // Check if any part of the author's number matches an ignored number
-          const isIgnored = group.ignoredNumbers.some(number => 
+          const isIgnored = group.ignoredNumbers.some(number =>
             message.author.includes(number) && number.length >= 8
           );
-          
+
           if (isIgnored) {
             this.logger.debug(`Ignorando mensagem de ${message.author} (ignorado no grupo)`);
             return; // Skip processing this message
@@ -247,10 +280,10 @@ class EventHandler {
 
         // Verifica se é pra ignorar a mensagem por conteúdo
         if (group && group.mutedStrings && Array.isArray(group.mutedStrings) && textContent) {
-          const isIgnored = group.mutedStrings.some(str => 
+          const isIgnored = group.mutedStrings.some(str =>
             textContent.toLowerCase().startsWith(str.toLowerCase())
           );
-          
+
           if (isIgnored) {
             this.logger.debug(`Ignorando processamento de mensagem por causa do conteudo: ${textContent.substring(0, 20)}...`);
             return; // Skip processing this message
@@ -265,43 +298,43 @@ class EventHandler {
         // Armazena mensagem para histórico de conversação no pv
         SummaryCommands.storeMessage(message, message.group);
       }
-        
-      
+
+
       // Se não houver conteúdo de texto, não pode ser um comando ou menção
       if (!textContent) {
         return this.processNonCommandMessage(bot, message, group);
       }
-      
+
       // Verifica menções ao bot
       const isMentionHandled = await bot.mentionHandler.processMention(bot, message, group, textContent);
       if (isMentionHandled) return;
-      
+
       // Obtém prefixo do grupo ou prefixo padrão do bot
       const prefix = (group && group.prefix !== undefined) ? group.prefix : bot.prefix;
-      
+
       // CORREÇÃO: Verificação adequada para prefixo vazio
       const isCommand = prefix === '' || textContent.startsWith(prefix);
-      
+
 
       if (isCommand) {
         // Se o prefixo for vazio, usa o texto completo como comando
         // Se não, remove o prefixo do início
         const commandText = prefix === '' ? textContent : textContent.substring(prefix.length);
-        
+
         // IMPORTANTE: Verificação especial para comandos de gerenciamento mesmo com prefixo vazio
         if (commandText.startsWith('g-')) {
           this.logger.debug(`Comando de gerenciamento detectado: ${commandText}`);
-          
+
           // Processa comando sem aguardar para evitar bloqueio
           this.commandHandler.handleCommand(bot, message, commandText, group).catch(error => {
             this.logger.error('Erro em handleCommand:', error);
           });
-          
+
           return; // Evita processamento adicional
         }
 
         // Processa comando normal
-        if(!ignorePV || message.group || this.comandosWhitelist.some(cW => textContent.includes(cW))){
+        if (!ignorePV || message.group || this.comandosWhitelist.some(cW => textContent.includes(cW))) {
           this.commandHandler.handleCommand(bot, message, commandText, group).catch(error => {
             this.logger.error('Erro em handleCommand:', error);
           });
@@ -326,24 +359,24 @@ class EventHandler {
    */
   async processNonCommandMessage(bot, message, group) {
     // Verifica se é uma mensagem de voz para processamento automático de STT    
-    const processed = await SpeechCommands.processAutoSTT(bot, message, group, {returnResult: true});
-    if (processed){
+    const processed = await SpeechCommands.processAutoSTT(bot, message, group, { returnResult: true });
+    if (processed) {
       message.content = `Audio[${processed}]`;
       message.caption = `Audio[${processed}]`;
 
       // Armazena também áudios no histórico!
       SummaryCommands.storeMessage(message, message.author);
 
-      if(false && bot.pvAI && processed.length > 0){ // Desabilitado por enquanto
+      if (false && bot.pvAI && processed.length > 0) { // Desabilitado por enquanto
         this.logger.debug(`[processNonCommandMessage] Recebido áudio no PV e trasncrito, chamando LLM com '${processed}'`);
         // Usa texto extraído do áudio como entrada pro LLM
         const msgsLLM = await aiCommand(bot, message, [], group);
         bot.sendReturnMessages(msgsLLM);
       }
       return;
-    } 
+    }
 
-    let ignorePV = bot.ignorePV && bot.notInWhitelist(message.author) && message.group === null; 
+    let ignorePV = bot.ignorePV && bot.notInWhitelist(message.author) && message.group === null;
 
     if (!group && !ignorePV) {
       const stickerProcessed = await Stickers.processAutoSticker(bot, message, group);
@@ -353,7 +386,7 @@ class EventHandler {
     // Trigger para jogos
     if (group && message.type === 'location') {
       const respGeo = await GeoGuesser.processLocationMessage(bot, message);
-      if(respGeo){
+      if (respGeo) {
         bot.sendReturnMessages(respGeo);
       }
     }

@@ -226,3 +226,4 @@ data/yt-channelsID-cache.json
 *.swp
 data/cooldowns.js
 /dev
+data/skip-groups*.json

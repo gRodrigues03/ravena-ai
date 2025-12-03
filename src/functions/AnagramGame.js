@@ -19,7 +19,7 @@ const logger = new Logger('anagrama-game');
 const database = Database.getInstance();
 
 // --- Configurações do Jogo ---
-const GAME_DURATION_SECONDS = 45;
+const GAME_DURATION_SECONDS = 60;
 const HINTS_PER_ROUND = 3;
 const SKIPS_PER_ROUND = 3;
 const DEBOUNCE_SAVE_MS = 5000; // Salva 5s após a última alteração

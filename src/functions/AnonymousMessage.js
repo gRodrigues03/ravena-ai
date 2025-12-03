@@ -124,8 +124,9 @@ function cleanId(id){
  */
 async function anonymousMessage(bot, message, args, group) {
   try {
+    //logger.debug(`[anonymousMessage] `, {message});
     // Verifica o ID do remetente
-    const senderIds = [cleanId(message.author), cleanId(message.key.remoteJidAlt ?? "-"), cleanId(message.key.remoteJid ?? "-")];
+    const senderIds = [cleanId(message.author), cleanId(message?.origin?.key?.remoteJidAlt ?? "-"), cleanId(message?.origin?.key?.remoteJid ?? "-"), cleanId(message?.origin?.Info?.SenderAlt ?? "-"), cleanId(message?.origin?.Info?.Sender ?? "-")];
     
     // Verifica se há argumentos suficientes
     if (args.length < 2) {
