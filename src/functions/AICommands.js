@@ -133,10 +133,7 @@ async function aiCommand(bot, message, args, group) {
     }
   }
 
-  const promptAutor = message?.evoMessageData?.key?.pushName ?? message?.name ?? message?.authorName ?? message?.pushname;
-  if(promptAutor){
-    completionOptions.systemContext = `Nome de quem enviou o prompt: ${promptAutor}\n\n`+ completionOptions.systemContext;
-  }
+  completionOptions.author = message?.evoMessageData?.key?.pushName ?? message?.name ?? message?.authorName ?? message?.pushname;
   
 
   // Obtém resposta da IA

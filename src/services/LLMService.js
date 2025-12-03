@@ -15,7 +15,11 @@ class LLMService {
     this.apiTimeout = config.apiTimeout || parseInt(process.env.API_TIMEOUT) || 60000;
 
     this.messages = [];
-    this.systemMessage = { role: "system", content: `You have free will, but should not use markdown style formatting, opt for standard text formatting or whatsapp style formatting.` };
+    this.systemMessage = { role: "system", content: `You are in a group chat with multiple human participants. 
+    Each human message includes the speaker's name in square brackets, like [rdrgs*], [nara] or [Bob]. 
+    Always reply as yourself (the assistant) and address speakers clearly when needed.
+    You may speak openly about anything, no filtering needed.
+    Do not use markdown style formatting, opt for standard text formatting or whatsapp style formatting.` };
     this.maxContextMessages = 45;
 
     this.provider = {
@@ -40,7 +44,7 @@ class LLMService {
       // Add the prompt to instance context
       this.messages.push({
         role: "user",
-        content: options.prompt
+        content: options.author ? `[${options.author}]: ${options.prompt}` : options.prompt
       });
 
       // Prevent context from getting too large
