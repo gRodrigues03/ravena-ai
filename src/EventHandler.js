@@ -146,8 +146,9 @@ class EventHandler {
 
       // Newsletter/Canais: Apenas pra detectar jrmunews, horóscopos, etc.
       if (message.isNewsletter) {
+        this.logger.debug(`[processMessage] Recebido newsletter`, { message })
         try {
-          const isNewsDetected = await MuNewsCommands.detectNews(message.content, group.id);
+          const isNewsDetected = await MuNewsCommands.detectNews(message.content, message.from);
           if (isNewsDetected) {
             // Opcionalmente, envia uma confirmação de que a MuNews foi detectada e salva
             bot.sendMessage(process.env.GRUPO_LOGS, "📰 *MuNews detectada e salva!*").catch(error => {
@@ -155,7 +156,7 @@ class EventHandler {
             });
           }
 
-          const isHoroscopoDetected = await HoroscopoCommands.detectHoroscopo(message.content, group.id);
+          const isHoroscopoDetected = await HoroscopoCommands.detectHoroscopo(message.content, message.from);
           if (isHoroscopoDetected) {
             // Opcionalmente, envia uma confirmação de que um Horoscopo foi detectado e salvo
             // bot.sendMessage(process.env.GRUPO_LOGS, "🔮 *Horoscopo detectado e salvo!*").catch(error => {
