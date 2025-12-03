@@ -13,7 +13,6 @@ const logger = new Logger('fishing-game');
 
 const database = Database.getInstance();
 const adminUtils = AdminUtils.getInstance();
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // --- CONSTANTES DO JOGO ---
 const MAX_FISH_PER_USER = 8;

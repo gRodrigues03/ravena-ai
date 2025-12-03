@@ -127,7 +127,6 @@ class BotAPI {
               },
               semPV: bot.ignorePV || false,
               semConvites: bot.ignoreInvites || false,
-              banido: bot.banido || false,
               comunitario: bot.comunitario || false,
               numeroResponsavel: bot.numeroResponsavel || false,
               banido: bot.banido || false,
@@ -157,7 +156,6 @@ class BotAPI {
             banido: bot.banido || false,
             comunitario: bot.comunitario || false,
             numeroResponsavel: bot.numeroResponsavel || false,
-            banido: bot.banido || false,
             supportMsg: bot.supportMsg || false,
             vip: bot.vip || false
           }))
