@@ -1401,7 +1401,7 @@ async setWelcomeMessage(bot, message, args, group) {
   /**
    * Verifica se o bot é admin no grupo
    * @param {WhatsAppBot} bot - Instância do bot
-   * @param {Objet} group - grupo
+   * @param {Object} group - grupo
    * @returns {Promise<boolean>} - Se o bot é admin
    */
   async isBotAdmin(bot, group) {
