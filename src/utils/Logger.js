@@ -11,26 +11,6 @@ class Logger {
   constructor(name) {
     this.name = name;
     this.debugMode = process.env.DEBUG === 'true';
-    
-    // Configura rotação à meia-noite
-    this.setupRotation();
-  }
-
-  /**
-   * Configura rotação de logs à meia-noite
-   */
-  setupRotation() {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(now.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    
-    const timeUntilMidnight = tomorrow - now;
-    
-    // Define timeout para rotacionar logs à meia-noite
-    setTimeout(() => {
-      this.setupRotation(); // Configura próxima rotação
-    }, timeUntilMidnight);
   }
 
   /**
