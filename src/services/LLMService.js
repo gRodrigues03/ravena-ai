@@ -55,7 +55,7 @@ class LLMService {
       const response = await axios.post(
         'https://openrouter.ai/api/v1/chat/completions',
         {
-          model: "x-ai/grok-4.1-fast:free",
+          model: "amazon/nova-2-lite-v1:free",
           messages: [
             this.systemMessage,
             ...this.messages
