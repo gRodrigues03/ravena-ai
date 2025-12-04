@@ -9,7 +9,6 @@ const DiscordBot = require('./src/DiscordBot');
 
 const EventHandler = require('./src/EventHandler');
 const Logger = require('./src/utils/Logger');
-const logCleaner = require('./src/utils/LogsCleaner');
 const BotAPI = require('./src/BotAPI');
 const fs = require('fs');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -18,7 +17,6 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
  * Exemplo de criação de múltiplas instâncias de bot
  */
 async function main() {
-  logCleaner.start();
   const logger = new Logger('main');
   let botInstances = [];
   

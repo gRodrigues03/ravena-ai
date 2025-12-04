@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const util = require('util');
 
 /**
@@ -12,53 +10,10 @@ class Logger {
    */
   constructor(name) {
     this.name = name;
-    this.logDir = path.join(__dirname, '../../logs');
-    this.currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    this.logFile = null;
     this.debugMode = process.env.DEBUG === 'true';
-    
-    // Cria diretório de log se não existir
-    this.ensureLogDirectory();
-    
-    // Abre arquivo de log
-    this.openLogFile();
     
     // Configura rotação à meia-noite
     this.setupRotation();
-  }
-
-  /**
-   * Garante que o diretório de log exista
-   */
-  ensureLogDirectory() {
-    if (!fs.existsSync(this.logDir)) {
-      fs.mkdirSync(this.logDir, { recursive: true });
-    }
-  }
-
-  /**
-   * Abre arquivo de log
-   */
-  openLogFile() {
-    const logFileName = `${this.currentDate}-${this.name}.log`;
-    const logFilePath = path.join(this.logDir, logFileName);
-    
-    // Fecha arquivo existente se estiver aberto
-    if (this.logFile) {
-      try {
-        fs.closeSync(this.logFile);
-      } catch (error) {
-        console.error('Erro ao fechar arquivo de log:', error);
-      }
-    }
-    
-    // Abre novo arquivo para anexar
-    try {
-      this.logFile = fs.openSync(logFilePath, 'a');
-    } catch (error) {
-      console.error('Erro ao abrir arquivo de log:', error);
-      this.logFile = null;
-    }
   }
 
   /**
@@ -74,8 +29,6 @@ class Logger {
     
     // Define timeout para rotacionar logs à meia-noite
     setTimeout(() => {
-      this.currentDate = new Date().toISOString().split('T')[0];
-      this.openLogFile();
       this.setupRotation(); // Configura próxima rotação
     }, timeUntilMidnight);
   }
@@ -102,17 +55,6 @@ class Logger {
     // Registra no console
     const consoleMethod = level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log';
     console[consoleMethod](logMessage);
-    
-    // Registra no arquivo
-    if (this.logFile) {
-      try {
-        fs.writeSync(this.logFile, logMessage + '\n');
-      } catch (error) {
-        console.error('Erro ao escrever no arquivo de log:', error);
-        // Tenta reabrir arquivo de log
-        this.openLogFile();
-      }
-    }
   }
 
   /**
